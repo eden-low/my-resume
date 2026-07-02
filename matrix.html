@@ -57,7 +57,7 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-4 mt-8 grid grid-cols-1 gap-6">
-    <section class="bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
+    <section class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <h1 class="font-cyber font-black text-3xl text-white">Matrix</h1>
@@ -66,8 +66,8 @@
         <div class="text-sm font-code text-textGray bg-darkBg/70 px-4 py-2 rounded-2xl border border-borderNeon">Charts are interactive and show a clear breakdown of competency & event leadership.</div>
       </div>
     </section>
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-cardBg/90 backdrop-blur-sm p-5 rounded-2xl neon-border-purple min-h-[360px] flex flex-col justify-between">
+    <section class="reveal-group grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="reveal bg-cardBg/90 backdrop-blur-sm p-5 rounded-2xl neon-border-purple min-h-[360px] flex flex-col justify-between">
         <div>
           <div class="flex justify-between items-start border-b border-borderNeon pb-3">
             <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-fire text-neonPurple mr-2"></i> Guild Leadership</h2>
@@ -92,7 +92,7 @@
         </div>
       </div>
 
-      <div class="bg-cardBg/90 backdrop-blur-sm p-5 rounded-2xl neon-border-purple min-h-[360px] flex flex-col justify-between">
+      <div class="reveal bg-cardBg/90 backdrop-blur-sm p-5 rounded-2xl neon-border-purple min-h-[360px] flex flex-col justify-between">
         <div>
           <div class="flex justify-between items-start border-b border-borderNeon pb-3">
             <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-crown text-amber-400 mr-2"></i> Core Attributes</h2>
@@ -115,6 +115,7 @@
     </section>
   </main>
 
+  <script src="scripts.js" defer></script>
   <script>
     Chart.defaults.color = '#a0aec0';
     Chart.defaults.font.family = 'Fira Code, monospace';
