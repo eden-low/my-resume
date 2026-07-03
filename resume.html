@@ -6,7 +6,6 @@
   <title>Resume | Low Fang Jun</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css" />
   <script>
@@ -14,18 +13,18 @@
       theme: {
         extend: {
           colors: {
-            darkBg: '#09090e',
-            cardBg: '#12121e',
-            borderNeon: '#2d1b4e',
-            neonPurple: '#d946ef',
-            neonBlue: '#3b82f6',
-            neonViolet: '#8b5cf6',
-            textGray: '#a0aec0',
+            darkBg: '#0a0a0e',
+            cardBg: '#17151f',
+            borderNeon: '#2a2833',
+            neonPurple: '#a78bfa',
+            neonBlue: '#6ea8fe',
+            neonViolet: '#8b7cf0',
+            textGray: '#9793ab',
           },
           fontFamily: {
-            cyber: ['Orbitron', 'sans-serif'],
-            code: ['Fira Code', 'monospace'],
-            sans: ['Inter', 'sans-serif'],
+            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
           }
         }
       }
@@ -40,14 +39,15 @@
           <i class="fa-solid fa-shield-halved text-white text-lg animate-pulse"></i>
         </div>
         <div>
-          <span class="font-cyber font-black text-xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
-          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM LEVELING ONLINE</span>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
         </div>
       </div>
       <nav class="flex flex-wrap items-center justify-center gap-4 text-sm font-cyber font-semibold tracking-wider text-textGray">
         <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
         <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
         <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
         <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
       </nav>
     </div>
@@ -57,10 +57,10 @@
     <nav class="reveal bg-cardBg/90 backdrop-blur-md neon-border-purple rounded-2xl px-3 py-2.5 flex flex-wrap items-center justify-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
       <a href="#profile" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Profile</a>
       <a href="#matrix" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Matrix</a>
-      <a href="#quests" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Quests</a>
-      <a href="#events" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Events</a>
-      <a href="#experience" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Experience</a>
-      <a href="#inventory" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Inventory</a>
+      <a href="#quests" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Education</a>
+      <a href="#events" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Leadership</a>
+      <a href="#experience" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Work</a>
+      <a href="#inventory" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Achievements</a>
     </nav>
   </div>
 
@@ -73,9 +73,9 @@
           <i class="fa-solid fa-user-astronaut text-6xl text-neonPurple animate-pulse"></i>
         </div>
         <div class="flex-1">
-          <p class="text-[10px] uppercase tracking-[0.35em] text-neonPurple font-code">HUNTER STATUS</p>
+          <p class="text-[10px] uppercase tracking-[0.35em] text-neonPurple font-code">PROFILE</p>
           <h1 class="font-cyber font-black text-3xl mt-3 text-white">Low Fang Jun</h1>
-          <p class="text-textGray mt-3 leading-relaxed">Undergraduate student of Business Information Systems. Aspiring and highly motivated, specializing in system design, data security, and web programming. Equipped with solid programming capabilities and algorithmic thinking using Python, Java, SQL, HTML, and CSS to conquer real-world commercial and technical dungeons.</p>
+          <p class="text-textGray mt-3 leading-relaxed">Undergraduate student of Business Information Systems. Aspiring and highly motivated, specializing in system design, data security, and web programming. Equipped with solid programming capabilities and algorithmic thinking using Python, Java, SQL, HTML, and CSS to tackle real-world commercial and technical challenges.</p>
           <div class="mt-5 flex flex-wrap gap-3">
             <span class="px-3 py-1 rounded-full border border-neonPurple/40 text-neonPurple text-xs font-code">BIS Analyst</span>
             <span class="px-3 py-1 rounded-full border border-neonBlue/40 text-neonBlue text-xs font-code">Software Engineer</span>
@@ -92,13 +92,13 @@
             <div class="flex justify-between"><span>Phone</span><span class="text-white">011-10574969</span></div>
             <div class="flex justify-between"><span>Address</span><span class="text-white text-right">Kuching, Sarawak, Malaysia</span></div>
             <div class="flex justify-between"><span>Attributes</span><span class="text-white">Male | Malaysian | Single</span></div>
-            <div class="flex justify-between"><span>Class</span><span class="text-white font-semibold">BIS Analyst / Software Engineer</span></div>
+            <div class="flex justify-between"><span>Role</span><span class="text-white font-semibold">BIS Analyst / Software Engineer</span></div>
           </div>
         </div>
 
         <div class="reveal lg:col-span-2 bg-darkBg/60 border border-borderNeon rounded-xl p-6">
-          <h2 class="font-cyber font-bold text-white text-sm tracking-wider">Academic Path EXP</h2>
-          <p class="text-xs text-textGray mt-3">UTAR Bachelor of Information Systems — progress is represented as CGPA and experience.</p>
+          <h2 class="font-cyber font-bold text-white text-sm tracking-wider">Academic Progress</h2>
+          <p class="text-xs text-textGray mt-3">UTAR Bachelor of Information Systems — progress is represented as CGPA and completion percentage.</p>
           <div class="mt-6 bg-darkBg/80 border border-borderNeon rounded-full p-1">
             <div class="h-3 rounded-full bg-gradient-to-r from-neonViolet to-neonPurple shadow-[0_0_10px_rgba(217,70,239,0.5)]" style="width:71.5%"></div>
           </div>
@@ -138,7 +138,7 @@
       <div class="reveal mt-8 bg-darkBg/60 border border-borderNeon rounded-2xl p-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <h2 class="font-cyber font-black text-lg text-white">Character Reference</h2>
+            <h2 class="font-cyber font-black text-lg text-white">Academic Reference</h2>
             <p class="text-textGray mt-2">Support from academic mentors and verified references.</p>
           </div>
           <div class="inline-flex items-center gap-2 rounded-full border border-neonPurple/40 bg-neonPurple/10 px-3 py-1 text-xs text-neonPurple font-code">
@@ -173,16 +173,16 @@
         <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-5 min-h-[360px] flex flex-col justify-between">
           <div>
             <div class="flex justify-between items-start border-b border-borderNeon pb-3">
-              <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-fire text-neonPurple mr-2"></i> Guild Leadership</h2>
-              <span class="text-[10px] font-code text-neonPurple px-2 py-0.5 rounded bg-neonPurple/10 border border-neonPurple/20">TEAMWORK HP</span>
+              <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-fire text-neonPurple mr-2"></i> Team Leadership</h2>
+              <span class="text-[10px] font-code text-neonPurple px-2 py-0.5 rounded bg-neonPurple/10 border border-neonPurple/20">TEAMWORK SCORE</span>
             </div>
             <div class="flex justify-between mt-4 text-[10px] font-code text-textGray">
               <div>Led Events</div>
               <div class="text-white font-bold">6+ Times</div>
             </div>
             <div class="flex justify-between mt-2 text-[10px] font-code text-textGray">
-              <div>Stat Rank</div>
-              <div class="text-white font-bold">A-Rank Chairperson</div>
+              <div>Role</div>
+              <div class="text-white font-bold">Chairperson</div>
             </div>
           </div>
           <div class="h-56 mt-4"><canvas id="leadershipChart"></canvas></div>
@@ -198,31 +198,31 @@
         <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-5 min-h-[360px] flex flex-col justify-between">
           <div>
             <div class="flex justify-between items-start border-b border-borderNeon pb-3">
-              <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-crown text-amber-400 mr-2"></i> Core Attributes</h2>
+              <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-crown text-amber-400 mr-2"></i> Core Skills</h2>
               <span class="text-[10px] font-code text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">RADAR MATRIX</span>
             </div>
             <div class="grid grid-cols-5 gap-1 mt-4 text-center text-[9px] font-cyber text-textGray">
-              <div><div class="text-white font-code text-xs font-bold">85</div><span>LOGIC(LOG)</span></div>
-              <div><div class="text-white font-code text-xs font-bold">82</div><span>FRONTEND(WEB)</span></div>
-              <div><div class="text-white font-code text-xs font-bold">80</div><span>DATABASE(DAT)</span></div>
-              <div><div class="text-white font-code text-xs font-bold">90</div><span>COLLAB(COL)</span></div>
-              <div><div class="text-white font-code text-xs font-bold">88</div><span>ANALYTICS(BIS)</span></div>
+              <div><div class="text-white font-code text-xs font-bold">85</div><span>LOGIC</span></div>
+              <div><div class="text-white font-code text-xs font-bold">82</div><span>FRONTEND</span></div>
+              <div><div class="text-white font-code text-xs font-bold">80</div><span>DATABASE</span></div>
+              <div><div class="text-white font-code text-xs font-bold">90</div><span>COLLAB</span></div>
+              <div><div class="text-white font-code text-xs font-bold">88</div><span>ANALYTICS</span></div>
             </div>
           </div>
           <div class="h-56 mt-4"><canvas id="capabilitiesChart"></canvas></div>
           <div class="mt-4 pt-3 border-t border-borderNeon/60 text-[10px] font-code text-textGray flex justify-between">
-            <span>Synergy Boost Status</span>
-            <span class="text-amber-400 font-bold">SYSTEM DRIVEN <i class="fa-solid fa-bolt"></i></span>
+            <span>Overall Trend</span>
+            <span class="text-amber-400 font-bold">CONSISTENTLY HIGH <i class="fa-solid fa-bolt"></i></span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Quests -->
+    <!-- Education -->
     <section id="quests" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Quest Board</h1>
+          <h1 class="font-cyber font-black text-3xl text-white">Education</h1>
           <p class="text-textGray mt-3">Academic paths, project achievements and learning milestones.</p>
         </div>
       </div>
@@ -231,7 +231,7 @@
         <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-6">
           <div class="flex flex-col sm:flex-row sm:justify-between gap-4">
             <div>
-              <p class="text-[10px] uppercase tracking-[0.35em] text-neonPurple font-code mb-3">Main Quest</p>
+              <p class="text-[10px] uppercase tracking-[0.35em] text-neonPurple font-code mb-3">Primary Degree</p>
               <h2 class="font-cyber font-bold text-xl text-white">Universiti Tunku Abdul Rahman (UTAR)</h2>
               <p class="text-xs text-textGray mt-1">2023 - 2026 | Bachelor of Information Systems (Honours) Business Information Systems</p>
             </div>
@@ -242,14 +242,14 @@
             <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
               <div class="flex justify-between text-xs font-bold text-white">
                 <span>UTAR Event Planning Management System (Final Year Project)</span>
-                <span class="text-neonPurple font-code">EPIC QUEST</span>
+                <span class="text-neonPurple font-code">FINAL YEAR PROJECT</span>
               </div>
               <p class="text-xs text-textGray">Built a web-based system to assist UTAR event organizers and students with event registration and management. Enabled UTAR staff to review and approve event requests, improving workflow efficiency. Utilized HTML, CSS, JavaScript, and SQL for front-end interface and database integration.</p>
             </div>
             <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
               <div class="flex justify-between text-xs font-bold text-white">
                 <span>Fundamentals of Business System (MonsoonSIM)</span>
-                <span class="text-neonBlue font-code">SIMULATION QUEST</span>
+                <span class="text-neonBlue font-code">SIMULATION PROJECT</span>
               </div>
               <p class="text-xs text-textGray">Managed Low Family Juice's B2B beverage sales using MonsoonSIM, handling inventory, procurement, and finance in a simulated business environment. Gained practical experience in business process management and decision-making.</p>
             </div>
@@ -259,7 +259,7 @@
         <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-6">
           <div class="flex flex-col sm:flex-row sm:justify-between gap-4">
             <div>
-              <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-400 font-code mb-3">Sub Quest</p>
+              <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-400 font-code mb-3">Prior Education</p>
               <h2 class="font-cyber font-bold text-xl text-white">International College of Advanced Technology Sarawak (iCATS)</h2>
               <p class="text-xs text-textGray mt-1">2020 - 2023 | Diploma in Software Engineering</p>
             </div>
@@ -270,14 +270,14 @@
             <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
               <div class="flex justify-between text-xs font-bold text-white">
                 <span>Library Management System (Python Project)</span>
-                <span class="text-emerald-400 font-code">PYTHON SKILL UP</span>
+                <span class="text-emerald-400 font-code">PYTHON PROJECT</span>
               </div>
               <p class="text-xs text-textGray">Developed a library management system using Python to handle book records, user registrations, borrowing, and returns. Implemented data validation, reporting, and basic file/database storage, gaining experience in object-oriented programming and practical Python applications.</p>
             </div>
             <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
               <div class="flex justify-between text-xs font-bold text-white">
                 <span>Frontend Application Development — Tourism Websites</span>
-                <span class="text-emerald-400 font-code">FRONTEND SKILL UP</span>
+                <span class="text-emerald-400 font-code">FRONTEND PROJECT</span>
               </div>
               <p class="text-xs text-textGray">Developed interactive tourism websites using HTML, CSS, and JavaScript to structure content and create a user-friendly and visually appealing interface for travelers. Learned responsive design and basic front-end programming techniques.</p>
             </div>
@@ -290,7 +290,7 @@
     <section id="events" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Guild Raid Archives</h1>
+          <h1 class="font-cyber font-black text-3xl text-white">Leadership & Events</h1>
           <p class="text-textGray mt-3">Organizing and leadership history across student events and team activities.</p>
         </div>
       </div>
@@ -363,7 +363,7 @@
     <section id="experience" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Gold Farming Quests</h1>
+          <h1 class="font-cyber font-black text-3xl text-white">Work Experience</h1>
           <p class="text-textGray mt-3">Working experience and part-time roles that supported teamwork, sales, and operational reliability.</p>
         </div>
       </div>
@@ -439,12 +439,12 @@
       </div>
     </section>
 
-    <!-- Inventory -->
+    <!-- Achievements -->
     <section id="inventory" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Achievements & Inventory</h1>
-          <p class="text-textGray mt-3">Awards, skills and equipped abilities from the resume dashboard.</p>
+          <h1 class="font-cyber font-black text-3xl text-white">Achievements & Skills</h1>
+          <p class="text-textGray mt-3">Awards, certifications, and core skills from the resume dashboard.</p>
         </div>
       </div>
 
@@ -468,34 +468,29 @@
 
       <div class="reveal-group mt-6 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
         <div class="reveal bg-darkBg/80 p-4 rounded-xl border border-borderNeon hover:border-neonPurple hover:scale-105 transition-all duration-300 text-center relative">
-          <div class="absolute top-1.5 right-1.5 text-[9px] font-code text-neonPurple bg-neonPurple/10 px-1 rounded">SSR</div>
           <div class="w-12 h-12 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple text-xl mb-3"><i class="fa-brands fa-python"></i></div>
           <span class="block font-cyber font-bold text-xs text-white">Python 3</span>
-          <span class="block text-[9px] text-textGray font-code mt-0.5">Core Weapon</span>
+          <span class="block text-[9px] text-textGray font-code mt-0.5">Primary Language</span>
         </div>
         <div class="reveal bg-darkBg/80 p-4 rounded-xl border border-borderNeon hover:border-neonBlue hover:scale-105 transition-all duration-300 text-center relative">
-          <div class="absolute top-1.5 right-1.5 text-[9px] font-code text-neonBlue bg-neonBlue/10 px-1 rounded">SR</div>
           <div class="w-12 h-12 rounded-full bg-neonBlue/10 flex items-center justify-center text-neonBlue text-xl mb-3"><i class="fa-solid fa-database"></i></div>
           <span class="block font-cyber font-bold text-xs text-white">SQL / DB</span>
-          <span class="block text-[9px] text-textGray font-code mt-0.5">Store & Guide</span>
+          <span class="block text-[9px] text-textGray font-code mt-0.5">Database</span>
         </div>
         <div class="reveal bg-darkBg/80 p-4 rounded-xl border border-borderNeon hover:border-amber-400 hover:scale-105 transition-all duration-300 text-center relative">
-          <div class="absolute top-1.5 right-1.5 text-[9px] font-code text-amber-400 bg-amber-400/10 px-1 rounded">R</div>
           <div class="w-12 h-12 rounded-full bg-amber-400/10 flex items-center justify-center text-amber-400 text-xl mb-3"><i class="fa-brands fa-html5"></i></div>
           <span class="block font-cyber font-bold text-xs text-white">HTML5 & CSS3</span>
-          <span class="block text-[9px] text-textGray font-code mt-0.5">Structure Shield</span>
+          <span class="block text-[9px] text-textGray font-code mt-0.5">Markup & Styling</span>
         </div>
         <div class="reveal bg-darkBg/80 p-4 rounded-xl border border-borderNeon hover:border-emerald-400 hover:scale-105 transition-all duration-300 text-center relative">
-          <div class="absolute top-1.5 right-1.5 text-[9px] font-code text-emerald-400 bg-emerald-400/10 px-1 rounded">SR</div>
           <div class="w-12 h-12 rounded-full bg-emerald-400/10 flex items-center justify-center text-emerald-400 text-xl mb-3"><i class="fa-brands fa-java"></i></div>
           <span class="block font-cyber font-bold text-xs text-white">Java OOP</span>
-          <span class="block text-[9px] text-textGray font-code mt-0.5">Object Scroll</span>
+          <span class="block text-[9px] text-textGray font-code mt-0.5">OOP Language</span>
         </div>
         <div class="reveal bg-darkBg/80 p-4 rounded-xl border border-borderNeon hover:border-rose-400 hover:scale-105 transition-all duration-300 text-center relative">
-          <div class="absolute top-1.5 right-1.5 text-[9px] font-code text-rose-400 bg-rose-400/10 px-1 rounded">SSR</div>
           <div class="w-12 h-12 rounded-full bg-rose-400/10 flex items-center justify-center text-rose-400 text-xl mb-3"><i class="fa-solid fa-chart-pie"></i></div>
           <span class="block font-cyber font-bold text-xs text-white">MonsoonSIM</span>
-          <span class="block text-[9px] text-textGray font-code mt-0.5">Business Grail</span>
+          <span class="block text-[9px] text-textGray font-code mt-0.5">Simulation Tool</span>
         </div>
       </div>
     </section>

@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gallery | Low Fang Jun</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css" />
   <script>
@@ -13,18 +12,18 @@
       theme: {
         extend: {
           colors: {
-            darkBg: '#09090e',
-            cardBg: '#12121e',
-            borderNeon: '#2d1b4e',
-            neonPurple: '#d946ef',
-            neonBlue: '#3b82f6',
-            neonViolet: '#8b5cf6',
-            textGray: '#a0aec0',
+            darkBg: '#0a0a0e',
+            cardBg: '#17151f',
+            borderNeon: '#2a2833',
+            neonPurple: '#a78bfa',
+            neonBlue: '#6ea8fe',
+            neonViolet: '#8b7cf0',
+            textGray: '#9793ab',
           },
           fontFamily: {
-            cyber: ['Orbitron', 'sans-serif'],
-            code: ['Fira Code', 'monospace'],
-            sans: ['Inter', 'sans-serif'],
+            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
           }
         }
       }
@@ -39,24 +38,25 @@
           <i class="fa-solid fa-shield-halved text-white text-lg animate-pulse"></i>
         </div>
         <div>
-          <span class="font-cyber font-black text-xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
-          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM LEVELING ONLINE</span>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
         </div>
       </div>
       <nav class="flex flex-wrap items-center justify-center gap-4 text-sm font-cyber font-semibold tracking-wider text-textGray">
         <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
         <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
         <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
         <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
       </nav>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 mt-8 space-y-6">
+  <main class="max-w-2xl mx-auto px-4 mt-8 space-y-6">
     <section class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Screenshot Archive</h1>
+          <h1 class="font-cyber font-black text-3xl text-white">Gallery</h1>
           <p class="text-textGray mt-3">Event moments, project screenshots, and personal snapshots from the journey so far.</p>
         </div>
         <div id="auth-control" class="flex items-center gap-3"></div>
@@ -66,57 +66,65 @@
       </p>
     </section>
 
-    <section class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <h2 class="font-cyber font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-people-group text-amber-400"></i> Event & Work Photos</h2>
-      <p class="text-xs text-textGray mt-1">Snapshots from event organizing, chairperson duties, and part-time roles.</p>
-      <div id="gallery-events-grid" class="reveal-group mt-5 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+    <section class="reveal bg-cardBg/90 backdrop-blur-sm p-3 rounded-2xl neon-border-purple flex flex-wrap items-center justify-between gap-3">
+      <div id="feed-filters" class="flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
+        <button data-filter="all" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">All</button>
+        <button data-filter="personal" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Personal</button>
+        <button data-filter="event" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Event</button>
+        <button data-filter="work" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Work</button>
+        <button data-filter="project" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Project</button>
+        <button data-filter="public" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Public</button>
+        <button data-filter="private" class="filter-tab hidden px-3 py-1.5 rounded-full hover:text-rose-400 hover:bg-rose-400/10 transition-colors">Private</button>
+      </div>
+      <button id="new-post-btn" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+        <i class="fa-solid fa-plus mr-1.5"></i> NEW POST
+      </button>
     </section>
 
-    <section class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <h2 class="font-cyber font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-laptop-code text-neonBlue"></i> Project Screenshots</h2>
-      <p class="text-xs text-textGray mt-1">Interfaces and outputs from builds like the UTAR Event Planning Management System.</p>
-      <div id="gallery-projects-grid" class="reveal-group mt-5 grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-    </section>
+    <div id="feed-container" class="space-y-6"></div>
+    <p id="feed-empty" class="hidden text-center text-xs font-code text-textGray py-10">No posts here yet.</p>
+  </main>
 
-    <section class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <h2 class="font-cyber font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-user-astronaut text-neonPurple"></i> Personal</h2>
-      <p class="text-xs text-textGray mt-1">A few personal snapshots to put a face to the hunter profile.</p>
-      <div id="gallery-personal-grid" class="reveal-group mt-5 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    </section>
-
-    <section id="gallery-private-section" class="hidden reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <h2 class="font-cyber font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-lock text-rose-400"></i> Private</h2>
-      <p class="text-xs text-textGray mt-1">Visible only to approved accounts.</p>
-      <div id="gallery-private-grid" class="reveal-group mt-5 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    </section>
-
-    <section id="gallery-upload-section" class="hidden reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <h2 class="font-cyber font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i> Upload Photo</h2>
-      <p class="text-xs text-textGray mt-1">Owner-only. Uploads go straight to Storage and appear above once done.</p>
-      <form id="upload-form" class="mt-5 flex flex-col sm:flex-row sm:items-end gap-4">
-        <div class="flex-1">
-          <label class="block text-xs font-code text-textGray mb-1.5" for="upload-file">File</label>
-          <input id="upload-file" type="file" accept="image/*" required class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
+  <!-- New Post modal -->
+  <div id="post-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="post-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md bg-cardBg neon-border-purple rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-cyber font-bold text-lg text-white">New Post</h2>
+        <button id="post-modal-close" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <form id="post-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5" for="post-file">Image</label>
+          <input id="post-file" type="file" accept="image/*" required class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
         </div>
         <div>
-          <label class="block text-xs font-code text-textGray mb-1.5" for="upload-category">Category</label>
-          <select id="upload-category" class="bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white">
-            <option value="personal">Personal</option>
-            <option value="event">Event & Work</option>
-            <option value="project">Project</option>
-          </select>
+          <label class="block text-xs font-code text-textGray mb-1.5" for="post-caption">Caption</label>
+          <textarea id="post-caption" rows="2" placeholder="Say something about this post..." class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60"></textarea>
         </div>
-        <div class="flex items-center gap-4 text-xs font-code text-textGray">
-          <label class="flex items-center gap-1.5"><input type="radio" name="upload-visibility" value="public" checked> Public</label>
-          <label class="flex items-center gap-1.5"><input type="radio" name="upload-visibility" value="private"> Private</label>
+        <div class="flex items-center gap-4">
+          <div class="flex-1">
+            <label class="block text-xs font-code text-textGray mb-1.5" for="post-category">Category</label>
+            <select id="post-category" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white">
+              <option value="personal">Personal</option>
+              <option value="event">Event</option>
+              <option value="work">Work</option>
+              <option value="project">Project</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-4 text-xs font-code text-textGray">
+            <label class="flex items-center gap-1.5"><input type="radio" name="post-visibility" value="public" checked> Public</label>
+            <label class="flex items-center gap-1.5"><input type="radio" name="post-visibility" value="private"> Private</label>
+          </div>
         </div>
-        <button type="submit" class="px-5 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
-          UPLOAD
+        <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
+          POST
         </button>
+        <p id="post-status" class="text-xs font-code text-textGray text-center"></p>
       </form>
-      <p id="upload-status" class="mt-3 text-xs font-code text-textGray"></p>
-    </section>
-  </main>
+    </div>
+  </div>
+
   <script src="scripts.js" defer></script>
   <script type="module" src="gallery.js"></script>
 </body>

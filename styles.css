@@ -7,32 +7,34 @@ html {
 }
 
 body {
-  background-color: #09090e;
+  background-color: #0a0a0e;
   color: #ffffff;
-  font-family: 'Inter', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Glass card: soft translucency + blur + hairline border, no colored glow */
 .neon-border-purple {
-  box-shadow: 0 0 10px rgba(217, 70, 239, 0.15), inset 0 0 10px rgba(217, 70, 239, 0.1);
-  border: 1px solid rgba(217, 70, 239, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.55);
 }
 
 .neon-border-purple:hover {
-  box-shadow: 0 0 18px rgba(217, 70, 239, 0.35), inset 0 0 12px rgba(217, 70, 239, 0.15);
-  border-color: rgba(217, 70, 239, 0.6);
-  transition: all 0.3s ease;
+  border-color: rgba(255, 255, 255, 0.16);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .neon-text-purple {
-  text-shadow: 0 0 8px rgba(217, 70, 239, 0.6);
+  text-shadow: none;
 }
 
 .neon-text-blue {
-  text-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+  text-shadow: none;
 }
 
 .neon-bg-purple {
-  background: radial-gradient(circle, rgba(217, 70, 239, 0.2) 0%, rgba(9, 9, 14, 0) 70%);
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.14) 0%, rgba(10, 10, 14, 0) 70%);
 }
 
 ::-webkit-scrollbar {
@@ -44,19 +46,20 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2d1b4e;
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8b5cf6;
+  background: #a78bfa;
 }
 
+/* Soft ambient glow instead of a grid-paper texture */
 .grid-bg {
-  background-size: 40px 40px;
+  background-repeat: no-repeat;
   background-image:
-    linear-gradient(to right, rgba(45, 27, 78, 0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(45, 27, 78, 0.15) 1px, transparent 1px);
+    radial-gradient(1100px 600px at 12% -10%, rgba(167, 139, 250, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(110, 168, 254, 0.07), transparent 55%);
 }
 
 /* Scroll-reveal: elements fade + slide up into view. Toggled by scripts.js via IntersectionObserver. */
