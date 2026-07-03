@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Contact | Low Fang Jun</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#17151f">
+  <link rel="apple-touch-icon" href="images/me3.jpeg">
   <script>
     tailwind.config = {
       theme: {
@@ -30,7 +34,7 @@
     }
   </script>
 </head>
-<body class="bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
+<body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
   <header class="max-w-7xl mx-auto px-4 pt-6">
     <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-3">
@@ -51,6 +55,7 @@
         <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
         <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
         <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
+        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
       </nav>
     </div>
   </header>
@@ -96,5 +101,6 @@
     </section>
   </main>
   <script src="scripts.js" defer></script>
+  <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

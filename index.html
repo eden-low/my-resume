@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Low Fang Jun - Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#17151f">
+    <link rel="apple-touch-icon" href="images/me3.jpeg">
     <script>
         tailwind.config = {
             theme: {
@@ -30,7 +34,7 @@
     </script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
+<body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
     <header class="max-w-7xl mx-auto px-4 pt-6">
         <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
@@ -51,6 +55,7 @@
                 <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
                 <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
                 <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
+                <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
             </nav>
             <div class="px-4 py-1.5 bg-gradient-to-r from-neonViolet/20 to-neonPurple/20 border border-neonPurple/40 rounded-full text-xs font-cyber font-bold tracking-wider text-neonPurple">
                 DEVELOPER MODE: ACTIVE
@@ -176,9 +181,17 @@
                     <p class="text-[11px] text-textGray mt-1 leading-relaxed">Email, phone, and location</p>
                 </div>
             </a>
+            <a href="settings.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonViolet/40 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-neonViolet/10 text-neonViolet flex items-center justify-center text-sm"><i class="fa-solid fa-gear"></i></div>
+                <div class="mt-4">
+                    <p class="text-sm font-semibold">Settings</p>
+                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Profile, preferences &amp; login history</p>
+                </div>
+            </a>
         </section>
     </main>
     <script src="scripts.js" defer></script>
+    <script type="module" src="auth-guard.js"></script>
     <script type="module">
         import { auth } from "./firebase-init.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";

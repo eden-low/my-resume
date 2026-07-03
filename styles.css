@@ -97,3 +97,48 @@ body {
   transform-style: preserve-3d;
   will-change: transform;
 }
+
+/* Hides the page until auth-guard.js (or login.html's own check) resolves the auth state,
+   avoiding a flash of gated content before a redirect. visibility (not display) keeps layout
+   intact so scripts.js's IntersectionObserver can still register .reveal elements while hidden. */
+body.auth-check-pending {
+  visibility: hidden;
+}
+
+/* Light theme: a simple, functional override, not a full redesign. Uses attribute substring
+   selectors (e.g. [class*="bg-cardBg"]) so Tailwind's opacity-suffixed utility classes
+   (bg-cardBg/90, bg-darkBg/60, etc.) are all caught by a single rule. Toggled by settings.js
+   writing localStorage + the theme-preload inline script in each page's <head>. */
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="light"] body {
+  background-color: #f5f5f7 !important;
+  color: #16151a !important;
+}
+
+html[data-theme="light"] .grid-bg {
+  background-image:
+    radial-gradient(1100px 600px at 12% -10%, rgba(167, 139, 250, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(110, 168, 254, 0.08), transparent 55%);
+}
+
+html[data-theme="light"] [class*="bg-darkBg"] { background-color: #f5f5f7 !important; }
+html[data-theme="light"] [class*="bg-cardBg"] { background-color: rgba(255, 255, 255, 0.85) !important; }
+html[data-theme="light"] [class*="text-white"] { color: #16151a !important; }
+html[data-theme="light"] [class*="text-textGray"] { color: #6b6878 !important; }
+html[data-theme="light"] [class*="border-borderNeon"] { border-color: rgba(0, 0, 0, 0.10) !important; }
+html[data-theme="light"] [class*="divide-borderNeon"] > * + * { border-color: rgba(0, 0, 0, 0.10) !important; }
+
+html[data-theme="light"] .neon-border-purple {
+  box-shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #eceaf0;
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+}

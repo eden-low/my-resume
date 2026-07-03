@@ -1,11 +1,12 @@
 # LFJ Portfolio — Dark Glass System Dashboard
 
-An 8-page portfolio site for **Low Fang Jun**, styled as a dark glassmorphism "system dashboard" (near-black canvas, translucent blurred cards, a single soft violet accent, Apple system fonts) — a deliberate move away from the earlier neon-cyber "hunter status" look, described further below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no dependencies to install.
+A 10-page **login-first** personal system for **Low Fang Jun**, styled as a dark glassmorphism "system dashboard" (near-black canvas, translucent blurred cards, a single soft violet accent, Apple system fonts) — a deliberate move away from the earlier neon-cyber "hunter status" look, described further below. Every page requires Google sign-in via `login.html` before it renders — see [Login gate](#login-gate-auth-guardjs--loginhtml) below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no dependencies to install. Includes a minimal PWA layer (`manifest.json` + `service-worker.js`) for installability.
 
 ## Pages
 
 | Page | File | Content |
 |---|---|---|
+| Login | [login.html](login.html) | The one page reachable while signed out — "Sign in with Google," then redirects into the app |
 | Home | [index.html](index.html) | Dashboard layout: identity strip, a System Status panel (live Firebase Auth session state), a live Weather widget (Kuching, OpenWeatherMap), and quick-link cards to the other pages |
 | Resume | [resume.html](resume.html) | Combined resume — Profile, Matrix, Education, Leadership & Events, Work Experience, Achievements & Skills sections with a sticky in-page sub-nav |
 | Gallery | [gallery.html](gallery.html) | Instagram-style feed of Firebase-backed posts — filter tabs by category/visibility; signing in as the owner reveals the Private tab and a "New Post" modal (see below) |
@@ -14,6 +15,7 @@ An 8-page portfolio site for **Low Fang Jun**, styled as a dark glassmorphism "s
 | Timeline | [timeline.html](timeline.html) | Life events grouped by year — type/visibility filter tabs, search by year or text, owner-only "New Event" modal, same public/private model as Gallery |
 | Dashboard | [dashboard.html](dashboard.html) | Read-only analytics rollup across Gallery, Expenses, and Journal, plus a System Status panel (session, account age, current weather) — no writes on this page |
 | Contact | [contact.html](contact.html) | Email / phone / location, with a one-click "send message" CTA |
+| Settings | [settings.html](settings.html) | Profile, preferences (theme/default city/default privacy), and — owner-only — login history and an Access Management panel for granting/revoking private-content access |
 
 ## Running locally
 
@@ -23,17 +25,22 @@ No install or build required — just open [index.html](index.html) in a browser
 npx serve .
 ```
 
+## Login gate: `auth-guard.js` + `login.html`
+
+Every page except `login.html` is gated: a single `<script type="module" src="auth-guard.js"></script>` tag (dropped right after `scripts.js`) checks `onAuthStateChanged` and redirects to `login.html?redirect=<page>` if signed out, or reveals the page (removing a static `auth-check-pending` body class that starts every protected page hidden via `visibility: hidden` in `styles.css`) once a user is confirmed. `login.html` has the inverse logic inline — redirect away if already signed in, otherwise show a "Sign in with Google" button. A successful sign-in writes a `login_logs` doc (`uid`, `email`, `loginTime`, `device`, `page`) before redirecting into the app. This gate is a UX convenience, not the security boundary — real access control is (and remains) enforced by `firestore.rules`/`storage.rules`.
+
 ## Tech stack
 
 - HTML5 + [Tailwind CSS](https://tailwindcss.com/) (loaded via CDN, configured inline in each page's `<script>` block)
-- [Chart.js](https://www.chartjs.org/) (loaded via CDN on `resume.html` and `expenses.html`) for charts
+- [Chart.js](https://www.chartjs.org/) (loaded via CDN on `resume.html`, `expenses.html`, and `dashboard.html`) for charts
 - [marked.js](https://marked.js.org/) (loaded via CDN on `journal.html`) for lightweight markdown rendering
 - [Font Awesome 6](https://fontawesome.com/) for icons
 - System font stacks only — no webfont loading: `-apple-system`/SF Pro for UI text, `ui-monospace`/SF Mono for data and labels
-- [Firebase](https://firebase.google.com/) (Auth, Firestore, Storage) on `gallery.html`, `journal.html`, `expenses.html`, `timeline.html`, `dashboard.html`, and the homepage's session widget, loaded as ES modules straight from `gstatic.com` — no npm install, no bundler
+- [Firebase](https://firebase.google.com/) (Auth, Firestore, Storage) on every page via `firebase-init.js`, `auth-guard.js`, `login.html`, `settings.js`, and each feature page's own module, loaded as ES modules straight from `gstatic.com` — no npm install, no bundler
 - [OpenWeatherMap](https://openweathermap.org/) Current Weather API for the homepage weather widget (free-tier key embedded client-side in `index.html`, same trust model as the Firebase config — see Design system below)
-- Shared custom styles in [styles.css](styles.css) (glass card treatment, ambient background glow, scrollbar, hero parallax layer)
-- Shared behavior in [scripts.js](scripts.js) (scroll-reveal animations + the hero mouse-parallax tilt, unused now that `index.html` is a dashboard rather than a photo hero — see Architecture in CLAUDE.md)
+- Shared custom styles in [styles.css](styles.css) (glass card treatment, ambient background glow, scrollbar, hero parallax layer, the `auth-check-pending` gate style, and the light-mode override block)
+- Shared behavior in [scripts.js](scripts.js) (scroll-reveal animations, the hero mouse-parallax tilt — unused now that `index.html` is a dashboard rather than a photo hero — and service-worker registration)
+- A minimal PWA layer: [manifest.json](manifest.json) + [service-worker.js](service-worker.js) (network-first with cache fallback, explicitly bypassing Firebase/CDN/weather hosts so it never interferes with live requests)
 
 ## Design system
 
@@ -43,7 +50,7 @@ The site moved from a neon-cyber "hunter status" look to a dark glassmorphism da
 
 `gallery.html` renders a single reverse-chronological feed of post cards (image, caption, category tag, public/private badge, timestamp), not fixed category grids. [firebase-init.js](firebase-init.js) sets up the Firebase app/auth/Firestore/Storage handles (reused by any future page that needs login), and [gallery.js](gallery.js) handles sign-in, fetches `photos` Firestore docs (public always, private only when authorized), merges + sorts them client-side by `uploadedAt` (deliberately not a Firestore `orderBy`, to avoid needing a composite index), and renders them into the feed. A filter tab bar (All / Personal / Event / Work / Project / Public / Private) re-filters the already-fetched posts in memory — no extra Firestore reads per click. The Private tab and the "New Post" button/modal only appear once signed in as the owner (`jjun8647@gmail.com`, see `OWNER_EMAIL` in `firebase-init.js`); the modal uploads the file to Storage then writes the Firestore doc (now including a user-entered `caption`).
 
-Access to private posts beyond the owner is controlled by an `allowedUsers` Firestore collection (doc ID = lowercase email) — inviting someone is just adding a document in the Firebase Console, no code changes needed. [firestore.rules](firestore.rules) and [storage.rules](storage.rules) are the source of truth for this access model; paste them into the Firebase Console's Rules tabs after any change (there's no Firebase CLI/deploy step wired up — keeping the "no build tools" philosophy).
+Access to private posts beyond the owner is controlled by an `allowedUsers` Firestore collection (doc ID = lowercase email) — inviting someone is now done from Settings' Access Management panel (Promote/Demote), no Firebase Console visit needed. [firestore.rules](firestore.rules) and [storage.rules](storage.rules) are the source of truth for this access model; after editing either, deploy with `npx firebase-tools deploy --only firestore:rules,storage` (see [firebase.json](firebase.json)/[.firebaserc](.firebaserc) — a dev-only CLI tool, the site itself stays buildless).
 
 Because posts are fetched at runtime, the feed is empty until the owner signs in and creates posts through the New Post modal.
 
@@ -62,6 +69,10 @@ Because posts are fetched at runtime, the feed is empty until the owner signs in
 ## Dashboard: read-only analytics
 
 `dashboard.html` has no create/edit UI at all — [dashboard.js](dashboard.js) just fetches from `photos`, `expenses`, and `journals` (public always, private only when authorized, same pattern as everywhere else) and computes aggregates client-side: Gallery totals/top category/last upload, Expense month/year/average-daily/top-category totals plus three Chart.js charts (monthly line, category pie, weekly bar), and Journal totals/mood/top-tags. A System Status section reads directly off `auth.currentUser.metadata` (`creationTime`, `lastSignInTime`) for account age and last sign-in, and does a simple (non-geolocated) OpenWeatherMap call for a Kuching weather readout. Because it only *reads* existing collections and the Auth user object, no new Firestore/Storage write rules were needed for this page.
+
+## Settings: profile, preferences & login history
+
+`settings.html` has four sections. **Profile** is read-only off `auth.currentUser` (name, email, avatar, account created/last sign-in) plus the site's one Sign Out button. **Preferences** (theme, default weather city, default post visibility) are stored client-side in `localStorage`, not Firestore — there's no per-user settings collection; the theme choice applies on the next reload. **System Logs** and **Access Management** are owner-only: System Logs lists the last 20 `login_logs` docs newest-first; Access Management lists every distinct email that has ever signed in (derived from the full `login_logs` collection) with a Promote/Demote control per row that adds/removes the corresponding `allowedUsers/{email}` doc — this replaces the previous manual Firebase-Console-only workflow for managing private-content access.
 
 ## Structure notes
 

@@ -44,3 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
     layer.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
   });
 });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(console.error);
+  });
+}

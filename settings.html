@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings | Low Fang Jun</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#17151f">
+  <link rel="apple-touch-icon" href="images/me3.jpeg">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            darkBg: '#0a0a0e',
+            cardBg: '#17151f',
+            borderNeon: '#2a2833',
+            neonPurple: '#a78bfa',
+            neonBlue: '#6ea8fe',
+            neonViolet: '#8b7cf0',
+            textGray: '#9793ab',
+          },
+          fontFamily: {
+            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
+  <header class="max-w-7xl mx-auto px-4 pt-6">
+    <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonViolet to-neonPurple flex items-center justify-center shadow-lg shadow-neonPurple/20">
+          <i class="fa-solid fa-shield-halved text-white text-lg animate-pulse"></i>
+        </div>
+        <div>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
+        </div>
+      </div>
+      <nav class="flex flex-wrap items-center justify-center gap-4 text-sm font-cyber font-semibold tracking-wider text-textGray">
+        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
+        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
+        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
+        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> Journal</a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
+        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
+        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
+        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
+        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 mt-8 space-y-6">
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <h1 class="font-cyber font-semibold text-2xl">Settings</h1>
+      <p class="text-textGray mt-2 text-sm">Profile, preferences, and system logs.</p>
+    </section>
+
+    <!-- Profile -->
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Profile</p>
+      <div class="flex items-center gap-4">
+        <img id="profile-avatar" src="" alt="" class="w-14 h-14 rounded-full border border-borderNeon object-cover hidden">
+        <div class="w-14 h-14 rounded-full bg-neonPurple/10 border border-borderNeon flex items-center justify-center text-neonPurple hidden" id="profile-avatar-fallback">
+          <i class="fa-solid fa-user text-xl"></i>
+        </div>
+        <div>
+          <p id="profile-name" class="font-semibold">&mdash;</p>
+          <p id="profile-email" class="text-xs text-textGray font-code mt-0.5">&mdash;</p>
+        </div>
+      </div>
+      <div class="divide-y divide-borderNeon/60 text-sm mt-5">
+        <div class="flex items-center justify-between py-2.5">
+          <span class="text-textGray">Account created</span>
+          <span id="profile-created" class="font-medium">&mdash;</span>
+        </div>
+        <div class="flex items-center justify-between py-2.5">
+          <span class="text-textGray">Last sign-in</span>
+          <span id="profile-last-login" class="font-medium">&mdash;</span>
+        </div>
+      </div>
+      <button id="signout-btn" class="mt-5 px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-rose-400 hover:text-rose-400 transition-all">
+        <i class="fa-solid fa-arrow-right-from-bracket mr-1.5"></i> SIGN OUT
+      </button>
+    </section>
+
+    <!-- Preferences -->
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Preferences</p>
+      <div class="divide-y divide-borderNeon/60 text-sm">
+        <div class="flex items-center justify-between py-3 gap-4">
+          <div>
+            <p class="font-medium">Theme</p>
+            <p class="text-xs text-textGray mt-0.5">Applies on next reload.</p>
+          </div>
+          <div id="theme-toggle" class="flex items-center gap-1 bg-darkBg/60 border border-borderNeon rounded-full p-1 text-xs font-code">
+            <button data-theme-choice="dark" class="theme-choice-btn px-3 py-1.5 rounded-full transition-colors">Dark</button>
+            <button data-theme-choice="light" class="theme-choice-btn px-3 py-1.5 rounded-full transition-colors">Light</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between py-3 gap-4">
+          <div class="flex-1">
+            <label for="default-city" class="font-medium block">Default weather city</label>
+            <p class="text-xs text-textGray mt-0.5">Fallback used if location access is denied.</p>
+          </div>
+          <input id="default-city" type="text" placeholder="Kuching,MY" class="w-40 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+        </div>
+        <div class="flex items-center justify-between py-3 gap-4">
+          <div>
+            <p class="font-medium">Default privacy for new posts</p>
+            <p class="text-xs text-textGray mt-0.5">Pre-selected visibility in Gallery/Journal/Expenses/Timeline forms.</p>
+          </div>
+          <div id="visibility-toggle" class="flex items-center gap-1 bg-darkBg/60 border border-borderNeon rounded-full p-1 text-xs font-code">
+            <button data-visibility-choice="public" class="visibility-choice-btn px-3 py-1.5 rounded-full transition-colors">Public</button>
+            <button data-visibility-choice="private" class="visibility-choice-btn px-3 py-1.5 rounded-full transition-colors">Private</button>
+          </div>
+        </div>
+      </div>
+      <button id="save-preferences-btn" class="mt-5 px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
+        SAVE PREFERENCES
+      </button>
+      <p id="preferences-status" class="mt-2 text-xs font-code text-textGray"></p>
+    </section>
+
+    <!-- System Logs (owner only) -->
+    <section id="system-logs-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">System Logs &mdash; Login History</p>
+      <div id="login-logs-list" class="space-y-2 text-sm"></div>
+      <p id="login-logs-empty" class="hidden text-xs font-code text-textGray py-6 text-center">No login history yet.</p>
+    </section>
+
+    <!-- Access Management (owner only) -->
+    <section id="access-management-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Access Management</p>
+      <p class="text-xs text-textGray mb-4">Everyone who has ever signed in. Promote to grant private-content access, demote to revoke it.</p>
+      <div id="access-list" class="space-y-2 text-sm"></div>
+      <p id="access-empty" class="hidden text-xs font-code text-textGray py-6 text-center">No signed-in users yet.</p>
+    </section>
+  </main>
+
+  <script src="scripts.js" defer></script>
+  <script type="module" src="auth-guard.js"></script>
+  <script type="module" src="settings.js"></script>
+</body>
+</html>
