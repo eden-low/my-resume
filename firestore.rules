@@ -1,22 +1,61 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+    }
+    function isFriend() {
+      return request.auth != null
+             && exists(/databases/$(database)/documents/friends/$(request.auth.token.email));
+    }
+    // Who may create their own private content (own expenses/journal/photos/etc.) —
+    // the owner, or anyone the owner has approved into the friends whitelist.
+    function canParticipate() {
+      return isOwner() || isFriend();
+    }
+    function isMineOrPublic(data) {
+      return request.auth != null && (data.uid == request.auth.uid || data.visibility == 'public');
+    }
+    // Same as isMineOrPublic, plus a fallback to the pre-v2.0 `uploadedBy` field so photos
+    // created before the `uid` rename still read/update correctly without a data migration.
+    function isPhotoMineOrPublic(data) {
+      return request.auth != null
+             && (data.uid == request.auth.uid || data.uploadedBy == request.auth.uid || data.visibility == 'public');
+    }
     function canReadPost(photoId) {
       let post = get(/databases/$(database)/documents/photos/$(photoId)).data;
-      return post.visibility == 'public'
-             || (request.auth != null && (
-                  request.auth.token.email == 'jjun8647@gmail.com'
-                  || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
-                ));
+      return isPhotoMineOrPublic(post);
+    }
+
+    // Always-private: financial data has no "public" story.
+    match /expenses/{expenseId} {
+      allow read, update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /journals/{journalId} {
+      allow read: if isMineOrPublic(resource.data);
+      allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /life_events/{eventId} {
+      allow read: if isMineOrPublic(resource.data);
+      allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /habits/{habitId} {
+      allow read: if isMineOrPublic(resource.data);
+      allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
     }
 
     match /photos/{photoId} {
-      allow read: if resource.data.visibility == 'public'
-                  || (request.auth != null && (
-                       request.auth.token.email == 'jjun8647@gmail.com'
-                       || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
-                     ));
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+      allow read: if isPhotoMineOrPublic(resource.data);
+      allow update, delete: if request.auth != null
+                             && (resource.data.uid == request.auth.uid || resource.data.uploadedBy == request.auth.uid);
+      allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
 
       match /likes/{uid} {
         allow read: if canReadPost(photoId);
@@ -30,57 +69,41 @@ service cloud.firestore {
         allow update, delete: if false;
       }
       match /views/{viewId} {
-        allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+        // Only the post's own owner needs to read view analytics for their post.
+        allow read: if request.auth != null && get(/databases/$(database)/documents/photos/$(photoId)).data.uid == request.auth.uid;
         allow create: if request.auth != null
                        && request.auth.uid == request.resource.data.viewerUid
                        && canReadPost(photoId);
         allow update, delete: if false;
       }
     }
-    match /expenses/{expenseId} {
-      allow read: if resource.data.visibility == 'public'
-                  || (request.auth != null && (
-                       request.auth.token.email == 'jjun8647@gmail.com'
-                       || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
-                     ));
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+
+    // Whitelist of approved friends, keyed by lowercase email (owner can approve someone
+    // before they've ever signed in — a uid wouldn't exist yet at that point).
+    match /friends/{email} {
+      allow read: if isOwner() || (request.auth != null && request.auth.token.email == email);
+      allow write: if isOwner();
     }
-    match /journals/{journalId} {
-      allow read: if resource.data.visibility == 'public'
-                  || (request.auth != null && (
-                       request.auth.token.email == 'jjun8647@gmail.com'
-                       || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
-                     ));
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+
+    // Lightweight directory doc per signed-in user, upserted on every login — powers
+    // "search other users' public content." Holds no private data.
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid && request.resource.data.uid == uid;
     }
-    match /life_events/{eventId} {
-      allow read: if resource.data.visibility == 'public'
-                  || (request.auth != null && (
-                       request.auth.token.email == 'jjun8647@gmail.com'
-                       || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
-                     ));
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
-    }
-    match /habits/{habitId} {
-      allow read: if resource.data.visibility == 'public'
-                  || (request.auth != null && (
-                       request.auth.token.email == 'jjun8647@gmail.com'
-                       || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
-                     ));
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
-    }
-    match /allowedUsers/{email} {
-      allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
-    }
+
     match /login_logs/{logId} {
-      allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+      allow read: if isOwner();
       allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
       allow update, delete: if false;
     }
+
+    // Each user reads/marks-read only their own notifications; every notification is still
+    // self-written by whoever's client observed the triggering condition (no cross-user writes).
     match /notifications/{notificationId} {
-      allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+      allow read, update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+      allow delete: if false;
     }
   }
 }

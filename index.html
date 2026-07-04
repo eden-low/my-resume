@@ -54,6 +54,8 @@
                 <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
                 <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
                 <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
                 <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
                 <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
                 <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
@@ -194,6 +196,20 @@
                     <p class="text-[11px] text-textGray mt-1 leading-relaxed">Daily check-ins, streaks &amp; completion trends</p>
                 </div>
             </a>
+            <a href="calendar.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonBlue/40 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-neonBlue/10 text-neonBlue flex items-center justify-center text-sm"><i class="fa-solid fa-calendar-days"></i></div>
+                <div class="mt-4">
+                    <p class="text-sm font-semibold">Calendar</p>
+                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Your expenses, photos &amp; journal by day</p>
+                </div>
+            </a>
+            <a href="reports.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-emerald-400/40 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-emerald-400/10 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-chart-pie"></i></div>
+                <div class="mt-4">
+                    <p class="text-sm font-semibold">Reports</p>
+                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Monthly spending &amp; activity insights</p>
+                </div>
+            </a>
             <a href="dashboard.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonPurple/40 transition-all">
                 <div class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-sm"><i class="fa-solid fa-chart-line"></i></div>
                 <div class="mt-4">
@@ -244,7 +260,7 @@
             loadNotifWidget(user);
         });
 
-        // Minimal, self-contained fetch+streak logic for the homepage widget â€” duplicated from
+        // Minimal, self-contained fetch+streak logic for the homepage widget — duplicated from
         // habits.js rather than imported, matching this codebase's per-page fetch/cache pattern.
         function toDateKey(d) {
             const y = d.getFullYear();
@@ -271,17 +287,18 @@
             const listEl = document.getElementById("habits-widget-list");
             const streakEl = document.getElementById("habits-widget-streak");
             try {
-                const habits = [];
+                const habitMap = new Map();
                 const publicSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "public")));
-                publicSnap.forEach((d) => habits.push(d.data()));
+                publicSnap.forEach((d) => habitMap.set(d.id, d.data()));
                 if (user) {
                     try {
-                        const privateSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "private")));
-                        privateSnap.forEach((d) => habits.push(d.data()));
+                        const mineSnap = await getDocs(query(collection(db, "habits"), where("uid", "==", user.uid)));
+                        mineSnap.forEach((d) => habitMap.set(d.id, d.data()));
                     } catch (err) {
-                        console.error("[habits-widget] private query failed:", err.code || err);
+                        console.error("[habits-widget] own habits query failed:", err.code || err);
                     }
                 }
+                const habits = [...habitMap.values()];
 
                 if (!habits.length) {
                     listEl.innerHTML = '<p class="text-xs font-code text-textGray">No habits yet. <a href="habits.html" class="text-neonPurple hover:underline">Add one</a>.</p>';
@@ -300,7 +317,7 @@
 
                 const bestStreak = Math.max(...habits.map((h) => computeStreak(h.completedDates)));
                 if (bestStreak > 0) {
-                    streakEl.textContent = `ðŸ”¥ ${bestStreak} day${bestStreak === 1 ? "" : "s"}`;
+                    streakEl.textContent = `🔥 ${bestStreak} day${bestStreak === 1 ? "" : "s"}`;
                     streakEl.classList.remove("hidden");
                 } else {
                     streakEl.classList.add("hidden");

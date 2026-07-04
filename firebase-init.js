@@ -24,10 +24,25 @@ export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// The only account allowed to upload/delete and always allowed to read private content.
-// Access beyond this is granted via the `allowedUsers` Firestore collection (see firestore.rules).
+// The single site owner — always allowed to write, and the only role that sees admin UI
+// (System Logs, Whitelist Management). Everyone else is either an approved friend (own
+// private data space, granted via the `friends` Firestore collection — see firestore.rules)
+// or a plain viewer (read-only, public content only).
 export const OWNER_EMAIL = "jjun8647@gmail.com";
 
 export function isOwner(user) {
   return !!user && user.email === OWNER_EMAIL;
+}
+
+// Role is decided once at login time (see login.html) and cached here — real enforcement is
+// always the Firestore/Storage rules re-checking `friends` fresh, this is UI gating only.
+export const USER_MODE_KEY = "lfj:userMode";
+
+export function getUserMode() {
+  return localStorage.getItem(USER_MODE_KEY) || "VIEWER";
+}
+
+export function canParticipate() {
+  const mode = getUserMode();
+  return mode === "OWNER" || mode === "FRIEND";
 }

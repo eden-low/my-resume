@@ -142,20 +142,22 @@ async function loadSystemLogs() {
   );
 }
 
-async function loadAccessManagement() {
-  const section = document.getElementById("access-management-section");
-  const list = document.getElementById("access-list");
-  const empty = document.getElementById("access-empty");
+// Whitelist Friend Management (owner only) — promoting someone into `friends` gives them
+// their own private expenses/journal/photos/timeline/habits space (see firestore.rules).
+async function loadWhitelistManagement() {
+  const section = document.getElementById("whitelist-section");
+  const list = document.getElementById("whitelist-list");
+  const empty = document.getElementById("whitelist-empty");
   section.classList.remove("hidden");
 
-  let logsSnap, allowedSnap;
+  let logsSnap, friendsSnap;
   try {
-    [logsSnap, allowedSnap] = await Promise.all([
+    [logsSnap, friendsSnap] = await Promise.all([
       getDocs(collection(db, "login_logs")),
-      getDocs(collection(db, "allowedUsers")),
+      getDocs(collection(db, "friends")),
     ]);
   } catch (err) {
-    console.error("[settings] access management read failed:", err);
+    console.error("[settings] whitelist read failed:", err);
     empty.textContent = "Couldn't load user access data — check that firestore.rules has been pasted into the Firebase Console.";
     empty.classList.remove("hidden");
     return;
@@ -173,8 +175,8 @@ async function loadAccessManagement() {
     }
   });
 
-  const allowedEmails = new Set();
-  allowedSnap.forEach((d) => allowedEmails.add(d.id.toLowerCase()));
+  const friendEmails = new Set();
+  friendsSnap.forEach((d) => friendEmails.add(d.id.toLowerCase()));
 
   const rows = [...users.values()].sort((a, b) => b.loginMillis - a.loginMillis);
   empty.classList.toggle("hidden", rows.length > 0);
@@ -183,7 +185,7 @@ async function loadAccessManagement() {
     ...rows.map((row) => {
       const emailLower = row.email.toLowerCase();
       const isTheOwner = emailLower === OWNER_EMAIL.toLowerCase();
-      const allowed = isTheOwner || allowedEmails.has(emailLower);
+      const isFriend = isTheOwner || friendEmails.has(emailLower);
 
       const el = document.createElement("div");
       el.className = "flex items-center justify-between gap-4 border-b border-borderNeon/40 py-2.5 last:border-0";
@@ -193,31 +195,31 @@ async function loadAccessManagement() {
           <p class="text-xs text-textGray font-code mt-0.5">Last login ${formatTimestamp(row.lastLogin)}</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span class="px-2 py-0.5 rounded-full border text-[10px] font-code ${allowed ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : "border-borderNeon bg-darkBg/60 text-textGray"}">
-            ${allowed ? "Allowed" : "Not allowed"}
+          <span class="px-2 py-0.5 rounded-full border text-[10px] font-code ${isFriend ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : "border-borderNeon bg-darkBg/60 text-textGray"}">
+            ${isFriend ? "Friend" : "Viewer"}
           </span>
-          ${isTheOwner ? "" : `<button data-email="${emailLower}" data-action="${allowed ? "demote" : "promote"}" class="access-toggle-btn px-3 py-1.5 rounded-lg text-xs font-cyber font-bold tracking-wider ${allowed ? "bg-rose-400/10 text-rose-400 hover:bg-rose-400/20" : "bg-neonPurple/10 text-neonPurple hover:bg-neonPurple/20"} transition-colors">${allowed ? "Demote" : "Promote"}</button>`}
+          ${isTheOwner ? "" : `<button data-email="${emailLower}" data-action="${isFriend ? "demote" : "promote"}" class="whitelist-toggle-btn px-3 py-1.5 rounded-lg text-xs font-cyber font-bold tracking-wider ${isFriend ? "bg-rose-400/10 text-rose-400 hover:bg-rose-400/20" : "bg-neonPurple/10 text-neonPurple hover:bg-neonPurple/20"} transition-colors">${isFriend ? "Demote" : "Promote"}</button>`}
         </div>`;
       return el;
     })
   );
 
-  list.querySelectorAll(".access-toggle-btn").forEach((btn) => {
+  list.querySelectorAll(".whitelist-toggle-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const email = btn.dataset.email;
       btn.disabled = true;
       try {
         if (btn.dataset.action === "promote") {
-          await setDoc(doc(db, "allowedUsers", email), {
+          await setDoc(doc(db, "friends", email), {
             addedAt: serverTimestamp(),
             addedBy: auth.currentUser.email,
           });
         } else {
-          await deleteDoc(doc(db, "allowedUsers", email));
+          await deleteDoc(doc(db, "friends", email));
         }
-        await loadAccessManagement();
+        await loadWhitelistManagement();
       } catch (err) {
-        console.error("[settings] access toggle failed:", err);
+        console.error("[settings] whitelist toggle failed:", err);
         btn.disabled = false;
       }
     });
@@ -227,9 +229,10 @@ async function loadAccessManagement() {
 onAuthStateChanged(auth, (user) => {
   if (!user) return;
   renderProfile(user);
+  // Export & Backup is for anyone signed in now — everyone has their own data to back up.
+  document.getElementById("export-section").classList.remove("hidden");
   if (isOwner(user)) {
     loadSystemLogs();
-    loadAccessManagement();
-    document.getElementById("export-section").classList.remove("hidden");
+    loadWhitelistManagement();
   }
 });

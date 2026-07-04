@@ -1,4 +1,4 @@
-import { auth, googleProvider, db, storage, isOwner } from "./firebase-init.js";
+import { auth, googleProvider, db, storage, canParticipate } from "./firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -54,11 +54,16 @@ function formatTimestamp(ts) {
   return ts.toDate().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+// Recognizes ownership on both current (`uid`) and legacy pre-v2.0 (`uploadedBy`) posts.
+function isMyPost(post, user) {
+  return !!user && (post.uid === user.uid || post.uploadedBy === user.uid);
+}
+
 function postCard(post) {
   const meta = CATEGORY_META[post.category] || CATEGORY_META.personal;
   const isPrivate = post.visibility === "private";
   const user = auth.currentUser;
-  const isMine = !!user && post.uploadedBy === user.uid;
+  const isMine = isMyPost(post, user);
   const commentsOpen = expandedComments.has(post.id);
   const analyticsOpen = expandedAnalytics.has(post.id);
 
@@ -83,7 +88,7 @@ function postCard(post) {
         <button class="comment-toggle-btn flex items-center gap-1.5 text-xs font-code text-textGray hover:text-neonPurple transition-colors">
           <i class="fa-regular fa-comment"></i> ${post.commentCount || 0}
         </button>
-        ${isOwner(user) ? `
+        ${isMine ? `
           <button class="analytics-toggle-btn ml-auto flex items-center gap-1.5 text-xs font-code text-textGray hover:text-neonBlue transition-colors">
             <i class="fa-solid fa-eye"></i> Analytics
           </button>` : ""}
@@ -149,8 +154,9 @@ async function attachSocialCounts(post) {
 
 function recordViews(posts) {
   const user = auth.currentUser;
-  if (!user || isOwner(user)) return;
+  if (!user) return;
   posts.forEach(async (post) => {
+    if (isMyPost(post, user)) return; // don't log viewing your own post
     if (viewedThisSession.has(post.id)) return;
     viewedThisSession.add(post.id);
     try {
@@ -166,12 +172,12 @@ function recordViews(posts) {
 }
 
 // Best-effort "someone liked your photo" alert: there's no backend to push this the instant
-// a like happens, so the owner's own client detects growth against a locally-cached count
+// a like happens, so each poster's own client detects growth against a locally-cached count
 // the next time they load the gallery. See notifications.js for the read side.
 function checkLikeNotifications(posts) {
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
-  posts.forEach(async (post) => {
+  if (!user) return;
+  posts.filter((post) => isMyPost(post, user)).forEach(async (post) => {
     const key = `lfj:lastSeenLikes:${post.id}`;
     const raw = localStorage.getItem(key);
     const lastSeen = raw === null ? null : Number(raw);
@@ -195,33 +201,42 @@ function checkLikeNotifications(posts) {
 }
 
 async function fetchVisiblePosts() {
-  const posts = [];
+  const user = auth.currentUser;
+  const posts = new Map();
 
-  const publicSnap = await getDocs(query(collection(db, "photos"), where("visibility", "==", "public")));
-  publicSnap.forEach((d) => posts.push({ id: d.id, ...d.data() }));
+  try {
+    const publicSnap = await getDocs(query(collection(db, "photos"), where("visibility", "==", "public")));
+    publicSnap.forEach((d) => posts.set(d.id, { id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("[gallery] public posts query failed:", err.code || err);
+  }
 
-  if (auth.currentUser) {
+  if (user) {
     try {
-      const privateSnap = await getDocs(query(collection(db, "photos"), where("visibility", "==", "private")));
-      privateSnap.forEach((d) => posts.push({ id: d.id, ...d.data() }));
-      accessNote.classList.add("hidden");
-      privateTab.classList.remove("hidden");
+      const mineSnap = await getDocs(query(collection(db, "photos"), where("uid", "==", user.uid)));
+      mineSnap.forEach((d) => posts.set(d.id, { id: d.id, ...d.data() }));
     } catch (err) {
-      console.error("[gallery] private posts query failed:", err.code || err);
-      accessNote.classList.remove("hidden");
-      privateTab.classList.add("hidden");
-      if (activeFilter === "private") setActiveTab("all");
+      console.error("[gallery] own posts query failed:", err.code || err);
+    }
+    // Legacy posts from before the uploadedBy -> uid rename (no data migration was run —
+    // firestore.rules accepts either field, so this keeps them visible client-side too).
+    try {
+      const legacySnap = await getDocs(query(collection(db, "photos"), where("uploadedBy", "==", user.uid)));
+      legacySnap.forEach((d) => posts.set(d.id, { id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error("[gallery] legacy own posts query failed:", err.code || err);
     }
   }
 
-  posts.sort((a, b) => (b.uploadedAt?.toMillis?.() || 0) - (a.uploadedAt?.toMillis?.() || 0));
+  const list = [...posts.values()];
+  list.sort((a, b) => (b.uploadedAt?.toMillis?.() || 0) - (a.uploadedAt?.toMillis?.() || 0));
 
-  await Promise.all(posts.map((post) => attachSocialCounts(post)));
+  await Promise.all(list.map((post) => attachSocialCounts(post)));
 
-  cachedPosts = posts;
+  cachedPosts = list;
   renderFeed();
-  recordViews(posts);
-  checkLikeNotifications(posts);
+  recordViews(list);
+  checkLikeNotifications(list);
 }
 
 function renderSignedOut() {
@@ -246,7 +261,11 @@ function renderSignedIn(user) {
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 
-  newPostBtn.classList.toggle("hidden", !isOwner(user));
+  const mayParticipate = canParticipate();
+  newPostBtn.classList.toggle("hidden", !mayParticipate);
+  privateTab.classList.toggle("hidden", !mayParticipate);
+  accessNote.classList.toggle("hidden", mayParticipate);
+  if (!mayParticipate && activeFilter === "private") setActiveTab("all");
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -274,7 +293,7 @@ postModalBackdrop.addEventListener("click", closeModal);
 postForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || !canParticipate()) return;
 
   const file = document.getElementById("post-file").files[0];
   const caption = document.getElementById("post-caption").value.trim();
@@ -284,7 +303,7 @@ postForm.addEventListener("submit", async (event) => {
 
   postStatus.textContent = "Uploading...";
   try {
-    const storagePath = `gallery/${visibility}/${category}/${Date.now()}-${file.name}`;
+    const storagePath = `gallery/${user.uid}/${visibility}/${category}/${Date.now()}-${file.name}`;
     const fileRef = ref(storage, storagePath);
     await uploadBytes(fileRef, file);
     const url = await getDownloadURL(fileRef);
@@ -296,7 +315,7 @@ postForm.addEventListener("submit", async (event) => {
       visibility,
       caption: caption || file.name,
       uploadedAt: serverTimestamp(),
-      uploadedBy: user.uid,
+      uid: user.uid,
     });
 
     postStatus.textContent = "Posted.";
@@ -398,7 +417,7 @@ async function renderCommentsPanel(post, card) {
   }
 }
 
-// ---- Owner-only view analytics ----
+// ---- Per-post view analytics (visible only to that post's own creator) ----
 
 function toggleAnalytics(post) {
   if (expandedAnalytics.has(post.id)) {

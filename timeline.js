@@ -1,4 +1,4 @@
-import { auth, googleProvider, db, isOwner } from "./firebase-init.js";
+import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -158,27 +158,33 @@ searchInput.addEventListener("input", (event) => {
 setFilter("all");
 
 async function fetchVisibleEvents() {
-  const events = [];
+  const user = auth.currentUser;
+  const events = new Map();
 
-  const publicSnap = await getDocs(query(collection(db, "life_events"), where("visibility", "==", "public")));
-  publicSnap.forEach((doc) => events.push(doc.data()));
+  try {
+    const publicSnap = await getDocs(query(collection(db, "life_events"), where("visibility", "==", "public")));
+    publicSnap.forEach((d) => events.set(d.id, { id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("[timeline] public query failed:", err.code || err);
+  }
 
-  if (auth.currentUser) {
+  if (user) {
     try {
-      const privateSnap = await getDocs(query(collection(db, "life_events"), where("visibility", "==", "private")));
-      privateSnap.forEach((doc) => events.push(doc.data()));
-      accessNote.classList.add("hidden");
-      privateTab.classList.remove("hidden");
+      const mineSnap = await getDocs(query(collection(db, "life_events"), where("uid", "==", user.uid)));
+      mineSnap.forEach((d) => events.set(d.id, { id: d.id, ...d.data() }));
     } catch (err) {
-      console.error("[timeline] private query failed:", err.code || err);
-      accessNote.classList.remove("hidden");
-      privateTab.classList.add("hidden");
-      if (activeFilter === "private") setFilter("all");
+      console.error("[timeline] own events query failed:", err.code || err);
     }
   }
 
-  events.sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
-  cachedEvents = events;
+  const mayParticipate = canParticipate();
+  privateTab.classList.toggle("hidden", !mayParticipate);
+  accessNote.classList.toggle("hidden", mayParticipate);
+  if (!mayParticipate && activeFilter === "private") setFilter("all");
+
+  const list = [...events.values()];
+  list.sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
+  cachedEvents = list;
   renderTimeline();
 }
 
@@ -204,7 +210,7 @@ function renderSignedIn(user) {
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 
-  newEventBtn.classList.toggle("hidden", !isOwner(user));
+  newEventBtn.classList.toggle("hidden", !canParticipate());
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -232,7 +238,7 @@ eventModalBackdrop.addEventListener("click", closeModal);
 eventForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || !canParticipate()) return;
 
   const title = document.getElementById("event-title").value.trim();
   const description = document.getElementById("event-description").value.trim();

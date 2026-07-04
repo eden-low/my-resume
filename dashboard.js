@@ -48,24 +48,112 @@ function isoWeekKey(date) {
   return `W${weekNo}`;
 }
 
-// Same public-always / private-if-authorized read pattern used by gallery.js, expenses.js, journal.js.
-async function fetchCollection(name) {
-  const docs = [];
-  const publicSnap = await getDocs(query(collection(db, name), where("visibility", "==", "public")));
-  publicSnap.forEach((d) => docs.push(d.data()));
-  if (auth.currentUser) {
-    try {
-      const privateSnap = await getDocs(query(collection(db, name), where("visibility", "==", "private")));
-      privateSnap.forEach((d) => docs.push(d.data()));
-    } catch (err) {
-      console.error(`[dashboard] private ${name} query failed:`, err.code || err);
-    }
+// This dashboard is personal analytics — every section below reads only the signed-in
+// user's own docs (uid == me), not everyone's public content too.
+async function fetchMyCollection(name) {
+  const user = auth.currentUser;
+  if (!user) return [];
+  try {
+    const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error(`[dashboard] ${name} query failed:`, err.code || err);
+    return [];
   }
-  return docs;
+}
+
+// ---- Search People ----
+
+let allUsers = [];
+const peopleSearchInput = document.getElementById("people-search");
+const peopleResults = document.getElementById("people-results");
+const peoplePublicView = document.getElementById("people-public-view");
+
+async function loadUserDirectory() {
+  try {
+    const snap = await getDocs(collection(db, "users"));
+    allUsers = snap.docs.map((d) => d.data());
+  } catch (err) {
+    console.error("[dashboard] users directory fetch failed:", err.code || err);
+    allUsers = [];
+  }
+}
+
+function renderPeopleResults(list) {
+  peopleResults.replaceChildren(
+    ...list.map((person) => {
+      const el = document.createElement("button");
+      el.className = "w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-darkBg/40 transition-colors text-left";
+      el.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple text-xs overflow-hidden flex-shrink-0">
+          ${person.photoURL ? `<img src="${person.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user"></i>`}
+        </div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium truncate">${person.displayName || person.email}</p>
+          <p class="text-[11px] text-textGray font-code truncate">${person.email}</p>
+        </div>`;
+      el.addEventListener("click", () => showPersonPublicContent(person));
+      return el;
+    })
+  );
+}
+
+peopleSearchInput.addEventListener("input", (event) => {
+  const q = event.target.value.trim().toLowerCase();
+  peoplePublicView.classList.add("hidden");
+  if (!q) {
+    peopleResults.replaceChildren();
+    return;
+  }
+  const matches = allUsers
+    .filter((p) => (p.displayName || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q))
+    .slice(0, 8);
+  renderPeopleResults(matches);
+});
+
+async function fetchPublicFor(collectionName, uid) {
+  try {
+    const snap = await getDocs(query(collection(db, collectionName), where("uid", "==", uid), where("visibility", "==", "public")));
+    return snap.docs.map((d) => d.data());
+  } catch (err) {
+    console.error(`[dashboard] public ${collectionName} for ${uid} failed:`, err.code || err);
+    return [];
+  }
+}
+
+async function showPersonPublicContent(person) {
+  peoplePublicView.classList.remove("hidden");
+  peoplePublicView.innerHTML = `<p class="text-xs font-code text-textGray">Loading&hellip;</p>`;
+
+  const [photos, journals, events, habits] = await Promise.all([
+    fetchPublicFor("photos", person.uid),
+    fetchPublicFor("journals", person.uid),
+    fetchPublicFor("life_events", person.uid),
+    fetchPublicFor("habits", person.uid),
+  ]);
+
+  const items = [
+    ...photos.map((p) => ({ icon: "fa-image", text: p.caption || "Photo", millis: p.uploadedAt?.toMillis?.() || 0 })),
+    ...journals.map((j) => ({ icon: "fa-book", text: j.title, millis: j.createdAt?.toMillis?.() || 0 })),
+    ...events.map((e) => ({ icon: "fa-timeline", text: e.title, millis: e.date?.toMillis?.() || 0 })),
+  ].sort((a, b) => b.millis - a.millis).slice(0, 5);
+
+  peoplePublicView.innerHTML = `
+    <p class="text-sm font-semibold mb-3">${person.displayName || person.email}'s public activity</p>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
+      <div><p class="text-textGray text-xs">Public photos</p><p class="font-code font-semibold text-xl mt-1">${photos.length}</p></div>
+      <div><p class="text-textGray text-xs">Public journal entries</p><p class="font-code font-semibold text-xl mt-1">${journals.length}</p></div>
+      <div><p class="text-textGray text-xs">Public timeline events</p><p class="font-code font-semibold text-xl mt-1">${events.length}</p></div>
+      <div><p class="text-textGray text-xs">Public habits</p><p class="font-code font-semibold text-xl mt-1">${habits.length}</p></div>
+    </div>
+    ${items.length ? `
+      <div class="space-y-1.5">
+        ${items.map((i) => `<p class="text-xs text-textGray"><i class="fa-solid ${i.icon} mr-2 text-neonPurple"></i>${i.text}</p>`).join("")}
+      </div>` : `<p class="text-xs font-code text-textGray">No public activity yet.</p>`}`;
 }
 
 async function renderGalleryAnalytics() {
-  const photos = await fetchCollection("photos");
+  const photos = await fetchMyCollection("photos");
   document.getElementById("gal-total").textContent = photos.length;
   document.getElementById("gal-public").textContent = photos.filter((p) => p.visibility === "public").length;
   document.getElementById("gal-private").textContent = photos.filter((p) => p.visibility === "private").length;
@@ -80,7 +168,7 @@ async function renderGalleryAnalytics() {
 let monthlyChart, categoryPieChart, weeklyChart;
 
 async function renderExpenseAnalytics() {
-  const expenses = await fetchCollection("expenses");
+  const expenses = await fetchMyCollection("expenses");
   const now = new Date();
 
   const monthTotal = expenses
@@ -142,7 +230,7 @@ async function renderExpenseAnalytics() {
 }
 
 async function renderJournalAnalytics() {
-  const entries = await fetchCollection("journals");
+  const entries = await fetchMyCollection("journals");
   document.getElementById("jnl-total").textContent = entries.length;
   const pub = entries.filter((e) => e.visibility === "public").length;
   document.getElementById("jnl-visibility").textContent = `${pub} / ${entries.length - pub}`;
@@ -206,6 +294,7 @@ onAuthStateChanged(auth, (user) => {
   renderGalleryAnalytics();
   renderExpenseAnalytics();
   renderJournalAnalytics();
+  loadUserDirectory();
 });
 
 loadWeather();

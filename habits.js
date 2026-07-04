@@ -1,4 +1,4 @@
-import { auth, googleProvider, db, isOwner } from "./firebase-init.js";
+import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -85,7 +85,8 @@ function habitCard(habit) {
   const monthPct = monthlyCompletion(habit.completedDates);
   const week = last7Days(habit.completedDates);
   const isPrivate = habit.visibility === "private";
-  const canCheckIn = isOwner(auth.currentUser);
+  const user = auth.currentUser;
+  const canCheckIn = !!user && habit.uid === user.uid;
 
   const card = document.createElement("div");
   card.className = "is-visible bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col gap-4";
@@ -149,27 +150,33 @@ filterTabs.forEach((btn) => btn.addEventListener("click", () => setFilter(btn.da
 setFilter("all");
 
 async function fetchVisibleHabits() {
-  const habits = [];
+  const user = auth.currentUser;
+  const habits = new Map();
 
-  const publicSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "public")));
-  publicSnap.forEach((d) => habits.push({ id: d.id, ...d.data() }));
+  try {
+    const publicSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "public")));
+    publicSnap.forEach((d) => habits.set(d.id, { id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("[habits] public query failed:", err.code || err);
+  }
 
-  if (auth.currentUser) {
+  if (user) {
     try {
-      const privateSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "private")));
-      privateSnap.forEach((d) => habits.push({ id: d.id, ...d.data() }));
-      accessNote.classList.add("hidden");
-      privateTab.classList.remove("hidden");
+      const mineSnap = await getDocs(query(collection(db, "habits"), where("uid", "==", user.uid)));
+      mineSnap.forEach((d) => habits.set(d.id, { id: d.id, ...d.data() }));
     } catch (err) {
-      console.error("[habits] private query failed:", err.code || err);
-      accessNote.classList.remove("hidden");
-      privateTab.classList.add("hidden");
-      if (activeFilter === "private") setFilter("all");
+      console.error("[habits] own habits query failed:", err.code || err);
     }
   }
 
-  habits.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-  cachedHabits = habits;
+  const mayParticipate = canParticipate();
+  privateTab.classList.toggle("hidden", !mayParticipate);
+  accessNote.classList.toggle("hidden", mayParticipate);
+  if (!mayParticipate && activeFilter === "private") setFilter("all");
+
+  const list = [...habits.values()];
+  list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  cachedHabits = list;
   renderHabits();
 }
 
@@ -195,7 +202,7 @@ function renderSignedIn(user) {
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 
-  newHabitBtn.classList.toggle("hidden", !isOwner(user));
+  newHabitBtn.classList.toggle("hidden", !canParticipate());
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -229,7 +236,7 @@ document.querySelectorAll(".icon-chip").forEach((chip) => {
 habitForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || !canParticipate()) return;
 
   const title = document.getElementById("habit-title").value.trim();
   const icon = habitIconInput.value.trim();
@@ -256,11 +263,11 @@ habitForm.addEventListener("submit", async (event) => {
   }
 });
 
-// Best-effort local milestone alert: written by the owner's own client at check-in time
+// Best-effort local milestone alert: written by the habit owner's own client at check-in time
 // since there's no backend to compute this server-side. See notifications.js for the read side.
 async function checkStreakNotification(habit) {
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || habit.uid !== user.uid) return;
   const streak = computeStreak(habit.completedDates);
   if (streak <= 0 || streak % 30 !== 0) return;
 
@@ -285,7 +292,7 @@ async function checkStreakNotification(habit) {
 
 async function toggleCheckIn(habit) {
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || habit.uid !== user.uid) return;
   const todayKey = toDateKey(new Date());
   const habitRef = doc(db, "habits", habit.id);
   const checked = (habit.completedDates || []).includes(todayKey);

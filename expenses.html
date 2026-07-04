@@ -55,6 +55,8 @@
         <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
         <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
         <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
         <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
         <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
         <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
@@ -68,12 +70,12 @@
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <h1 class="font-cyber font-semibold text-2xl">Expenses</h1>
-          <p class="text-textGray mt-2 text-sm">Personal spend tracker &mdash; sign in to add entries and see private ones.</p>
+          <p class="text-textGray mt-2 text-sm">Your own personal spend tracker &mdash; always private, never shared.</p>
         </div>
         <div id="auth-control" class="flex items-center gap-3"></div>
       </div>
       <p id="expense-access-note" class="hidden mt-4 text-xs font-code text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2">
-        <i class="fa-solid fa-lock mr-1.5"></i> Signed in, but this account isn't on the private access list.
+        <i class="fa-solid fa-lock mr-1.5"></i> Expense tracking is for the owner and approved friends only.
       </p>
     </section>
 
@@ -96,8 +98,6 @@
         <button data-filter="shopping" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Shopping</button>
         <button data-filter="bills" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Bills</button>
         <button data-filter="other" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Other</button>
-        <button data-filter="public" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Public</button>
-        <button data-filter="private" class="filter-tab hidden px-3 py-1.5 rounded-full hover:text-rose-400 hover:bg-rose-400/10 transition-colors">Private</button>
       </div>
       <button id="new-expense-btn" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
         <i class="fa-solid fa-plus mr-1.5"></i> ADD EXPENSE
@@ -135,10 +135,6 @@
               <option value="bills">Bills</option>
               <option value="other">Other</option>
             </select>
-          </div>
-          <div class="flex items-center gap-4 text-xs font-code text-textGray">
-            <label class="flex items-center gap-1.5"><input type="radio" name="expense-visibility" value="public" checked> Public</label>
-            <label class="flex items-center gap-1.5"><input type="radio" name="expense-visibility" value="private"> Private</label>
           </div>
         </div>
         <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">

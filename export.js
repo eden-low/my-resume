@@ -1,5 +1,8 @@
-import { auth, db } from "./firebase-init.js";
+﻿import { auth, db } from "./firebase-init.js";
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+// Available to any signed-in user now (everyone has their own private space) — exports
+// always mean "my own docs", never anyone else's, even their public ones.
 
 const SETTINGS_KEY = "lfj:settings";
 
@@ -25,20 +28,17 @@ function isoDate(ts) {
   return ts?.toDate ? ts.toDate().toISOString() : null;
 }
 
-// Same public-always / private-if-authorized read pattern used by dashboard.js/gallery.js/etc.
-async function fetchCollection(name) {
-  const docs = [];
-  const publicSnap = await getDocs(query(collection(db, name), where("visibility", "==", "public")));
-  publicSnap.forEach((d) => docs.push(d.data()));
-  if (auth.currentUser) {
-    try {
-      const privateSnap = await getDocs(query(collection(db, name), where("visibility", "==", "private")));
-      privateSnap.forEach((d) => docs.push(d.data()));
-    } catch (err) {
-      console.error(`[export] private ${name} query failed:`, err.code || err);
-    }
+// Exports are always "my own docs" (uid == me) — same scoping as dashboard.js's analytics.
+async function fetchMyCollection(name) {
+  const user = auth.currentUser;
+  if (!user) return [];
+  try {
+    const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
+    return snap.docs.map((d) => d.data());
+  } catch (err) {
+    console.error(`[export] ${name} query failed:`, err.code || err);
+    return [];
   }
-  return docs;
 }
 
 function csvEscape(value) {
@@ -48,7 +48,7 @@ function csvEscape(value) {
 
 async function exportExpensesCsv() {
   setStatus("Exporting expenses...");
-  const expenses = await fetchCollection("expenses");
+  const expenses = await fetchMyCollection("expenses");
   const rows = [["date", "amount", "category", "note"]];
   expenses
     .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0))
@@ -67,7 +67,7 @@ async function exportExpensesCsv() {
 
 async function exportJournalMarkdown() {
   setStatus("Exporting journal...");
-  const entries = await fetchCollection("journals");
+  const entries = await fetchMyCollection("journals");
   const blocks = entries
     .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0))
     .map((e) => {
@@ -81,7 +81,7 @@ async function exportJournalMarkdown() {
 
 async function exportTimelineJson() {
   setStatus("Exporting timeline...");
-  const events = await fetchCollection("life_events");
+  const events = await fetchMyCollection("life_events");
   const data = events.map((e) => ({ ...e, date: isoDate(e.date) }));
   downloadFile("timeline.json", JSON.stringify(data, null, 2), "application/json");
   setStatus("Timeline exported.");
@@ -89,7 +89,7 @@ async function exportTimelineJson() {
 
 async function exportGalleryJson() {
   setStatus("Exporting gallery metadata...");
-  const photos = await fetchCollection("photos");
+  const photos = await fetchMyCollection("photos");
   const data = photos.map((p) => ({ ...p, uploadedAt: isoDate(p.uploadedAt) }));
   downloadFile("gallery_metadata.json", JSON.stringify(data, null, 2), "application/json");
   setStatus("Gallery metadata exported.");
@@ -99,11 +99,11 @@ async function exportFullBackup() {
   setStatus("Building full backup...");
   const user = auth.currentUser;
   const [expenses, journals, timeline, photos, habits] = await Promise.all([
-    fetchCollection("expenses"),
-    fetchCollection("journals"),
-    fetchCollection("life_events"),
-    fetchCollection("photos"),
-    fetchCollection("habits"),
+    fetchMyCollection("expenses"),
+    fetchMyCollection("journals"),
+    fetchMyCollection("life_events"),
+    fetchMyCollection("photos"),
+    fetchMyCollection("habits"),
   ]);
 
   let settings = {};

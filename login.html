@@ -57,9 +57,9 @@
 
   <script src="scripts.js" defer></script>
   <script type="module">
-    import { auth, googleProvider, db, isOwner } from "./firebase-init.js";
+    import { auth, googleProvider, db, isOwner, USER_MODE_KEY } from "./firebase-init.js";
     import { onAuthStateChanged, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-    import { addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    import { addDoc, collection, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     const signinBtn = document.getElementById("signin-btn");
     const statusEl = document.getElementById("signin-status");
@@ -106,9 +106,41 @@
       return raw && /^[a-zA-Z0-9_-]+\.html$/.test(raw) ? raw : "index.html";
     }
 
-    onAuthStateChanged(auth, (user) => {
+    // OWNER (jjun8647@gmail.com) > approved FRIEND (an entry in `friends/{email}`) > VIEWER
+    // (signed in, public content only). Cached in localStorage for cheap UI gating elsewhere —
+    // firestore.rules re-checks `friends` fresh on every read/write, this is display-only.
+    async function resolveUserMode(user) {
+      if (isOwner(user)) return "OWNER";
+      try {
+        const friendSnap = await getDoc(doc(db, "friends", user.email.toLowerCase()));
+        if (friendSnap.exists()) return "FRIEND";
+      } catch (err) {
+        console.error("[login] friends lookup failed:", err);
+      }
+      return "VIEWER";
+    }
+
+    // Lightweight directory doc so other signed-in users can find this account to view its
+    // public content (see dashboard.js's "Search People").
+    async function upsertUserProfile(user) {
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || "",
+          photoURL: user.photoURL || "",
+        });
+      } catch (err) {
+        console.error("[login] users profile upsert failed:", err);
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
         if (signingIn) return;
+        // Session restore (not a fresh interactive sign-in): just refresh the cached role
+        // in case whitelist status changed since last time, no logging.
+        localStorage.setItem(USER_MODE_KEY, await resolveUserMode(user));
         location.href = getRedirectTarget();
         return;
       }
@@ -128,6 +160,9 @@
         return;
       }
 
+      localStorage.setItem(USER_MODE_KEY, await resolveUserMode(user));
+      await upsertUserProfile(user);
+
       // Best-effort: don't let a login_logs write failure (e.g. firestore.rules not yet
       // pasted into the Firebase Console) block an otherwise-successful sign-in.
       try {
@@ -142,21 +177,18 @@
         console.error("[login] login_logs write failed (continuing anyway):", err);
       }
 
-      // System notifications are owner-only (see firestore.rules) — a "new login" alert only
-      // makes sense for the account whose logins are worth watching.
-      if (isOwner(user)) {
-        try {
-          await addDoc(collection(db, "notifications"), {
-            uid: user.uid,
-            type: "login",
-            title: "New login detected",
-            message: `New login detected from ${shortDevice(navigator.userAgent)}.`,
-            read: false,
-            createdAt: serverTimestamp(),
-          });
-        } catch (err) {
-          console.error("[login] notification write failed (continuing anyway):", err);
-        }
+      // Notifications are per-user now (everyone has their own space) — not owner-only.
+      try {
+        await addDoc(collection(db, "notifications"), {
+          uid: user.uid,
+          type: "login",
+          title: "New login detected",
+          message: `New login detected from ${shortDevice(navigator.userAgent)}.`,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.error("[login] notification write failed (continuing anyway):", err);
       }
 
       location.href = getRedirectTarget();

@@ -1,4 +1,4 @@
-import { auth, googleProvider, db, isOwner } from "./firebase-init.js";
+import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -26,7 +26,6 @@ const accessNote = document.getElementById("expense-access-note");
 const expenseList = document.getElementById("expense-list");
 const expenseEmpty = document.getElementById("expense-empty");
 const filterTabs = document.querySelectorAll(".filter-tab");
-const privateTab = document.querySelector('.filter-tab[data-filter="private"]');
 const newExpenseBtn = document.getElementById("new-expense-btn");
 const expenseModal = document.getElementById("expense-modal");
 const expenseModalClose = document.getElementById("expense-modal-close");
@@ -55,11 +54,11 @@ function monthKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// Best-effort local alert: written by the owner's own client when they next load this page,
+// Best-effort local alert: written by each user's own client when they next load this page,
 // deduped per calendar month via localStorage (no backend to compute this server-side).
 async function checkExpenseAlert(expenses) {
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user) return;
 
   const thisMonth = monthKey();
   const monthTotal = expenses.reduce((sum, e) => {
@@ -89,7 +88,6 @@ async function checkExpenseAlert(expenses) {
 
 function expenseRow(expense) {
   const meta = CATEGORY_META[expense.category] || CATEGORY_META.other;
-  const isPrivate = expense.visibility === "private";
 
   const row = document.createElement("article");
   row.className = "is-visible bg-cardBg/90 neon-border-purple rounded-2xl p-4 flex items-center justify-between gap-4";
@@ -101,21 +99,14 @@ function expenseRow(expense) {
         <p class="text-[11px] text-textGray mt-0.5 font-code">${formatTimestamp(expense.createdAt)}</p>
       </div>
     </div>
-    <div class="flex items-center gap-3 flex-shrink-0">
-      <span class="text-[10px] font-code px-2 py-0.5 rounded-full border ${isPrivate ? "border-rose-400/30 bg-rose-400/10 text-rose-400" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-400"}">
-        <i class="fa-solid ${isPrivate ? "fa-lock" : "fa-globe"} mr-1"></i>${isPrivate ? "Private" : "Public"}
-      </span>
-      <span class="font-code font-semibold text-sm tabular-nums">RM ${Number(expense.amount).toFixed(2)}</span>
-    </div>`;
+    <span class="font-code font-semibold text-sm tabular-nums flex-shrink-0">RM ${Number(expense.amount).toFixed(2)}</span>`;
   return row;
 }
 
 function renderList() {
   const visible = activeFilter === "all"
     ? cachedExpenses
-    : activeFilter === "public" || activeFilter === "private"
-      ? cachedExpenses.filter((e) => e.visibility === activeFilter)
-      : cachedExpenses.filter((e) => e.category === activeFilter);
+    : cachedExpenses.filter((e) => e.category === activeFilter);
 
   expenseList.replaceChildren(...visible.map(expenseRow));
   expenseEmpty.classList.toggle("hidden", visible.length > 0);
@@ -196,23 +187,17 @@ function setActiveTab(filter) {
 filterTabs.forEach((btn) => btn.addEventListener("click", () => setActiveTab(btn.dataset.filter)));
 setActiveTab("all");
 
-async function fetchVisibleExpenses() {
-  const expenses = [];
-
-  const publicSnap = await getDocs(query(collection(db, "expenses"), where("visibility", "==", "public")));
-  publicSnap.forEach((doc) => expenses.push(doc.data()));
-
-  if (auth.currentUser) {
+// Expenses are always private and per-user — there's no "public" concept here, so this is
+// just "my own docs", unlike the fetch pattern on every other page.
+async function fetchMyExpenses() {
+  const user = auth.currentUser;
+  let expenses = [];
+  if (user && canParticipate()) {
     try {
-      const privateSnap = await getDocs(query(collection(db, "expenses"), where("visibility", "==", "private")));
-      privateSnap.forEach((doc) => expenses.push(doc.data()));
-      accessNote.classList.add("hidden");
-      privateTab.classList.remove("hidden");
+      const snap = await getDocs(query(collection(db, "expenses"), where("uid", "==", user.uid)));
+      expenses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     } catch (err) {
-      console.error("[expenses] private query failed:", err.code || err);
-      accessNote.classList.remove("hidden");
-      privateTab.classList.add("hidden");
-      if (activeFilter === "private") setActiveTab("all");
+      console.error("[expenses] fetch failed:", err.code || err);
     }
   }
 
@@ -231,10 +216,8 @@ function renderSignedOut() {
   document.getElementById("auth-signin-btn").addEventListener("click", () => {
     signInWithPopup(auth, googleProvider).catch((err) => console.error("Sign-in failed", err));
   });
-  accessNote.classList.add("hidden");
-  privateTab.classList.add("hidden");
+  accessNote.classList.remove("hidden");
   newExpenseBtn.classList.add("hidden");
-  if (activeFilter === "private") setActiveTab("all");
 }
 
 function renderSignedIn(user) {
@@ -245,7 +228,9 @@ function renderSignedIn(user) {
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 
-  newExpenseBtn.classList.toggle("hidden", !isOwner(user));
+  const mayParticipate = canParticipate();
+  newExpenseBtn.classList.toggle("hidden", !mayParticipate);
+  accessNote.classList.toggle("hidden", mayParticipate);
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -254,7 +239,7 @@ onAuthStateChanged(auth, (user) => {
   } else {
     renderSignedOut();
   }
-  fetchVisibleExpenses();
+  fetchMyExpenses();
 });
 
 function openModal() {
@@ -273,12 +258,11 @@ expenseModalBackdrop.addEventListener("click", closeModal);
 expenseForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || !canParticipate()) return;
 
   const amount = parseFloat(document.getElementById("expense-amount").value);
   const note = document.getElementById("expense-note").value.trim();
   const category = document.getElementById("expense-category").value;
-  const visibility = expenseForm.querySelector('input[name="expense-visibility"]:checked').value;
   if (!amount || amount <= 0) return;
 
   expenseStatus.textContent = "Saving...";
@@ -287,13 +271,12 @@ expenseForm.addEventListener("submit", async (event) => {
       amount,
       category,
       note,
-      visibility,
       createdAt: serverTimestamp(),
       uid: user.uid,
     });
 
     expenseStatus.textContent = "Saved.";
-    await fetchVisibleExpenses();
+    await fetchMyExpenses();
     closeModal();
   } catch (err) {
     console.error("Save failed", err);

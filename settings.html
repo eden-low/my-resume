@@ -54,6 +54,8 @@
         <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
         <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
         <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
         <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
         <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
         <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
@@ -141,18 +143,18 @@
       <p id="login-logs-empty" class="hidden text-xs font-code text-textGray py-6 text-center">No login history yet.</p>
     </section>
 
-    <!-- Access Management (owner only) -->
-    <section id="access-management-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
-      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Access Management</p>
-      <p class="text-xs text-textGray mb-4">Everyone who has ever signed in. Promote to grant private-content access, demote to revoke it.</p>
-      <div id="access-list" class="space-y-2 text-sm"></div>
-      <p id="access-empty" class="hidden text-xs font-code text-textGray py-6 text-center">No signed-in users yet.</p>
+    <!-- Whitelist Friend Management (owner only) -->
+    <section id="whitelist-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Whitelist &mdash; Friend Management</p>
+      <p class="text-xs text-textGray mb-4">Everyone who has ever signed in. Promote to Friend to give them their own private expenses/journal/photos/timeline/habits space; demote to make them a read-only Viewer again.</p>
+      <div id="whitelist-list" class="space-y-2 text-sm"></div>
+      <p id="whitelist-empty" class="hidden text-xs font-code text-textGray py-6 text-center">No signed-in users yet.</p>
     </section>
 
-    <!-- Export & Backup (owner only) -->
+    <!-- Export & Backup -->
     <section id="export-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
       <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Export &amp; Backup</p>
-      <p class="text-xs text-textGray mb-4">Downloads whatever is currently visible to you (public + private).</p>
+      <p class="text-xs text-textGray mb-4">Downloads your own data.</p>
       <div class="flex flex-wrap gap-2.5">
         <button id="export-expenses-btn" class="px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-neonPurple transition-all">
           <i class="fa-solid fa-file-csv mr-1.5"></i> Expenses (CSV)

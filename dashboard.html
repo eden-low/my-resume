@@ -55,6 +55,8 @@
         <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
         <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
         <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
         <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
         <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
         <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
@@ -68,10 +70,22 @@
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <h1 class="font-cyber font-semibold text-2xl">Dashboard</h1>
-          <p class="text-textGray mt-2 text-sm">Read-only overview across Gallery, Expenses, and Journal. Sign in to include your private entries.</p>
+          <p class="text-textGray mt-2 text-sm">Read-only overview of your own Gallery, Expenses, and Journal activity.</p>
         </div>
         <div id="auth-control" class="flex items-center gap-3"></div>
       </div>
+    </section>
+
+    <!-- Search People -->
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Search People</p>
+      <p class="text-xs text-textGray mb-4">Find another signed-in user and view their public posts, entries, and events.</p>
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-textGray text-xs"></i>
+        <input id="people-search" type="text" placeholder="Search by name or email&hellip;" class="w-full bg-darkBg/60 border border-borderNeon rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-textGray/60">
+      </div>
+      <div id="people-results" class="mt-3 space-y-1.5"></div>
+      <div id="people-public-view" class="hidden mt-5 pt-5 border-t border-borderNeon/40"></div>
     </section>
 
     <!-- Gallery Analytics -->

@@ -1,4 +1,4 @@
-import { auth, googleProvider, db, storage, isOwner } from "./firebase-init.js";
+import { auth, googleProvider, db, storage, canParticipate } from "./firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -83,11 +83,11 @@ function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Best-effort local reminder: written by the owner's own client when they next load this
+// Best-effort local reminder: written by each user's own client when they next load this
 // page, deduped per calendar day via localStorage (no backend to compute this server-side).
 async function checkJournalReminder(entries) {
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || !canParticipate()) return;
 
   const newestMillis = entries.reduce((latest, e) => Math.max(latest, e.createdAt?.toMillis?.() || 0), 0);
   const daysSince = newestMillis ? (Date.now() - newestMillis) / (1000 * 60 * 60 * 24) : Infinity;
@@ -206,29 +206,35 @@ setVisibilityFilter("all");
 setMoodFilter("all");
 
 async function fetchVisibleEntries() {
-  const entries = [];
+  const user = auth.currentUser;
+  const entries = new Map();
 
-  const publicSnap = await getDocs(query(collection(db, "journals"), where("visibility", "==", "public")));
-  publicSnap.forEach((doc) => entries.push(doc.data()));
+  try {
+    const publicSnap = await getDocs(query(collection(db, "journals"), where("visibility", "==", "public")));
+    publicSnap.forEach((d) => entries.set(d.id, { id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("[journal] public query failed:", err.code || err);
+  }
 
-  if (auth.currentUser) {
+  if (user) {
     try {
-      const privateSnap = await getDocs(query(collection(db, "journals"), where("visibility", "==", "private")));
-      privateSnap.forEach((doc) => entries.push(doc.data()));
-      accessNote.classList.add("hidden");
-      privateTab.classList.remove("hidden");
+      const mineSnap = await getDocs(query(collection(db, "journals"), where("uid", "==", user.uid)));
+      mineSnap.forEach((d) => entries.set(d.id, { id: d.id, ...d.data() }));
     } catch (err) {
-      console.error("[journal] private query failed:", err.code || err);
-      accessNote.classList.remove("hidden");
-      privateTab.classList.add("hidden");
-      if (activeVisibility === "private") setVisibilityFilter("all");
+      console.error("[journal] own entries query failed:", err.code || err);
     }
   }
 
-  entries.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-  cachedEntries = entries;
+  const mayParticipate = canParticipate();
+  privateTab.classList.toggle("hidden", !mayParticipate);
+  accessNote.classList.toggle("hidden", mayParticipate);
+  if (!mayParticipate && activeVisibility === "private") setVisibilityFilter("all");
+
+  const list = [...entries.values()];
+  list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  cachedEntries = list;
   renderGrid();
-  checkJournalReminder(entries);
+  if (user) checkJournalReminder(list.filter((e) => e.uid === user.uid));
 }
 
 function renderSignedOut() {
@@ -253,7 +259,7 @@ function renderSignedIn(user) {
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 
-  newJournalBtn.classList.toggle("hidden", !isOwner(user));
+  newJournalBtn.classList.toggle("hidden", !canParticipate());
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -281,7 +287,7 @@ journalModalBackdrop.addEventListener("click", closeModal);
 journalForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const user = auth.currentUser;
-  if (!isOwner(user)) return;
+  if (!user || !canParticipate()) return;
 
   const title = document.getElementById("journal-title").value.trim();
   const content = document.getElementById("journal-content").value.trim();
@@ -298,7 +304,7 @@ journalForm.addEventListener("submit", async (event) => {
   try {
     let imageUrl = null;
     if (file) {
-      const storagePath = `journal/${visibility}/${Date.now()}-${file.name}`;
+      const storagePath = `journal/${user.uid}/${visibility}/${Date.now()}-${file.name}`;
       const fileRef = ref(storage, storagePath);
       await uploadBytes(fileRef, file);
       imageUrl = await getDownloadURL(fileRef);

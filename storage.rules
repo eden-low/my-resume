@@ -1,27 +1,26 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /gallery/public/{allPaths=**} {
+    function canParticipate(email) {
+      return email == 'jjun8647@gmail.com'
+             || firestore.exists(/databases/(default)/documents/friends/$(email));
+    }
+
+    match /gallery/{uid}/public/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+      allow write: if request.auth != null && request.auth.uid == uid && canParticipate(request.auth.token.email);
     }
-    match /gallery/private/{allPaths=**} {
-      allow read: if request.auth != null && (
-        request.auth.token.email == 'jjun8647@gmail.com'
-        || firestore.exists(/databases/(default)/documents/allowedUsers/$(request.auth.token.email))
-      );
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+    match /gallery/{uid}/private/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && canParticipate(request.auth.token.email);
     }
-    match /journal/public/{allPaths=**} {
+    match /journal/{uid}/public/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+      allow write: if request.auth != null && request.auth.uid == uid && canParticipate(request.auth.token.email);
     }
-    match /journal/private/{allPaths=**} {
-      allow read: if request.auth != null && (
-        request.auth.token.email == 'jjun8647@gmail.com'
-        || firestore.exists(/databases/(default)/documents/allowedUsers/$(request.auth.token.email))
-      );
-      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+    match /journal/{uid}/private/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && canParticipate(request.auth.token.email);
     }
   }
 }
