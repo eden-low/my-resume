@@ -1,6 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function canReadPost(photoId) {
+      let post = get(/databases/$(database)/documents/photos/$(photoId)).data;
+      return post.visibility == 'public'
+             || (request.auth != null && (
+                  request.auth.token.email == 'jjun8647@gmail.com'
+                  || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
+                ));
+    }
+
     match /photos/{photoId} {
       allow read: if resource.data.visibility == 'public'
                   || (request.auth != null && (
@@ -8,6 +17,25 @@ service cloud.firestore {
                        || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
                      ));
       allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+
+      match /likes/{uid} {
+        allow read: if canReadPost(photoId);
+        allow write: if request.auth != null && request.auth.uid == uid && canReadPost(photoId);
+      }
+      match /comments/{commentId} {
+        allow read: if canReadPost(photoId);
+        allow create: if request.auth != null
+                       && request.auth.uid == request.resource.data.uid
+                       && canReadPost(photoId);
+        allow update, delete: if false;
+      }
+      match /views/{viewId} {
+        allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+        allow create: if request.auth != null
+                       && request.auth.uid == request.resource.data.viewerUid
+                       && canReadPost(photoId);
+        allow update, delete: if false;
+      }
     }
     match /expenses/{expenseId} {
       allow read: if resource.data.visibility == 'public'
@@ -33,6 +61,14 @@ service cloud.firestore {
                      ));
       allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
     }
+    match /habits/{habitId} {
+      allow read: if resource.data.visibility == 'public'
+                  || (request.auth != null && (
+                       request.auth.token.email == 'jjun8647@gmail.com'
+                       || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
+                     ));
+      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+    }
     match /allowedUsers/{email} {
       allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
       allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
@@ -41,6 +77,10 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
       allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
       allow update, delete: if false;
+    }
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
+      allow write: if request.auth != null && request.auth.token.email == 'jjun8647@gmail.com';
     }
   }
 }

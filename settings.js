@@ -230,5 +230,6 @@ onAuthStateChanged(auth, (user) => {
   if (isOwner(user)) {
     loadSystemLogs();
     loadAccessManagement();
+    document.getElementById("export-section").classList.remove("hidden");
   }
 });

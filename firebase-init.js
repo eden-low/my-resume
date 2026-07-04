@@ -1,7 +1,7 @@
 // Shared Firebase setup, imported by any page that needs auth/data (currently gallery.js;
 // future phases like notes/dashboard widgets will reuse this same module).
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
@@ -17,6 +17,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+// Explicit rather than relying on the SDK default so the PWA (standalone launch,
+// no browser chrome) reliably keeps the session across relaunches.
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);

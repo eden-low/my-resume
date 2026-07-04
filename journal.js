@@ -77,6 +77,41 @@ function entryKey(entry) {
   return `${entry.uid}-${entry.createdAt?.toMillis?.() || 0}-${entry.title}`;
 }
 
+const JOURNAL_REMINDER_DAYS = 3;
+
+function todayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Best-effort local reminder: written by the owner's own client when they next load this
+// page, deduped per calendar day via localStorage (no backend to compute this server-side).
+async function checkJournalReminder(entries) {
+  const user = auth.currentUser;
+  if (!isOwner(user)) return;
+
+  const newestMillis = entries.reduce((latest, e) => Math.max(latest, e.createdAt?.toMillis?.() || 0), 0);
+  const daysSince = newestMillis ? (Date.now() - newestMillis) / (1000 * 60 * 60 * 24) : Infinity;
+  if (daysSince < JOURNAL_REMINDER_DAYS) return;
+
+  const storageKey = "lfj:notifiedJournalReminder";
+  const today = todayKey();
+  if (localStorage.getItem(storageKey) === today) return;
+  localStorage.setItem(storageKey, today);
+
+  try {
+    await addDoc(collection(db, "notifications"), {
+      uid: user.uid,
+      type: "journal_reminder",
+      title: "Journal reminder",
+      message: `No journal entries in ${JOURNAL_REMINDER_DAYS} days.`,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error("[journal] reminder notification failed:", err.code || err);
+  }
+}
+
 function journalCard(entry) {
   const mood = MOOD_META[entry.mood] || null;
   const isPrivate = entry.visibility === "private";
@@ -193,6 +228,7 @@ async function fetchVisibleEntries() {
   entries.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   cachedEntries = entries;
   renderGrid();
+  checkJournalReminder(entries);
 }
 
 function renderSignedOut() {

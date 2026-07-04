@@ -1,6 +1,6 @@
-# LFJ Portfolio — Dark Glass System Dashboard
+# Personal OS — Dark Glass System Dashboard
 
-A 10-page **login-first** personal system for **Low Fang Jun**, styled as a dark glassmorphism "system dashboard" (near-black canvas, translucent blurred cards, a single soft violet accent, Apple system fonts) — a deliberate move away from the earlier neon-cyber "hunter status" look, described further below. Every page requires Google sign-in via `login.html` before it renders — see [Login gate](#login-gate-auth-guardjs--loginhtml) below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no dependencies to install. Includes a minimal PWA layer (`manifest.json` + `service-worker.js`) for installability.
+A 12-page **login-first** personal system ("Personal OS") for **Low Fang Jun**, styled as a dark glassmorphism "system dashboard" (near-black canvas, translucent blurred cards, a single soft violet accent, Apple system fonts) — a deliberate move away from the earlier neon-cyber "hunter status" look, described further below. Every page requires Google sign-in via `login.html` before it renders — see [Login gate](#login-gate-auth-guardjs--loginhtml) below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no dependencies to install. Installable as a PWA (`manifest.json` + `service-worker.js`, real `images/icon-192.png`/`icon-512.png` app icons) with offline shell caching.
 
 ## Pages
 
@@ -9,13 +9,15 @@ A 10-page **login-first** personal system for **Low Fang Jun**, styled as a dark
 | Login | [login.html](login.html) | The one page reachable while signed out — "Sign in with Google," then redirects into the app |
 | Home | [index.html](index.html) | Dashboard layout: identity strip, a System Status panel (live Firebase Auth session state), a live Weather widget (Kuching, OpenWeatherMap), and quick-link cards to the other pages |
 | Resume | [resume.html](resume.html) | Combined resume — Profile, Matrix, Education, Leadership & Events, Work Experience, Achievements & Skills sections with a sticky in-page sub-nav |
-| Gallery | [gallery.html](gallery.html) | Instagram-style feed of Firebase-backed posts — filter tabs by category/visibility; signing in as the owner reveals the Private tab and a "New Post" modal (see below) |
+| Gallery | [gallery.html](gallery.html) | Instagram-style feed of Firebase-backed posts — filter tabs by category/visibility, likes, comments, and owner-only view analytics per post; signing in as the owner reveals the Private tab and a "New Post" modal (see below) |
 | Journal | [journal.html](journal.html) | Daily journal — markdown entries with mood + tags, optional image, search across title/content/tags, same public/private model as Gallery |
 | Expenses | [expenses.html](expenses.html) | Personal spend tracker — daily-spending and by-category Chart.js charts, filterable list, owner-only "Add Expense" modal, same public/private model as Gallery |
 | Timeline | [timeline.html](timeline.html) | Life events grouped by year — type/visibility filter tabs, search by year or text, owner-only "New Event" modal, same public/private model as Gallery |
+| Habits | [habits.html](habits.html) | Habit tracker — daily check-ins, streaks, a 7-day weekly strip, and a monthly completion ring per habit, same public/private model as Gallery |
 | Dashboard | [dashboard.html](dashboard.html) | Read-only analytics rollup across Gallery, Expenses, and Journal, plus a System Status panel (session, account age, current weather) — no writes on this page |
+| Notifications | [notifications.html](notifications.html) | Owner-only notification center — login/expense/journal/habit/gallery alerts, unread badge in the nav, mark-as-read |
 | Contact | [contact.html](contact.html) | Email / phone / location, with a one-click "send message" CTA |
-| Settings | [settings.html](settings.html) | Profile, preferences (theme/default city/default privacy), and — owner-only — login history and an Access Management panel for granting/revoking private-content access |
+| Settings | [settings.html](settings.html) | Profile, preferences (theme/default city/default privacy), owner-only login history + Access Management, and an owner-only Export & Backup section (CSV/Markdown/JSON exports plus a full JSON backup) |
 
 ## Running locally
 
@@ -40,7 +42,7 @@ Every page except `login.html` is gated: a single `<script type="module" src="au
 - [OpenWeatherMap](https://openweathermap.org/) Current Weather API for the homepage weather widget (free-tier key embedded client-side in `index.html`, same trust model as the Firebase config — see Design system below)
 - Shared custom styles in [styles.css](styles.css) (glass card treatment, ambient background glow, scrollbar, hero parallax layer, the `auth-check-pending` gate style, and the light-mode override block)
 - Shared behavior in [scripts.js](scripts.js) (scroll-reveal animations, the hero mouse-parallax tilt — unused now that `index.html` is a dashboard rather than a photo hero — and service-worker registration)
-- A minimal PWA layer: [manifest.json](manifest.json) + [service-worker.js](service-worker.js) (network-first with cache fallback, explicitly bypassing Firebase/CDN/weather hosts so it never interferes with live requests)
+- A PWA layer: [manifest.json](manifest.json) (name "Personal OS", `#09090e` theme/background colors, real `images/icon-192.png`/`icon-512.png` app icons) + [service-worker.js](service-worker.js) (network-first with cache fallback, explicitly bypassing Firebase/CDN/weather hosts so it never interferes with live requests)
 
 ## Design system
 
@@ -54,6 +56,8 @@ Access to private posts beyond the owner is controlled by an `allowedUsers` Fire
 
 Because posts are fetched at runtime, the feed is empty until the owner signs in and creates posts through the New Post modal.
 
+**Social features**: each post has a like button (`photos/{id}/likes/{uid}` — doc ID is the liker's uid, so "one like per user" is structural, not just enforced by rules) and a comment thread (`photos/{id}/comments`, click the comment count to expand) open to any signed-in/allowed viewer, not just the owner. View analytics (`photos/{id}/views`) are owner-only end to end — recorded when a non-owner viewer sees a post, and only ever displayed to the owner (total views, unique visitors, recent visitor emails) via an "Analytics" toggle on each card. Firestore subcollection rules don't inherit from the parent document's `match` block, so `firestore.rules` adds a `canReadPost()` helper function reused by all three subcollections' read rules.
+
 ## Expenses: personal spend tracker
 
 `expenses.html` follows the same pattern as the gallery — [expenses.js](expenses.js) fetches `expenses` Firestore docs (public always, private only when authorized), caches them client-side, and renders a filterable list (by category, or by Public/Private) plus two Chart.js charts built from the full accessible set regardless of the active list filter: a daily-spending bar chart (last 7 days) and a by-category doughnut chart. The owner-only "Add Expense" modal writes `{ amount, category, note, visibility, createdAt, uid }` — there's no file upload here, so it only needs Firestore, not Storage. Access control mirrors the gallery exactly (owner + `allowedUsers` allowlist); the `expenses` collection rules live alongside `photos` in [firestore.rules](firestore.rules).
@@ -65,6 +69,18 @@ Because posts are fetched at runtime, the feed is empty until the owner signs in
 ## Timeline: life events by year
 
 `timeline.html` is the fourth implementation of the fetch/cache/filter pattern, for a `life_events` Firestore collection (`{ title, description, date, type: career|education|travel|personal, visibility, uid }`). [timeline.js](timeline.js) groups the visible (filtered + searched) events by `date`'s year and renders each year as its own section with a vertical connector line; clicking an entry toggles its description open (no separate detail page). The search box matches title/description text **or** an exact year (typing "2024" jumps to that year's entries). `date` is a user-picked `<input type="date">` converted to a Firestore `Timestamp` on save — unlike the other pages' `createdAt`, this is an editable point-in-time value, not an auto "now" timestamp, since life events are often logged after the fact. **Scope note**: the automatic cross-collection aggregation described in some earlier planning notes (pulling in Gallery uploads / Expense milestones / Journal entries as auto-generated timeline items, and matching Travel events to related photos/expenses) was deliberately left out of this pass — it's a materially bigger feature (cross-collection queries + a unified item shape) that's easier to scope well once the manual timeline has real data in it. Right now the timeline only shows manually-created `life_events`.
+
+## Habits: daily check-ins & streaks
+
+`habits.html` is the fifth implementation of the fetch/cache/filter pattern, for a `habits` Firestore collection (`{ uid, title, icon, completedDates: [], visibility, createdAt }`). [habits.js](habits.js) computes everything client-side from `completedDates` (an array of `YYYY-MM-DD` strings): a current streak (consecutive days, allowing "not yet checked in today" without breaking it), a 7-day weekly strip, and a monthly completion percentage rendered as a CSS `conic-gradient` ring (no Chart.js needed). Checking in for today toggles today's date in/out of `completedDates` via `arrayUnion`/`arrayRemove`; this write, like every other collection, is owner-only — non-owner allowed viewers see read-only cards. `index.html`'s homepage has a compact "Today's Habits" widget (checklist + best streak) that duplicates a minimal version of this fetch/streak logic inline, matching how every other page keeps its own copy rather than importing a shared module.
+
+## Notifications: owner-only alert center
+
+`notifications.html` lists `notifications` docs (`{ uid, type, title, message, read, createdAt }`) for the owner only — the collection uses the same owner-write-only rule as everything else, deliberately, since there's no backend/Cloud Functions to push a notification the instant something happens elsewhere. Instead, each alert is written by the **owner's own client**, opportunistically, the next time their browser loads the page that would know about the triggering condition: a login alert from `login.html` right after the `login_logs` write, a spending alert from `expenses.js` when the current month crosses RM1000, a journal reminder from `journal.js` when the newest entry is 3+ days old, a habit-streak alert from `habits.js` on a 30/60/90-day milestone, and a "someone liked your photo" alert from `gallery.js` when a post's like count grows since the owner's last visit (tracked via `localStorage`, since there's no server-side comparison available). Duplicate alerts are avoided per-condition via `localStorage` checkpoints (e.g. one spending alert per calendar month). [auth-guard.js](auth-guard.js) — already loaded on every protected page — queries for unread count and lights up a badge next to the Notifications nav link.
+
+## Export & Backup
+
+Settings' owner-only **Export & Backup** section ([export.js](export.js)) downloads whatever is currently visible to the signed-in owner (public + private, same read pattern as every other page): Expenses as CSV (`date,amount,category,note`), Journal as a single combined Markdown file (one `# Title` block per entry with date/mood/tags), Timeline and Gallery metadata as JSON, and a "Full Backup" button that bundles `{ profile, settings, expenses, journals, timeline, gallery_metadata, habits }` into one `personal_os_backup.json` (`profile` from `auth.currentUser`, `settings` from the `lfj:settings` localStorage key). All downloads use a plain Blob + temporary `<a download>` click — no library.
 
 ## Dashboard: read-only analytics
 

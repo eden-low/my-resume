@@ -4,9 +4,8 @@
   <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Journal | Low Fang Jun</title>
+  <title>Habits | Low Fang Jun</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json">
@@ -63,90 +62,72 @@
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 mt-8 space-y-6">
+  <main class="max-w-3xl mx-auto px-4 mt-8 space-y-6">
     <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-semibold text-2xl">Journal</h1>
-          <p class="text-textGray mt-2 text-sm">Daily notes &mdash; markdown supported. Sign in to write and to see private entries.</p>
+          <h1 class="font-cyber font-semibold text-2xl">Habits</h1>
+          <p class="text-textGray mt-2 text-sm">Daily check-ins, streaks, and completion trends.</p>
         </div>
         <div id="auth-control" class="flex items-center gap-3"></div>
       </div>
-      <p id="journal-access-note" class="hidden mt-4 text-xs font-code text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2">
+      <p id="habits-access-note" class="hidden mt-4 text-xs font-code text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2">
         <i class="fa-solid fa-lock mr-1.5"></i> Signed in, but this account isn't on the private access list.
       </p>
-      <div class="mt-5 relative">
-        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-textGray text-xs"></i>
-        <input id="journal-search" type="text" placeholder="Search title, content, or tags&hellip;" class="w-full bg-darkBg/60 border border-borderNeon rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-textGray/60">
-      </div>
     </section>
 
     <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap items-center gap-3">
-        <div id="journal-filters" class="flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
-          <button data-filter="all" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">All</button>
-          <button data-filter="public" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Public</button>
-          <button data-filter="private" class="filter-tab hidden px-3 py-1.5 rounded-full hover:text-rose-400 hover:bg-rose-400/10 transition-colors">Private</button>
-        </div>
-        <div class="w-px h-4 bg-borderNeon"></div>
-        <div id="mood-filters" class="flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
-          <button data-mood="all" class="mood-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Any mood</button>
-        </div>
+      <div id="habit-filters" class="flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
+        <button data-filter="all" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">All</button>
+        <button data-filter="public" class="filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Public</button>
+        <button data-filter="private" class="filter-tab hidden px-3 py-1.5 rounded-full hover:text-rose-400 hover:bg-rose-400/10 transition-colors">Private</button>
       </div>
-      <button id="new-journal-btn" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
-        <i class="fa-solid fa-plus mr-1.5"></i> NEW ENTRY
+      <button id="new-habit-btn" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+        <i class="fa-solid fa-plus mr-1.5"></i> NEW HABIT
       </button>
     </section>
 
-    <div id="journal-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-    <p id="journal-empty" class="hidden text-center text-xs font-code text-textGray py-10">No entries here yet.</p>
+    <div id="habits-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+    <p id="habits-empty" class="hidden text-center text-xs font-code text-textGray py-10">No habits here yet.</p>
   </main>
 
-  <!-- New Entry modal -->
-  <div id="journal-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div id="journal-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
-    <div class="relative w-full max-w-lg bg-cardBg neon-border-purple rounded-2xl p-6 my-8">
+  <!-- New Habit modal -->
+  <div id="habit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="habit-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md bg-cardBg neon-border-purple rounded-2xl p-6">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-cyber font-semibold text-lg">New Entry</h2>
-        <button id="journal-modal-close" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+        <h2 class="font-cyber font-semibold text-lg">New Habit</h2>
+        <button id="habit-modal-close" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
       </div>
-      <form id="journal-form" class="space-y-4">
+      <form id="habit-form" class="space-y-4">
         <div>
-          <label class="block text-xs font-code text-textGray mb-1.5" for="journal-title">Title</label>
-          <input id="journal-title" type="text" required placeholder="Today's entry" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+          <label class="block text-xs font-code text-textGray mb-1.5" for="habit-title">Title</label>
+          <input id="habit-title" type="text" required placeholder="Exercise" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
         </div>
         <div>
-          <label class="block text-xs font-code text-textGray mb-1.5" for="journal-content">Content <span class="text-textGray/60">(markdown supported)</span></label>
-          <textarea id="journal-content" rows="6" required placeholder="What happened today?" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60 font-code"></textarea>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="flex-1">
-            <label class="block text-xs font-code text-textGray mb-1.5" for="journal-mood">Mood</label>
-            <select id="journal-mood" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white"></select>
-          </div>
-          <div class="flex items-center gap-4 text-xs font-code text-textGray">
-            <label class="flex items-center gap-1.5"><input type="radio" name="journal-visibility" value="public" checked> Public</label>
-            <label class="flex items-center gap-1.5"><input type="radio" name="journal-visibility" value="private"> Private</label>
+          <label class="block text-xs font-code text-textGray mb-1.5" for="habit-icon">Icon</label>
+          <input id="habit-icon" type="text" required maxlength="4" placeholder="ðŸƒ" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+          <div class="flex items-center gap-2 mt-2">
+            <button type="button" data-icon="ðŸƒ" class="icon-chip w-9 h-9 rounded-lg bg-darkBg/60 border border-borderNeon text-base hover:border-neonPurple/60 transition-colors">ðŸƒ</button>
+            <button type="button" data-icon="ðŸ“š" class="icon-chip w-9 h-9 rounded-lg bg-darkBg/60 border border-borderNeon text-base hover:border-neonPurple/60 transition-colors">ðŸ“š</button>
+            <button type="button" data-icon="ðŸ’§" class="icon-chip w-9 h-9 rounded-lg bg-darkBg/60 border border-borderNeon text-base hover:border-neonPurple/60 transition-colors">ðŸ’§</button>
+            <button type="button" data-icon="ðŸ’»" class="icon-chip w-9 h-9 rounded-lg bg-darkBg/60 border border-borderNeon text-base hover:border-neonPurple/60 transition-colors">ðŸ’»</button>
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-code text-textGray mb-1.5" for="journal-tags">Tags <span class="text-textGray/60">(comma separated)</span></label>
-          <input id="journal-tags" type="text" placeholder="work, coding, family" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
-        </div>
-        <div>
-          <label class="block text-xs font-code text-textGray mb-1.5" for="journal-image">Image <span class="text-textGray/60">(optional)</span></label>
-          <input id="journal-image" type="file" accept="image/*" class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
+        <div class="flex items-center gap-4 text-xs font-code text-textGray">
+          <label class="flex items-center gap-1.5"><input type="radio" name="habit-visibility" value="public" checked> Public</label>
+          <label class="flex items-center gap-1.5"><input type="radio" name="habit-visibility" value="private"> Private</label>
         </div>
         <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
-          SAVE ENTRY
+          SAVE HABIT
         </button>
-        <p id="journal-status" class="text-xs font-code text-textGray text-center"></p>
+        <p id="habit-status" class="text-xs font-code text-textGray text-center"></p>
       </form>
     </div>
   </div>
 
   <script src="scripts.js" defer></script>
   <script type="module" src="auth-guard.js"></script>
-  <script type="module" src="journal.js"></script>
+  <script type="module" src="habits.js"></script>
 </body>
 </html>

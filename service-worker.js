@@ -1,14 +1,16 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
-const CACHE = "lfj-shell-v1";
+const CACHE = "lfj-shell-v2";
 
 const PRECACHE = [
   "index.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
   "timeline.html", "dashboard.html", "contact.html", "login.html", "settings.html",
+  "habits.html", "notifications.html",
   "styles.css", "scripts.js", "firebase-init.js", "auth-guard.js",
   "gallery.js", "expenses.js", "journal.js", "timeline.js", "dashboard.js", "settings.js",
-  "manifest.json",
+  "habits.js", "notifications.js", "export.js",
+  "manifest.json", "images/icon-192.png", "images/icon-512.png",
 ];
 
 const BYPASS_HOSTS = [

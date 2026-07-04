@@ -49,6 +49,44 @@ function dayKey(ts) {
   return ts.toDate().toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+const EXPENSE_ALERT_THRESHOLD = 1000;
+
+function monthKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Best-effort local alert: written by the owner's own client when they next load this page,
+// deduped per calendar month via localStorage (no backend to compute this server-side).
+async function checkExpenseAlert(expenses) {
+  const user = auth.currentUser;
+  if (!isOwner(user)) return;
+
+  const thisMonth = monthKey();
+  const monthTotal = expenses.reduce((sum, e) => {
+    const d = e.createdAt?.toDate?.();
+    if (!d || monthKey(d) !== thisMonth) return sum;
+    return sum + Number(e.amount || 0);
+  }, 0);
+  if (monthTotal <= EXPENSE_ALERT_THRESHOLD) return;
+
+  const storageKey = "lfj:notifiedExpenseMonth";
+  if (localStorage.getItem(storageKey) === thisMonth) return;
+  localStorage.setItem(storageKey, thisMonth);
+
+  try {
+    await addDoc(collection(db, "notifications"), {
+      uid: user.uid,
+      type: "expense_alert",
+      title: "Spending alert",
+      message: `This month's spending exceeded RM${EXPENSE_ALERT_THRESHOLD}.`,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error("[expenses] alert notification failed:", err.code || err);
+  }
+}
+
 function expenseRow(expense) {
   const meta = CATEGORY_META[expense.category] || CATEGORY_META.other;
   const isPrivate = expense.visibility === "private";
@@ -182,6 +220,7 @@ async function fetchVisibleExpenses() {
   cachedExpenses = expenses;
   renderList();
   renderCharts();
+  checkExpenseAlert(expenses);
 }
 
 function renderSignedOut() {

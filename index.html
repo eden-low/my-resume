@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#17151f">
-    <link rel="apple-touch-icon" href="images/me3.jpeg">
+    <meta name="theme-color" content="#09090e">
+    <link rel="apple-touch-icon" href="images/icon-192.png">
     <script>
         tailwind.config = {
             theme: {
@@ -46,14 +46,16 @@
                     <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
                 </div>
             </div>
-            <nav class="flex flex-wrap items-center justify-center gap-4 text-sm font-cyber font-semibold tracking-wider text-textGray">
+            <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
                 <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
                 <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
                 <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
                 <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> Journal</a>
                 <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
                 <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
+                <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
                 <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
+                <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
                 <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
                 <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
             </nav>
@@ -83,7 +85,7 @@
         <!-- Dashboard grid -->
         <section class="reveal-group grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
             <!-- System status panel -->
-            <div class="reveal lg:col-span-7 bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+            <div class="reveal lg:col-span-5 bg-cardBg/90 neon-border-purple rounded-2xl p-6">
                 <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">System Status</p>
                 <div class="divide-y divide-borderNeon/60 text-sm">
                     <div class="flex items-center justify-between py-2.5">
@@ -114,7 +116,7 @@
             </div>
 
             <!-- Weather widget -->
-            <div class="reveal lg:col-span-5 bg-cardBg/90 neon-border-purple rounded-2xl p-6 flex flex-col">
+            <div class="reveal lg:col-span-4 bg-cardBg/90 neon-border-purple rounded-2xl p-6 flex flex-col">
                 <div class="flex items-start justify-between">
                     <div>
                         <p id="weather-city" class="text-sm font-semibold">Kuching</p>
@@ -128,6 +130,24 @@
                 <p id="weather-cond" class="mt-2 text-sm text-textGray">Loading&hellip;</p>
                 <p id="weather-updated" class="mt-auto pt-3 text-[10px] font-code text-textGray/70 tracking-wide"></p>
             </div>
+
+            <!-- Today's Habits widget -->
+            <div class="reveal lg:col-span-3 bg-cardBg/90 neon-border-purple rounded-2xl p-6 flex flex-col">
+                <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3">Today's Habits</p>
+                <div id="habits-widget-list" class="space-y-2 text-sm flex-1">
+                    <p class="text-xs font-code text-textGray">Loading&hellip;</p>
+                </div>
+                <p id="habits-widget-streak" class="mt-3 pt-3 border-t border-borderNeon/40 text-xs font-code text-amber-400 font-semibold hidden"></p>
+            </div>
+        </section>
+
+        <!-- Recent Notifications -->
+        <section id="notif-widget-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6 mb-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code">Recent Notifications</p>
+                <a href="notifications.html" class="text-[11px] font-code text-neonPurple hover:underline">View all</a>
+            </div>
+            <div id="notif-widget-list" class="space-y-2 text-sm"></div>
         </section>
 
         <!-- Quick links -->
@@ -167,11 +187,25 @@
                     <p class="text-[11px] text-textGray mt-1 leading-relaxed">Life events grouped by year</p>
                 </div>
             </a>
+            <a href="habits.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-amber-400/40 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center text-sm"><i class="fa-solid fa-list-check"></i></div>
+                <div class="mt-4">
+                    <p class="text-sm font-semibold">Habits</p>
+                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Daily check-ins, streaks &amp; completion trends</p>
+                </div>
+            </a>
             <a href="dashboard.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonPurple/40 transition-all">
                 <div class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-sm"><i class="fa-solid fa-chart-line"></i></div>
                 <div class="mt-4">
                     <p class="text-sm font-semibold">Dashboard</p>
                     <p class="text-[11px] text-textGray mt-1 leading-relaxed">Analytics across Gallery, Expenses &amp; Journal</p>
+                </div>
+            </a>
+            <a href="notifications.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonBlue/40 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-neonBlue/10 text-neonBlue flex items-center justify-center text-sm"><i class="fa-solid fa-bell"></i></div>
+                <div class="mt-4">
+                    <p class="text-sm font-semibold">Notifications</p>
+                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">System alerts &amp; activity</p>
                 </div>
             </a>
             <a href="contact.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-rose-400/40 transition-all">
@@ -193,8 +227,9 @@
     <script src="scripts.js" defer></script>
     <script type="module" src="auth-guard.js"></script>
     <script type="module">
-        import { auth } from "./firebase-init.js";
+        import { auth, db, isOwner } from "./firebase-init.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+        import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
         onAuthStateChanged(auth, (user) => {
             const pill = document.getElementById("session-pill");
@@ -205,7 +240,106 @@
                 pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-textGray/60"></span> SIGNED OUT';
                 pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 text-textGray font-code text-[11px] font-semibold";
             }
+            loadHabitsWidget(user);
+            loadNotifWidget(user);
         });
+
+        // Minimal, self-contained fetch+streak logic for the homepage widget â€” duplicated from
+        // habits.js rather than imported, matching this codebase's per-page fetch/cache pattern.
+        function toDateKey(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
+
+        function computeStreak(completedDates) {
+            const set = new Set(completedDates || []);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const cursor = new Date(today);
+            if (!set.has(toDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+            let streak = 0;
+            while (set.has(toDateKey(cursor))) {
+                streak++;
+                cursor.setDate(cursor.getDate() - 1);
+            }
+            return streak;
+        }
+
+        async function loadHabitsWidget(user) {
+            const listEl = document.getElementById("habits-widget-list");
+            const streakEl = document.getElementById("habits-widget-streak");
+            try {
+                const habits = [];
+                const publicSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "public")));
+                publicSnap.forEach((d) => habits.push(d.data()));
+                if (user) {
+                    try {
+                        const privateSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "private")));
+                        privateSnap.forEach((d) => habits.push(d.data()));
+                    } catch (err) {
+                        console.error("[habits-widget] private query failed:", err.code || err);
+                    }
+                }
+
+                if (!habits.length) {
+                    listEl.innerHTML = '<p class="text-xs font-code text-textGray">No habits yet. <a href="habits.html" class="text-neonPurple hover:underline">Add one</a>.</p>';
+                    streakEl.classList.add("hidden");
+                    return;
+                }
+
+                const todayKey = toDateKey(new Date());
+                listEl.innerHTML = habits.map((h) => {
+                    const done = (h.completedDates || []).includes(todayKey);
+                    return `<div class="flex items-center gap-2">
+                        <i class="fa-solid ${done ? "fa-square-check text-emerald-400" : "fa-square text-textGray/50"}"></i>
+                        <span class="${done ? "text-white" : "text-textGray"}">${h.icon || ""} ${h.title}</span>
+                    </div>`;
+                }).join("");
+
+                const bestStreak = Math.max(...habits.map((h) => computeStreak(h.completedDates)));
+                if (bestStreak > 0) {
+                    streakEl.textContent = `ðŸ”¥ ${bestStreak} day${bestStreak === 1 ? "" : "s"}`;
+                    streakEl.classList.remove("hidden");
+                } else {
+                    streakEl.classList.add("hidden");
+                }
+            } catch (err) {
+                console.error("[habits-widget] failed:", err);
+                listEl.innerHTML = '<p class="text-xs font-code text-textGray">Unavailable.</p>';
+            }
+        }
+
+        async function loadNotifWidget(user) {
+            const section = document.getElementById("notif-widget-section");
+            const listEl = document.getElementById("notif-widget-list");
+            if (!isOwner(user)) {
+                section.classList.add("hidden");
+                return;
+            }
+            try {
+                const snap = await getDocs(query(collection(db, "notifications"), where("uid", "==", user.uid), where("read", "==", false)));
+                const notifs = snap.docs
+                    .map((d) => d.data())
+                    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+                    .slice(0, 5);
+                if (!notifs.length) {
+                    section.classList.add("hidden");
+                    return;
+                }
+                section.classList.remove("hidden");
+                listEl.innerHTML = notifs.map((n) => `
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-neonPurple flex-shrink-0"></span>
+                        <span class="text-white font-medium">${n.title}</span>
+                        <span class="text-textGray">&mdash; ${n.message}</span>
+                    </div>`).join("");
+            } catch (err) {
+                console.error("[notif-widget] failed:", err);
+                section.classList.add("hidden");
+            }
+        }
 
         const WEATHER_API_KEY = "4708932833bff8ef44d180197bfc4664";
         const WEATHER_ICONS = {
