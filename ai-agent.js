@@ -1,55 +1,46 @@
 import { auth, db, canParticipate } from "./firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-// Use the latest official Web SDK import as requested
-import { GoogleGenAI, Type, FunctionCallingConfigMode } from "https://esm.run/@google/genai";
 
 // Embedded client-side (same trust model as the OpenWeatherMap key in index.html), but this
 // key is directly billable — unlike the weather key, a leaked/scraped copy can run up real
 // cost. Once pushed, it's visible to anyone viewing the deployed site's source or browsing the
-// public GitHub repo. Restrict it in Google Cloud Console (API restriction to Generative
-// Language API, and/or HTTP referrer restriction to your own domain) if this stays public.
-const GEMINI_API_KEY = "AQ.Ab8RN6J0E-HUq-XEnhz33ZbEYTToDIDNz-397f8ZXpO40msiZA";
-const MODEL = "gemini-2.5-flash";
+// public GitHub repo. Restrict/rotate it in the Alibaba Cloud DashScope console if this stays public.
+const QWEN_API_KEY = "sk-ws-H.YPRIMR.D6ch.MEQCIFepSDGumKwff6nPeQ_r-8jjk9JkUkCxP4Xlcoj_kLRlAiAMQvXY--hDdBtYHNPC1AK7TUyplGrbPF1l0djz2jIcGA";
+const QWEN_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const MODEL = "qwen3.5-omni-flash";
 
 const SYSTEM_INSTRUCTION =
   "You are the core secretary of a personal system called Personal OS. Be sharp, efficient, and " +
   "minimalist — short replies, no filler. When the user's message describes spending money, buying " +
   "something, or logging an invoice/receipt, call the addExpense tool instead of just replying in text.";
 
-const ADD_EXPENSE_DECLARATION = {
-  name: "addExpense",
-  description:
-    "Log a financial expense. Call this whenever the user's message describes spending money, " +
-    "buying something, or saving an invoice/receipt item.",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      amount: { type: Type.NUMBER, description: "The amount spent, as a plain number with no currency symbol." },
-      category: {
-        type: Type.STRING,
-        enum: ["Food", "Transport", "Entertainment", "Shopping", "Utilities", "Others"],
-        description: "The spending category.",
+const ADD_EXPENSE_TOOL = {
+  type: "function",
+  function: {
+    name: "addExpense",
+    description:
+      "Log a financial expense. Call this whenever the user's message describes spending money, " +
+      "buying something, or saving an invoice/receipt item.",
+    parameters: {
+      type: "object",
+      properties: {
+        amount: { type: "number", description: "The amount spent, as a plain number with no currency symbol." },
+        category: {
+          type: "string",
+          enum: ["Food", "Transport", "Entertainment", "Shopping", "Utilities", "Others"],
+          description: "The spending category.",
+        },
+        description: { type: "string", description: "A short description of what the expense was for." },
       },
-      description: { type: Type.STRING, description: "A short description of what the expense was for." },
+      required: ["amount", "category", "description"],
     },
-    required: ["amount", "category", "description"],
   },
 };
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-const chat = ai.chats.create({
-  model: MODEL,
-  config: {
-    systemInstruction: SYSTEM_INSTRUCTION,
-    tools: [{ functionDeclarations: [ADD_EXPENSE_DECLARATION] }],
-    toolConfig: {
-      functionCallingConfig: {
-        mode: FunctionCallingConfigMode.ANY,
-      },
-    },
-  },
-});
+// OpenAI-compatible chat history — the fetch() endpoint is stateless per-request, so (unlike the
+// old SDK's `chat` session object) this array is what carries conversation context across turns.
+const messages = [{ role: "system", content: SYSTEM_INSTRUCTION }];
 
 const chatLog = document.getElementById("chat-log");
 const chatForm = document.getElementById("chat-form");
@@ -114,50 +105,92 @@ async function handleAddExpense(args) {
   return { amount, category, note };
 }
 
-async function handleModelResponse(response) {
-  removeTyping();
-  const calls = response.functionCalls;
+async function callQwen() {
+  const res = await fetch(QWEN_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${QWEN_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      tools: [ADD_EXPENSE_TOOL],
+      tool_choice: "auto",
+    }),
+  });
 
-  if (calls && calls.length) {
-    for (const call of calls) {
-      if (call.name !== "addExpense") continue;
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Qwen API error ${res.status}: ${errText}`);
+  }
+
+  const data = await res.json();
+  return data.choices[0].message;
+}
+
+async function handleAssistantMessage(message) {
+  messages.push(message);
+  const toolCalls = message.tool_calls;
+
+  if (toolCalls && toolCalls.length) {
+    for (const toolCall of toolCalls) {
+      if (toolCall.function?.name !== "addExpense") continue;
+      let args = {};
       try {
-        const result = await handleAddExpense(call.args);
-        appendMessage("ai", `✅ Successfully logged RM ${result.amount.toFixed(2)} under ${capitalize(result.category)}.`);
+        args = JSON.parse(toolCall.function.arguments || "{}");
+      } catch (err) {
+        console.error("[ai-agent] failed to parse tool arguments:", err);
+      }
 
-        const followUp = await chat.sendMessage({
-          message: [{ functionResponse: { name: "addExpense", response: { status: "success", ...result } } }],
+      try {
+        const result = await handleAddExpense(args);
+        appendMessage("ai", `✅ Successfully logged RM ${result.amount.toFixed(2)} under ${capitalize(result.category)}.`);
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify({ status: "success", ...result }),
         });
-        if (followUp.text && followUp.text.trim()) {
-          appendMessage("ai", followUp.text.trim());
-        }
       } catch (err) {
         console.error("[ai-agent] addExpense failed:", err);
         appendMessage("ai", "I couldn't save that expense — you may need to be an approved participant first.");
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify({ status: "error", message: String(err.message || err) }),
+        });
       }
+    }
+
+    const followUp = await callQwen();
+    messages.push(followUp);
+    if (followUp.content && followUp.content.trim()) {
+      appendMessage("ai", followUp.content.trim());
     }
     return;
   }
 
-  if (response.text && response.text.trim()) {
-    appendMessage("ai", response.text.trim());
+  if (message.content && message.content.trim()) {
+    appendMessage("ai", message.content.trim());
   }
 }
 
 async function sendUserMessage(text) {
   appendMessage("user", text);
+  messages.push({ role: "user", content: text });
   chatInput.value = "";
   chatInput.disabled = true;
   chatSendBtn.disabled = true;
   appendTyping();
 
   try {
-    const response = await chat.sendMessage({ message: text });
-    await handleModelResponse(response);
+    const message = await callQwen();
+    removeTyping();
+    await handleAssistantMessage(message);
   } catch (err) {
     console.error("[ai-agent] sendMessage failed:", err);
     removeTyping();
-    appendMessage("ai", "Something went wrong talking to the model — check the console (a real Gemini API key needs to be set in ai-agent.js).");
+    appendMessage("ai", "Something went wrong talking to the model — check the console (a real Qwen API key needs to be set in ai-agent.js).");
   } finally {
     chatInput.disabled = false;
     chatSendBtn.disabled = false;

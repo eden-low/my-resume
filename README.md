@@ -24,7 +24,7 @@ Nobody is ever signed out or blocked at login — everyone gets in, access just 
 | Habits | [habits.html](habits.html) | Habit tracker — daily check-ins, streaks, a 7-day weekly strip, and a monthly completion ring per habit |
 | Calendar | [calendar.html](calendar.html) | Monthly 7-column grid of your own expenses/photos/journal entries, bucketed by day |
 | Reports | [reports.html](reports.html) | Monthly recap of your own activity — total spend, top category, weekday-vs-weekend spending comparison, photo/journal counts |
-| AI Assistant | [ai.html](ai.html) | Chat interface backed by Google's Gemini API — natural-language function calling to log expenses (e.g. "spent RM12 on lunch") directly into your Expenses collection |
+| AI Assistant | [ai.html](ai.html) | Chat interface backed by Alibaba Cloud's Qwen (Tongyi) API — natural-language function calling to log expenses (e.g. "spent RM12 on lunch") directly into your Expenses collection |
 | Dashboard | [dashboard.html](dashboard.html) | Read-only analytics of your own Gallery/Expenses/Journal activity, plus **Search People** to find another signed-in user by name/@username/email |
 | Profile | [profile.html](profile.html) | Read-only IG-style profile (`?uid=`) opened from Search People — avatar/name/@username, public-activity stats, and a public photo grid you can like/comment on but not edit. Not in the nav — only reachable via a search result, same as `login.html` |
 | Notifications | [notifications.html](notifications.html) | Your own notification center — login/expense/journal/habit/gallery alerts, unread badge in the nav, mark-as-read |
@@ -81,7 +81,7 @@ All four follow the same shape: your own entries (any visibility) plus everyone'
 
 ## AI Assistant
 
-[ai.html](ai.html) / [ai-agent.js](ai-agent.js) is a chat interface backed by Google's Gemini API (`@google/genai`, loaded from jsDelivr's ESM CDN build — no npm install). It's configured with one native tool, `addExpense`, so a message like "spent RM12 on lunch" gets logged straight into the same `expenses` collection every other page reads, without opening a form. **Requires your own Gemini API key** — set `GEMINI_API_KEY` in `ai-agent.js` before this page will work; treat it as sensitive, since a leaked key is directly billable (unlike this app's other hardcoded client-side keys). Expense-logging is gated by `canParticipate()` like every other write in the app.
+[ai.html](ai.html) / [ai-agent.js](ai-agent.js) is a chat interface backed by Alibaba Cloud's Qwen (Tongyi) API, called directly via `fetch()` against DashScope's OpenAI-compatible endpoint (`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`, model `qwen3.5-omni-flash`) — no SDK, no npm install. It's configured with one tool, `addExpense`, so a message like "spent RM12 on lunch" gets logged straight into the same `expenses` collection every other page reads, without opening a form. **Requires your own DashScope API key** — set `QWEN_API_KEY` in `ai-agent.js` before this page will work; treat it as sensitive, since a leaked key is directly billable (unlike this app's other hardcoded client-side keys). Expense-logging is gated by `canParticipate()` like every other write in the app.
 
 ## Notifications
 

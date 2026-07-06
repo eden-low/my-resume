@@ -23,7 +23,7 @@ const BYPASS_HOSTS = [
   "cdn.tailwindcss.com",
   "cdnjs.cloudflare.com",
   "cdn.jsdelivr.net",
-  "generativelanguage.googleapis.com",
+  "dashscope.aliyuncs.com",
 ];
 
 self.addEventListener("install", (event) => {
