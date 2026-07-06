@@ -1,7 +1,7 @@
 import { auth, db, canParticipate } from "./firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-import { GoogleGenAI, Type } from "https://cdn.jsdelivr.net/npm/@google/genai/+esm";
+import { GoogleGenAI, Type, FunctionCallingConfigMode } from "https://cdn.jsdelivr.net/npm/@google/genai/+esm";
 
 // Embedded client-side (same trust model as the OpenWeatherMap key in index.html), but this
 // key is directly billable — unlike the weather key, a leaked/scraped copy can run up real
@@ -42,6 +42,11 @@ const chat = ai.chats.create({
   config: {
     systemInstruction: SYSTEM_INSTRUCTION,
     tools: [{ functionDeclarations: [ADD_EXPENSE_DECLARATION] }],
+    toolConfig: {
+      functionCallingConfig: {
+        mode: FunctionCallingConfigMode.ANY,
+      },
+    },
   },
 });
 
