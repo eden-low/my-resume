@@ -1,5 +1,5 @@
 import { auth, db, isOwner, OWNER_EMAIL } from "./firebase-init.js";
-import { getLang, setLang } from "./js/i18n.js";
+import { getLang, setLang, init as initI18n } from "./js/i18n.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -206,13 +206,27 @@ function setActiveChoice(buttons, value, attr) {
   });
 }
 
-function renderPreferences() {
+// Language buttons need the *resolved* language, not whatever `currentLang` happens to be at
+// this module's own top-level eval time — i18n.js's init() (localStorage → Firestore → browser
+// language) runs on DOMContentLoaded and may not have finished yet when this file first
+// evaluates, since ES modules on a page don't wait on one another. Awaiting the same init()
+// promise here (safe to call repeatedly — see js/i18n.js) guarantees the toggle always reflects
+// the language that's actually been applied to the page.
+async function renderPreferences() {
   const s = loadSettings();
   setActiveChoice(themeButtons, s.theme || "dark", "themeChoice");
   setActiveChoice(visibilityButtons, s.defaultVisibility || "public", "visibilityChoice");
-  setActiveChoice(langButtons, getLang(), "langChoice");
   defaultCityInput.value = s.defaultCity || "";
+
+  await initI18n();
+  setActiveChoice(langButtons, getLang(), "langChoice");
 }
+
+// Repaint if the language changed via another control (e.g. the mobile drawer's own switcher,
+// present in the DOM on every page including this one) — both call the exact same setLanguage().
+document.addEventListener("eden:langchange", () => {
+  setActiveChoice(langButtons, getLang(), "langChoice");
+});
 
 themeButtons.forEach((btn) => btn.addEventListener("click", () => setActiveChoice(themeButtons, btn.dataset.themeChoice, "themeChoice")));
 visibilityButtons.forEach((btn) => btn.addEventListener("click", () => setActiveChoice(visibilityButtons, btn.dataset.visibilityChoice, "visibilityChoice")));

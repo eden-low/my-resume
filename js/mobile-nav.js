@@ -5,7 +5,7 @@
 // slide-in drawer, a fixed bottom nav, and a Quick Add action sheet.
 import { auth } from "../firebase-init.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-import { getLang, setLang } from "./i18n.js";
+import { getLang, setLang, init as initI18n } from "./i18n.js";
 
 const DRAWER_LINKS = [
   { href: "index.html", icon: "fa-house", key: "nav.home", label: "Home" },
@@ -153,6 +153,7 @@ function wireDrawer() {
     location.href = "login.html";
   });
 
+  // Same setLang()/getLang() from js/i18n.js that Settings uses — no separate mobile logic.
   const langButtons = document.querySelectorAll(".drawer-lang-btn");
   const paintActive = () => {
     langButtons.forEach((btn) => {
@@ -162,11 +163,16 @@ function wireDrawer() {
       btn.classList.toggle("text-textGray", !active);
     });
   };
-  paintActive();
+  // Await init() (safe to call repeatedly) so the initial paint reflects the fully-resolved
+  // language (localStorage → Firestore → browser) rather than whatever currentLang defaulted
+  // to before init() finished — the same ordering fix applied to Settings' own toggle.
+  initI18n().then(paintActive);
   langButtons.forEach((btn) => btn.addEventListener("click", async () => {
     await setLang(btn.dataset.langChoice);
     paintActive();
   }));
+  // Repaint if the language changed via another control (e.g. Settings' inline toggle).
+  document.addEventListener("eden:langchange", paintActive);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !document.getElementById("mobile-drawer-overlay").classList.contains("hidden")) {
