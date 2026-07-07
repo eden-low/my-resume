@@ -1,0 +1,156 @@
+{
+  "nav": {
+    "home": "首页",
+    "career": "履历",
+    "memories": "回忆",
+    "journey": "历程",
+    "people": "人脉",
+    "reports": "报告",
+    "inbox": "收件箱",
+    "settings": "设置",
+    "journal": "日记",
+    "finance": "财务",
+    "calendar": "日历",
+    "habits": "习惯",
+    "ai": "AI",
+    "contact": "联系",
+    "logout": "退出登录"
+  },
+  "common": {
+    "save": "保存",
+    "saving": "保存中…",
+    "saved": "已保存。",
+    "couldnt_save": "保存失败，请查看控制台。",
+    "cancel": "取消",
+    "edit": "编辑",
+    "delete": "删除",
+    "upload": "上传",
+    "uploading": "上传中…",
+    "uploaded": "已上传。",
+    "search": "搜索",
+    "add": "添加",
+    "new": "新建",
+    "close": "关闭",
+    "loading": "加载中…",
+    "back": "返回",
+    "sign_in": "登录",
+    "sign_out": "退出登录",
+    "public": "公开",
+    "private": "私密",
+    "none_yet": "这里还没有内容。"
+  },
+  "footer": {
+    "line": "EdenAtlas · by Jun · Version 2.5"
+  },
+  "home": {
+    "greeting_morning": "早上好",
+    "greeting_afternoon": "下午好",
+    "greeting_evening": "晚上好",
+    "greeting_night": "夜深了",
+    "tagline": "让你的生活，井井有条。",
+    "today": "今天",
+    "memories": "回忆",
+    "recent_memories": "最近的回忆",
+    "this_month": "本月概览",
+    "quick_actions": "快速操作",
+    "add_expense": "记一笔支出",
+    "journal": "写日记",
+    "upload_photo": "上传照片"
+  },
+  "career": {
+    "title": "履历",
+    "subtitle": "工作经历、项目、证书与奖项。",
+    "highlights": "亮点",
+    "experience": "工作经历",
+    "projects": "项目",
+    "featured_projects": "精选项目",
+    "certificates": "证书",
+    "awards": "奖项",
+    "add_experience": "添加经历",
+    "add_project": "添加项目",
+    "add_certificate": "添加证书",
+    "add_award": "添加奖项",
+    "no_experience": "每段故事，都从第一份工作开始。",
+    "no_projects": "每一段精彩的职业生涯，都始于第一个项目。",
+    "no_certificates": "你获得的证书，会显示在这里。",
+    "no_awards": "属于你的荣誉，终将被看见。",
+    "reflection": "复盘",
+    "reflection_placeholder": "学到了什么？遇到了哪些挑战？如何解决的？下次可以怎么改进？",
+    "view_project": "查看项目"
+  },
+  "memories": {
+    "title": "回忆",
+    "subtitle": "照片时刻，按相册整理。",
+    "new_post": "发布照片",
+    "no_posts": "每段旅程，都始于一张照片。",
+    "album_travel": "旅行",
+    "album_projects": "项目",
+    "album_events": "活动",
+    "album_dailylife": "日常",
+    "album_favorites": "收藏"
+  },
+  "journal": {
+    "title": "日记",
+    "new_entry": "新建日记",
+    "no_entries": "今天写点什么吧，未来的你会感谢现在的你。"
+  },
+  "finance": {
+    "title": "财务",
+    "add_expense": "记一笔支出",
+    "no_expenses": "记下第一笔支出——小小的习惯，会画出清晰的全貌。"
+  },
+  "journey": {
+    "title": "历程",
+    "add_event": "新建事件",
+    "no_events": "人生总有值得记住的时刻，记下第一个吧。"
+  },
+  "habits": {
+    "title": "习惯",
+    "add_habit": "新建习惯",
+    "no_habits": "微小的坚持，会带来长久的改变。今天开始一个吧。"
+  },
+  "calendar": {
+    "title": "日历"
+  },
+  "reports": {
+    "title": "报告"
+  },
+  "people": {
+    "title": "人脉",
+    "search_placeholder": "按姓名、@用户名或邮箱搜索…",
+    "goals": "目标",
+    "new_goal": "新建目标",
+    "no_goals": "还没有目标 — 设一个开始追踪进度吧。",
+    "achievements": "成就"
+  },
+  "inbox": {
+    "title": "收件箱",
+    "mark_all_read": "全部标为已读",
+    "no_notifications": "全部处理完毕。"
+  },
+  "settings": {
+    "title": "设置",
+    "profile": "个人资料",
+    "preferences": "偏好设置",
+    "language": "语言",
+    "about": "关于"
+  },
+  "contact": {
+    "title": "联系方式"
+  },
+  "login": {
+    "title": "使用 Google 账号登录以继续。"
+  },
+  "mobilenav": {
+    "home": "首页",
+    "memories": "回忆",
+    "quick_add": "快速添加",
+    "people": "人脉",
+    "me": "我",
+    "add_expense": "记一笔支出",
+    "write_journal": "写日记",
+    "upload_photo": "上传照片",
+    "add_timeline_event": "添加历程事件",
+    "add_habit": "添加习惯"
+  }
+}

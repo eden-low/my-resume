@@ -1,4 +1,5 @@
 import { auth, db, isOwner, OWNER_EMAIL } from "./firebase-init.js";
+import { getLang, setLang } from "./js/i18n.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -151,10 +152,48 @@ saveUsernameBtn.addEventListener("click", async () => {
   saveUsernameBtn.disabled = false;
 });
 
+// ---- About (bio + location, shown on the public profile) ----
+
+const bioInput = document.getElementById("bio-input");
+const locationInput = document.getElementById("location-input");
+const saveAboutBtn = document.getElementById("save-about-btn");
+const aboutStatus = document.getElementById("about-status");
+
+async function loadAbout(user) {
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    const data = snap.data() || {};
+    bioInput.value = data.bio || "";
+    locationInput.value = data.location || "";
+  } catch (err) {
+    console.error("[settings] about load failed:", err);
+  }
+}
+
+saveAboutBtn.addEventListener("click", async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+  aboutStatus.textContent = "Saving…";
+  saveAboutBtn.disabled = true;
+  try {
+    await setDoc(doc(db, "users", user.uid), {
+      uid: user.uid,
+      bio: bioInput.value.trim(),
+      location: locationInput.value.trim(),
+    }, { merge: true });
+    aboutStatus.textContent = "Saved.";
+  } catch (err) {
+    console.error("[settings] about save failed:", err);
+    aboutStatus.textContent = "Couldn't save — check console.";
+  }
+  saveAboutBtn.disabled = false;
+});
+
 // ---- Preferences ----
 
 const themeButtons = document.querySelectorAll(".theme-choice-btn");
 const visibilityButtons = document.querySelectorAll(".visibility-choice-btn");
+const langButtons = document.querySelectorAll(".lang-choice-btn");
 const defaultCityInput = document.getElementById("default-city");
 const preferencesStatus = document.getElementById("preferences-status");
 
@@ -171,11 +210,18 @@ function renderPreferences() {
   const s = loadSettings();
   setActiveChoice(themeButtons, s.theme || "dark", "themeChoice");
   setActiveChoice(visibilityButtons, s.defaultVisibility || "public", "visibilityChoice");
+  setActiveChoice(langButtons, getLang(), "langChoice");
   defaultCityInput.value = s.defaultCity || "";
 }
 
 themeButtons.forEach((btn) => btn.addEventListener("click", () => setActiveChoice(themeButtons, btn.dataset.themeChoice, "themeChoice")));
 visibilityButtons.forEach((btn) => btn.addEventListener("click", () => setActiveChoice(visibilityButtons, btn.dataset.visibilityChoice, "visibilityChoice")));
+// Language applies immediately (no reload needed — see js/i18n.js), unlike the other
+// preferences here which only take effect after Save + reload.
+langButtons.forEach((btn) => btn.addEventListener("click", async () => {
+  setActiveChoice(langButtons, btn.dataset.langChoice, "langChoice");
+  await setLang(btn.dataset.langChoice);
+}));
 
 document.getElementById("save-preferences-btn").addEventListener("click", () => {
   const theme = document.querySelector(".theme-choice-btn.text-white")?.dataset.themeChoice || "dark";
@@ -311,6 +357,7 @@ onAuthStateChanged(auth, (user) => {
   if (!user) return;
   renderProfile(user);
   loadUsername(user);
+  loadAbout(user);
   // Export & Backup is for anyone signed in now — everyone has their own data to back up.
   document.getElementById("export-section").classList.remove("hidden");
   if (isOwner(user)) {

@@ -13,6 +13,7 @@ import {
   addDoc,
   doc,
   setDoc,
+  updateDoc,
   deleteDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
@@ -22,12 +23,21 @@ import {
   getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
+// Albums, replacing the old Personal/Event/Work/Project categories.
 const CATEGORY_META = {
-  personal: { label: "Personal", text: "text-neonPurple", bg: "bg-neonPurple/10", border: "border-neonPurple/30" },
-  event: { label: "Event", text: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/30" },
-  work: { label: "Work", text: "text-neonBlue", bg: "bg-neonBlue/10", border: "border-neonBlue/30" },
-  project: { label: "Project", text: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/30" },
+  travel: { label: "Travel", text: "text-neonBlue", bg: "bg-neonBlue/10", border: "border-neonBlue/30" },
+  projects: { label: "Projects", text: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/30" },
+  events: { label: "Events", text: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/30" },
+  dailylife: { label: "Daily Life", text: "text-neonPurple", bg: "bg-neonPurple/10", border: "border-neonPurple/30" },
 };
+
+// Photos uploaded before the album relabel still carry the old category values in Firestore —
+// alias them into the new taxonomy for display/filtering rather than migrating production data.
+const LEGACY_CATEGORY_ALIAS = { personal: "dailylife", event: "events", work: "projects", project: "projects" };
+
+function albumOf(post) {
+  return LEGACY_CATEGORY_ALIAS[post.category] || post.category;
+}
 
 const authControl = document.getElementById("auth-control");
 const accessNote = document.getElementById("gallery-access-note");
@@ -60,7 +70,7 @@ function isMyPost(post, user) {
 }
 
 function postCard(post) {
-  const meta = CATEGORY_META[post.category] || CATEGORY_META.personal;
+  const meta = CATEGORY_META[albumOf(post)] || CATEGORY_META.dailylife;
   const isPrivate = post.visibility === "private";
   const user = auth.currentUser;
   const isMine = isMyPost(post, user);
@@ -89,6 +99,9 @@ function postCard(post) {
           <i class="fa-regular fa-comment"></i> ${post.commentCount || 0}
         </button>
         ${isMine ? `
+          <button class="featured-toggle-btn flex items-center gap-1.5 text-xs font-code ${post.featured ? "text-amber-400" : "text-textGray"} hover:text-amber-400 transition-colors" title="${post.featured ? "Remove from Favorites" : "Add to Favorites"}">
+            <i class="fa-${post.featured ? "solid" : "regular"} fa-star"></i>
+          </button>
           <button class="analytics-toggle-btn ml-auto flex items-center gap-1.5 text-xs font-code text-textGray hover:text-neonBlue transition-colors">
             <i class="fa-solid fa-eye"></i> Analytics
           </button>` : ""}
@@ -99,6 +112,8 @@ function postCard(post) {
 
   card.querySelector(".like-btn").addEventListener("click", () => toggleLike(post));
   card.querySelector(".comment-toggle-btn").addEventListener("click", () => toggleComments(post));
+  const featuredBtn = card.querySelector(".featured-toggle-btn");
+  if (featuredBtn) featuredBtn.addEventListener("click", () => toggleFeatured(post));
   const analyticsBtn = card.querySelector(".analytics-toggle-btn");
   if (analyticsBtn) analyticsBtn.addEventListener("click", () => toggleAnalytics(post));
 
@@ -113,7 +128,9 @@ function renderFeed() {
     ? cachedPosts
     : activeFilter === "public" || activeFilter === "private"
       ? cachedPosts.filter((p) => p.visibility === activeFilter)
-      : cachedPosts.filter((p) => p.category === activeFilter);
+      : activeFilter === "featured"
+        ? cachedPosts.filter((p) => p.featured)
+        : cachedPosts.filter((p) => albumOf(p) === activeFilter);
 
   feedContainer.replaceChildren(...visible.map(postCard));
   feedEmpty.classList.toggle("hidden", visible.length > 0);
@@ -266,6 +283,18 @@ function renderSignedIn(user) {
   privateTab.classList.toggle("hidden", !mayParticipate);
   accessNote.classList.toggle("hidden", mayParticipate);
   if (!mayParticipate && activeFilter === "private") setActiveTab("all");
+  maybeAutoOpenFromQuickAdd(mayParticipate);
+}
+
+// Mobile Quick Add (js/mobile-nav.js) links here with ?new=1 to jump straight into the
+// upload form instead of just landing on the feed.
+let autoOpenedFromQuickAdd = false;
+function maybeAutoOpenFromQuickAdd(mayParticipate) {
+  if (autoOpenedFromQuickAdd || !mayParticipate) return;
+  if (new URLSearchParams(location.search).get("new") === "1") {
+    autoOpenedFromQuickAdd = true;
+    openModal();
+  }
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -313,6 +342,7 @@ postForm.addEventListener("submit", async (event) => {
       storagePath,
       category,
       visibility,
+      featured: false,
       caption: caption || file.name,
       uploadedAt: serverTimestamp(),
       uid: user.uid,
@@ -346,6 +376,21 @@ async function toggleLike(post) {
     renderFeed();
   } catch (err) {
     console.error("[gallery] like toggle failed:", err.code || err);
+  }
+}
+
+// ---- Favorites ----
+
+async function toggleFeatured(post) {
+  const user = auth.currentUser;
+  if (!user || !isMyPost(post, user)) return;
+  const next = !post.featured;
+  try {
+    await updateDoc(doc(db, "photos", post.id), { featured: next });
+    post.featured = next;
+    renderFeed();
+  } catch (err) {
+    console.error("[gallery] featured toggle failed:", err.code || err);
   }
 }
 

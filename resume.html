@@ -4,10 +4,10 @@
   <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resume | Low Fang Jun</title>
+  <title>Career | EdenAtlas</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#09090e">
@@ -36,32 +36,31 @@
   </script>
 </head>
 <body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
-  <header class="max-w-7xl mx-auto px-4 pt-6">
+  <header class="hidden max-w-7xl mx-auto px-4 pt-6">
     <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonViolet to-neonPurple flex items-center justify-center shadow-lg shadow-neonPurple/20">
-          <i class="fa-solid fa-shield-halved text-white text-lg animate-pulse"></i>
+          <i class="fa-solid fa-circle-user text-white text-lg animate-pulse"></i>
         </div>
         <div>
-          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
-          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">EdenAtlas</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">DIGITAL ATLAS</span>
         </div>
       </div>
-      <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
-        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
-        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
-        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
-        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> Journal</a>
-        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
-        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
-        <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
-        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
-        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
-        <a href="ai.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-robot text-xs"></i> AI</a>
-        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
-        <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
-        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
-        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
+            <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
+        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> <span data-i18n="nav.home">Home</span></a>
+        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> <span data-i18n="nav.career">Career</span></a>
+        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> <span data-i18n="nav.memories">Memories</span></a>
+        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> <span data-i18n="nav.journey">Journey</span></a>
+        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> <span data-i18n="nav.people">People</span></a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> <span data-i18n="nav.reports">Reports</span></a>
+        <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> <span data-i18n="nav.inbox">Inbox</span> <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
+        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> <span data-i18n="nav.settings">Settings</span></a>
+        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> <span data-i18n="nav.journal">Journal</span></a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> <span data-i18n="nav.finance">Finance</span></a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> <span data-i18n="nav.calendar">Calendar</span></a>
+        <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> <span data-i18n="nav.habits">Habits</span></a>
+        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> <span data-i18n="nav.contact">Contact</span></a>
       </nav>
     </div>
   </header>
@@ -69,27 +68,26 @@
   <div class="sticky top-4 z-30 max-w-6xl mx-auto px-4 mt-6">
     <nav class="reveal bg-cardBg/90 backdrop-blur-md neon-border-purple rounded-2xl px-3 py-2.5 flex flex-wrap items-center justify-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
       <a href="#profile" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Profile</a>
-      <a href="#matrix" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Matrix</a>
-      <a href="#quests" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Education</a>
       <a href="#events" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Leadership</a>
-      <a href="#experience" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Work</a>
-      <a href="#inventory" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Achievements</a>
+      <a href="#experience" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Experience</a>
+      <a href="#projects" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Projects</a>
+      <a href="#certificates" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Certificates</a>
+      <a href="#inventory" class="px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Awards</a>
     </nav>
   </div>
 
   <main class="max-w-6xl mx-auto px-4 mt-6 space-y-6">
 
-    <!-- Profile -->
+    <!-- Profile: slim header + essentials (education folded in, no charts/percentages) -->
     <section id="profile" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-8 rounded-2xl neon-border-purple">
       <div class="flex flex-col lg:flex-row lg:items-center gap-8">
-        <div class="w-40 h-40 rounded-full bg-darkBg border-2 border-neonPurple flex items-center justify-center">
-          <i class="fa-solid fa-user-astronaut text-6xl text-neonPurple animate-pulse"></i>
+        <div class="w-32 h-32 rounded-full bg-darkBg border-2 border-neonPurple flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-user-astronaut text-5xl text-neonPurple"></i>
         </div>
         <div class="flex-1">
-          <p class="text-[10px] uppercase tracking-[0.35em] text-neonPurple font-code">PROFILE</p>
-          <h1 class="font-cyber font-black text-3xl mt-3 text-white">Low Fang Jun</h1>
-          <p class="text-textGray mt-3 leading-relaxed">Undergraduate student of Business Information Systems. Aspiring and highly motivated, specializing in system design, data security, and web programming. Equipped with solid programming capabilities and algorithmic thinking using Python, Java, SQL, HTML, and CSS to tackle real-world commercial and technical challenges.</p>
-          <div class="mt-5 flex flex-wrap gap-3">
+          <h1 class="font-cyber font-black text-3xl text-white">Low Fang Jun</h1>
+          <p class="text-textGray mt-3 leading-relaxed">Undergraduate student of Business Information Systems, specializing in system design, data security, and web programming — comfortable across Python, Java, SQL, HTML, and CSS.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
             <span class="px-3 py-1 rounded-full border border-neonPurple/40 text-neonPurple text-xs font-code">BIS Analyst</span>
             <span class="px-3 py-1 rounded-full border border-neonBlue/40 text-neonBlue text-xs font-code">Software Engineer</span>
             <span class="px-3 py-1 rounded-full border border-emerald-500/40 text-emerald-400 text-xs font-code">Web Developer</span>
@@ -97,389 +95,151 @@
         </div>
       </div>
 
-      <div class="reveal-group mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-xl p-6 text-sm text-textGray space-y-4">
-          <h2 class="font-cyber font-bold text-white text-sm tracking-wider">Basic Info</h2>
-          <div class="space-y-3">
-            <div class="flex justify-between"><span>Email</span><a href="mailto:jjun8647@gmail.com" class="text-white hover:text-neonPurple">jjun8647@gmail.com</a></div>
-            <div class="flex justify-between"><span>Phone</span><span class="text-white">011-10574969</span></div>
-            <div class="flex justify-between"><span>Address</span><span class="text-white text-right">Kuching, Sarawak, Malaysia</span></div>
-            <div class="flex justify-between"><span>Attributes</span><span class="text-white">Male | Malaysian | Single</span></div>
-            <div class="flex justify-between"><span>Role</span><span class="text-white font-semibold">BIS Analyst / Software Engineer</span></div>
-          </div>
+      <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-darkBg/60 border border-borderNeon rounded-xl p-6 text-sm text-textGray space-y-3">
+          <h2 class="font-cyber font-bold text-white text-sm tracking-wider mb-1">Contact</h2>
+          <div class="flex justify-between"><span>Email</span><a href="mailto:jjun8647@gmail.com" class="text-white hover:text-neonPurple">jjun8647@gmail.com</a></div>
+          <div class="flex justify-between"><span>Phone</span><span class="text-white">011-10574969</span></div>
+          <div class="flex justify-between"><span>Location</span><span class="text-white text-right">Kuching, Sarawak, Malaysia</span></div>
         </div>
 
-        <div class="reveal lg:col-span-2 bg-darkBg/60 border border-borderNeon rounded-xl p-6">
-          <h2 class="font-cyber font-bold text-white text-sm tracking-wider">Academic Progress</h2>
-          <p class="text-xs text-textGray mt-3">UTAR Bachelor of Information Systems — progress is represented as CGPA and completion percentage.</p>
-          <div class="mt-6 bg-darkBg/80 border border-borderNeon rounded-full p-1">
-            <div class="h-3 rounded-full bg-gradient-to-r from-neonViolet to-neonPurple shadow-[0_0_10px_rgba(217,70,239,0.5)]" style="width:71.5%"></div>
+        <div class="bg-darkBg/60 border border-borderNeon rounded-xl p-6 text-sm text-textGray space-y-3">
+          <h2 class="font-cyber font-bold text-white text-sm tracking-wider mb-1">Education</h2>
+          <div>
+            <p class="text-white font-medium">Universiti Tunku Abdul Rahman (UTAR)</p>
+            <p class="text-xs mt-0.5">Bachelor of Information Systems (Honours), Business Information Systems &middot; 2023–2026 &middot; CGPA 2.86</p>
           </div>
-          <div class="mt-3 flex justify-between text-xs font-code text-textGray">
-            <span>71.5% progress</span>
-            <span>CGPA 2.86 / 4.00</span>
+          <div class="pt-2 border-t border-borderNeon/40">
+            <p class="text-white font-medium">International College of Advanced Technology Sarawak (iCATS)</p>
+            <p class="text-xs mt-0.5">Diploma in Software Engineering &middot; 2020–2023 &middot; CGPA 3.22</p>
           </div>
         </div>
       </div>
 
-      <div class="reveal mt-8 bg-darkBg/60 border border-borderNeon rounded-xl p-6 space-y-6">
-        <h2 class="font-cyber font-bold text-white text-sm tracking-wider">Skill Tracker</h2>
-        <div class="space-y-5">
-          <div>
-            <div class="flex justify-between items-center text-sm mb-2"><span class="font-semibold text-white">Python Scripting</span><span class="text-neonPurple">85%</span></div>
-            <p class="text-xs text-textGray">Basic programming, data handling, simple automation scripts, OOP, and logical problem-solving.</p>
-            <div class="mt-3 h-2 rounded-full bg-darkBg overflow-hidden"><div class="h-full bg-gradient-to-r from-neonViolet to-neonPurple" style="width:85%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between items-center text-sm mb-2"><span class="font-semibold text-white">Structured Query Language (SQL)</span><span class="text-neonBlue">80%</span></div>
-            <p class="text-xs text-textGray">Database management & querying, selective filtering (WHERE), joining tables (JOIN), and DML operations.</p>
-            <div class="mt-3 h-2 rounded-full bg-darkBg overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-600 to-neonBlue" style="width:80%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between items-center text-sm mb-2"><span class="font-semibold text-white">Web Architecture (HTML & CSS)</span><span class="text-emerald-400">82%</span></div>
-            <p class="text-xs text-textGray">Semantic layouts (tables, headers, forms) and styled formatting using Flexbox, CSS animations, and responsive patterns.</p>
-            <div class="mt-3 h-2 rounded-full bg-darkBg overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400" style="width:82%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between items-center text-sm mb-2"><span class="font-semibold text-white">Object-Oriented Java</span><span class="text-amber-400">75%</span></div>
-            <p class="text-xs text-textGray">Classes, objects, inheritance, methods, polymorphism, encapsulation, and robust application architecture.</p>
-            <div class="mt-3 h-2 rounded-full bg-darkBg overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-600 to-amber-400" style="width:75%"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="reveal mt-8 bg-darkBg/60 border border-borderNeon rounded-2xl p-6">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <h2 class="font-cyber font-black text-lg text-white">Academic Reference</h2>
-            <p class="text-textGray mt-2">Support from academic mentors and verified references.</p>
-          </div>
-          <div class="inline-flex items-center gap-2 rounded-full border border-neonPurple/40 bg-neonPurple/10 px-3 py-1 text-xs text-neonPurple font-code">
-            <i class="fa-solid fa-check-circle"></i> Verified Mentor Reference
-          </div>
-        </div>
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-darkBg/40 border border-borderNeon/40 rounded-2xl p-6">
-          <div>
-            <h3 class="font-cyber font-bold text-white">Nurul Syafidah binti Jamil</h3>
-            <p class="text-xs text-neonPurple font-code mt-1">Lecturer / Academic Advisor</p>
-            <p class="text-sm text-textGray mt-3">Universiti Tunku Abdul Rahman (UTAR)</p>
-            <p class="text-sm text-textGray">Faculty of Information and Communication Technology, Department of Digital Technology Economy</p>
-          </div>
-          <div class="space-y-2 text-sm text-textGray">
-            <p><i class="fa-solid fa-envelope text-neonBlue mr-2"></i> syafidahj@utar.edu.my</p>
-            <p class="text-white font-semibold">Recommended as a reliable academic guide and mentor.</p>
-          </div>
-        </div>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <span class="px-3 py-1.5 rounded-full bg-darkBg/60 border border-borderNeon text-xs font-code text-textGray">Python</span>
+        <span class="px-3 py-1.5 rounded-full bg-darkBg/60 border border-borderNeon text-xs font-code text-textGray">SQL</span>
+        <span class="px-3 py-1.5 rounded-full bg-darkBg/60 border border-borderNeon text-xs font-code text-textGray">HTML &amp; CSS</span>
+        <span class="px-3 py-1.5 rounded-full bg-darkBg/60 border border-borderNeon text-xs font-code text-textGray">Java (OOP)</span>
+        <span class="px-3 py-1.5 rounded-full bg-darkBg/60 border border-borderNeon text-xs font-code text-textGray">MonsoonSIM</span>
       </div>
     </section>
 
-    <!-- Matrix -->
-    <section id="matrix" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Matrix</h1>
-          <p class="text-textGray mt-3">Leadership metrics and core attribute performance delivered with neon chart styling.</p>
-        </div>
-        <div class="text-sm font-code text-textGray bg-darkBg/70 px-4 py-2 rounded-2xl border border-borderNeon">Charts are interactive and show a clear breakdown of competency & event leadership.</div>
-      </div>
-      <div class="reveal-group mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-5 min-h-[360px] flex flex-col justify-between">
-          <div>
-            <div class="flex justify-between items-start border-b border-borderNeon pb-3">
-              <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-fire text-neonPurple mr-2"></i> Team Leadership</h2>
-              <span class="text-[10px] font-code text-neonPurple px-2 py-0.5 rounded bg-neonPurple/10 border border-neonPurple/20">TEAMWORK SCORE</span>
-            </div>
-            <div class="flex justify-between mt-4 text-[10px] font-code text-textGray">
-              <div>Led Events</div>
-              <div class="text-white font-bold">6+ Times</div>
-            </div>
-            <div class="flex justify-between mt-2 text-[10px] font-code text-textGray">
-              <div>Role</div>
-              <div class="text-white font-bold">Chairperson</div>
-            </div>
-          </div>
-          <div class="h-56 mt-4"><canvas id="leadershipChart"></canvas></div>
-          <div class="mt-4 pt-3 border-t border-borderNeon/60 flex flex-col gap-3 text-[10px] font-code text-textGray">
-            <div class="flex justify-between">
-              <span>Collaboration Intensity</span>
-              <span class="text-neonPurple font-bold">9.2 / 10 MAX</span>
-            </div>
-            <div class="w-full h-2 bg-darkBg rounded-full overflow-hidden"><div class="h-full bg-neonPurple" style="width:92%"></div></div>
-          </div>
-        </div>
-
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-5 min-h-[360px] flex flex-col justify-between">
-          <div>
-            <div class="flex justify-between items-start border-b border-borderNeon pb-3">
-              <h2 class="font-cyber font-bold text-sm uppercase tracking-wider text-white"><i class="fa-solid fa-crown text-amber-400 mr-2"></i> Core Skills</h2>
-              <span class="text-[10px] font-code text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">RADAR MATRIX</span>
-            </div>
-            <div class="grid grid-cols-5 gap-1 mt-4 text-center text-[9px] font-cyber text-textGray">
-              <div><div class="text-white font-code text-xs font-bold">85</div><span>LOGIC</span></div>
-              <div><div class="text-white font-code text-xs font-bold">82</div><span>FRONTEND</span></div>
-              <div><div class="text-white font-code text-xs font-bold">80</div><span>DATABASE</span></div>
-              <div><div class="text-white font-code text-xs font-bold">90</div><span>COLLAB</span></div>
-              <div><div class="text-white font-code text-xs font-bold">88</div><span>ANALYTICS</span></div>
-            </div>
-          </div>
-          <div class="h-56 mt-4"><canvas id="capabilitiesChart"></canvas></div>
-          <div class="mt-4 pt-3 border-t border-borderNeon/60 text-[10px] font-code text-textGray flex justify-between">
-            <span>Overall Trend</span>
-            <span class="text-amber-400 font-bold">CONSISTENTLY HIGH <i class="fa-solid fa-bolt"></i></span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Education -->
-    <section id="quests" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Education</h1>
-          <p class="text-textGray mt-3">Academic paths, project achievements and learning milestones.</p>
-        </div>
-      </div>
-
-      <div class="reveal-group mt-6 space-y-10">
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-6">
-          <div class="flex flex-col sm:flex-row sm:justify-between gap-4">
-            <div>
-              <p class="text-[10px] uppercase tracking-[0.35em] text-neonPurple font-code mb-3">Primary Degree</p>
-              <h2 class="font-cyber font-bold text-xl text-white">Universiti Tunku Abdul Rahman (UTAR)</h2>
-              <p class="text-xs text-textGray mt-1">2023 - 2026 | Bachelor of Information Systems (Honours) Business Information Systems</p>
-            </div>
-            <span class="self-start sm:self-center px-3 py-1 rounded-full bg-neonPurple/15 border border-neonPurple/40 text-[10px] font-cyber font-bold tracking-wider text-neonPurple uppercase">PROGRESSING (CGPA 2.86)</span>
-          </div>
-          <div class="mt-6 space-y-5 text-sm text-textGray leading-relaxed">
-            <p>During the UTAR program, I focused on systems thinking, business information strategies, and practical software development. I have applied both technical and analytical skills through coursework and project work.</p>
-            <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
-              <div class="flex justify-between text-xs font-bold text-white">
-                <span>UTAR Event Planning Management System (Final Year Project)</span>
-                <span class="text-neonPurple font-code">FINAL YEAR PROJECT</span>
-              </div>
-              <p class="text-xs text-textGray">Built a web-based system to assist UTAR event organizers and students with event registration and management. Enabled UTAR staff to review and approve event requests, improving workflow efficiency. Utilized HTML, CSS, JavaScript, and SQL for front-end interface and database integration.</p>
-            </div>
-            <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
-              <div class="flex justify-between text-xs font-bold text-white">
-                <span>Fundamentals of Business System (MonsoonSIM)</span>
-                <span class="text-neonBlue font-code">SIMULATION PROJECT</span>
-              </div>
-              <p class="text-xs text-textGray">Managed Low Family Juice's B2B beverage sales using MonsoonSIM, handling inventory, procurement, and finance in a simulated business environment. Gained practical experience in business process management and decision-making.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-2xl p-6">
-          <div class="flex flex-col sm:flex-row sm:justify-between gap-4">
-            <div>
-              <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-400 font-code mb-3">Prior Education</p>
-              <h2 class="font-cyber font-bold text-xl text-white">International College of Advanced Technology Sarawak (iCATS)</h2>
-              <p class="text-xs text-textGray mt-1">2020 - 2023 | Diploma in Software Engineering</p>
-            </div>
-            <span class="self-start sm:self-center px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-cyber font-bold tracking-wider text-emerald-400 uppercase">COMPLETED (CGPA 3.22) <i class="fa-solid fa-circle-check ml-1"></i></span>
-          </div>
-          <div class="mt-6 space-y-5 text-sm text-textGray leading-relaxed">
-            <p>At iCATS, I built foundational software engineering skills through team-based projects, Python programming, and front-end development. I gained hands-on experience building practical applications while strengthening my analytical and problem-solving abilities.</p>
-            <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
-              <div class="flex justify-between text-xs font-bold text-white">
-                <span>Library Management System (Python Project)</span>
-                <span class="text-emerald-400 font-code">PYTHON PROJECT</span>
-              </div>
-              <p class="text-xs text-textGray">Developed a library management system using Python to handle book records, user registrations, borrowing, and returns. Implemented data validation, reporting, and basic file/database storage, gaining experience in object-oriented programming and practical Python applications.</p>
-            </div>
-            <div class="bg-darkBg/40 border border-borderNeon/40 rounded-xl p-4 space-y-3">
-              <div class="flex justify-between text-xs font-bold text-white">
-                <span>Frontend Application Development — Tourism Websites</span>
-                <span class="text-emerald-400 font-code">FRONTEND PROJECT</span>
-              </div>
-              <p class="text-xs text-textGray">Developed interactive tourism websites using HTML, CSS, and JavaScript to structure content and create a user-friendly and visually appealing interface for travelers. Learned responsive design and basic front-end programming techniques.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Events -->
+    <!-- Leadership & Events: slimmed to a compact list, no per-item paragraphs -->
     <section id="events" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
-      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Leadership & Events</h1>
-          <p class="text-textGray mt-3">Organizing and leadership history across student events and team activities.</p>
+      <h1 class="font-cyber font-black text-3xl text-white">Leadership & Events</h1>
+      <div class="mt-5 divide-y divide-borderNeon/40">
+        <div class="flex items-center gap-3 py-3">
+          <i data-lucide="users" class="w-4 h-4 text-neonPurple flex-shrink-0"></i>
+          <span class="text-sm text-white flex-1">Chairperson &mdash; Ice Breaking Telematch</span>
+          <span class="text-[11px] font-code text-textGray flex-shrink-0">Mar 2026</span>
         </div>
-      </div>
-
-      <div class="reveal-group mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="reveal bg-darkBg/60 border border-borderNeon/60 rounded-xl p-4 hover:border-neonPurple transition-all">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-neonPurple/10 flex items-center justify-center text-neonPurple text-lg"><i class="fa-solid fa-people-roof"></i></div>
-            <div>
-              <h2 class="font-cyber font-bold text-xs text-white">Chairperson - Ice Breaking Telematch</h2>
-              <p class="text-[10px] text-neonPurple font-code mt-0.5">UTAR - Mar 2026</p>
-            </div>
-          </div>
-          <p class="text-[11px] text-textGray mt-4 leading-relaxed">Led overall event planning and execution, coordinating multiple sub-teams, resource distribution, and ensuring smooth event operations.</p>
+        <div class="flex items-center gap-3 py-3">
+          <i data-lucide="users" class="w-4 h-4 text-neonBlue flex-shrink-0"></i>
+          <span class="text-sm text-white flex-1">Chairperson &mdash; Buddhist Society Welcoming Night</span>
+          <span class="text-[11px] font-code text-textGray flex-shrink-0">Oct 2024</span>
         </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon/60 rounded-xl p-4 hover:border-neonBlue transition-all">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-neonBlue/10 flex items-center justify-center text-neonBlue text-lg"><i class="fa-solid fa-dharmachakra"></i></div>
-            <div>
-              <h2 class="font-cyber font-bold text-xs text-white">Chairperson - Buddhist Society Welcoming Night</h2>
-              <p class="text-[10px] text-neonBlue font-code mt-0.5">UTAR - Oct 2024</p>
-            </div>
-          </div>
-          <p class="text-[11px] text-textGray mt-4 leading-relaxed">Managed event flow, team coordination, external relations, and strategic logistics planning for a large-scale student onboarding campaign.</p>
+        <div class="flex items-center gap-3 py-3">
+          <i data-lucide="compass" class="w-4 h-4 text-emerald-400 flex-shrink-0"></i>
+          <span class="text-sm text-white flex-1">Program Leader &mdash; ISC 2025</span>
+          <span class="text-[11px] font-code text-textGray flex-shrink-0">2025</span>
         </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon/60 rounded-xl p-4 hover:border-emerald-400 transition-all">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg"><i class="fa-solid fa-compass"></i></div>
-            <div>
-              <h2 class="font-cyber font-bold text-xs text-white">Program Leader - ISC 2025</h2>
-              <p class="text-[10px] text-emerald-400 font-code mt-0.5">UTAR - 2025</p>
-            </div>
-          </div>
-          <p class="text-[11px] text-textGray mt-4 leading-relaxed">Spearheaded structural program planning and execution, guaranteeing that student activities were well-organized, timed, and engaging.</p>
+        <div class="flex items-center gap-3 py-3">
+          <i data-lucide="wrench" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
+          <span class="text-sm text-white flex-1">Technical Head &mdash; Sport Glory Color Run</span>
+          <span class="text-[11px] font-code text-textGray flex-shrink-0">&mdash;</span>
         </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon/60 rounded-xl p-4 hover:border-amber-400 transition-all">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 text-lg"><i class="fa-solid fa-laptop-code"></i></div>
-            <div>
-              <h2 class="font-cyber font-bold text-xs text-white">Technical Head - Sport Glory Color Run</h2>
-              <p class="text-[10px] text-amber-400 font-code mt-0.5">UTAR - Technical</p>
-            </div>
-          </div>
-          <p class="text-[11px] text-textGray mt-4 leading-relaxed">Oversaw full hardware setup, technical troubleshooting, and ensured high-fidelity operations of PA system equipment.</p>
+        <div class="flex items-center gap-3 py-3">
+          <i data-lucide="handshake" class="w-4 h-4 text-rose-400 flex-shrink-0"></i>
+          <span class="text-sm text-white flex-1">HR &amp; Sponsor Committee &mdash; IBT</span>
+          <span class="text-[11px] font-code text-textGray flex-shrink-0">Feb 2025</span>
         </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon/60 rounded-xl p-4 hover:border-rose-400 transition-all">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 text-lg"><i class="fa-solid fa-handshake-angle"></i></div>
-            <div>
-              <h2 class="font-cyber font-bold text-xs text-white">HR & Sponsor Committee - IBT</h2>
-              <p class="text-[10px] text-rose-400 font-code mt-0.5">UTAR - Feb 2025</p>
-            </div>
-          </div>
-          <p class="text-[11px] text-textGray mt-4 leading-relaxed">Managed participant onboarding workflows, coordinated communications, and assisted in sponsorship pitching.</p>
-        </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon/60 rounded-xl p-4 hover:border-purple-400 transition-all">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 text-lg"><i class="fa-solid fa-user-gear"></i></div>
-            <div>
-              <h2 class="font-cyber font-bold text-xs text-white">HR Committee - Warrior 3.0</h2>
-              <p class="text-[10px] text-purple-400 font-code mt-0.5">UTAR - Warrior 3.0</p>
-            </div>
-          </div>
-          <p class="text-[11px] text-textGray mt-4 leading-relaxed">Assisted in handling manpower allocation, shifts scheduling, participant registration database, and internal synchronization.</p>
+        <div class="flex items-center gap-3 py-3">
+          <i data-lucide="users" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>
+          <span class="text-sm text-white flex-1">HR Committee &mdash; Warrior 3.0</span>
+          <span class="text-[11px] font-code text-textGray flex-shrink-0">&mdash;</span>
         </div>
       </div>
     </section>
 
-    <!-- Experience -->
+    <!-- Experience (Career CMS: career_experiences) -->
     <section id="experience" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Work Experience</h1>
+          <h1 class="font-cyber font-black text-3xl text-white" data-i18n="career.experience">Experience</h1>
           <p class="text-textGray mt-3">Working experience and part-time roles that supported teamwork, sales, and operational reliability.</p>
         </div>
+        <button id="add-experience-btn" type="button" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+          <i class="fa-solid fa-plus mr-1.5"></i> <span data-i18n="career.add_experience">Add Experience</span>
+        </button>
       </div>
-
-      <div class="reveal-group mt-6 space-y-4">
-        <div class="reveal bg-darkBg/40 border border-borderNeon/40 rounded-xl p-5 hover:border-amber-400 transition-all">
-          <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
-            <div>
-              <span class="text-[10px] font-cyber tracking-widest text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">CARLSBERG PROMOTER</span>
-              <h2 class="font-cyber font-bold text-sm text-white mt-2">Carlsberg Brand Promoter / Tristar, Taman Perindu, Malaysia</h2>
-              <p class="text-[10px] text-textGray mt-1">Jan 2026 - Jan 2026</p>
-            </div>
-            <div class="text-right">
-              <span class="text-[10px] font-cyber text-amber-400 block">HIGH PERFORMANCE</span>
-            </div>
-          </div>
-          <ul class="list-disc list-inside text-xs text-textGray space-y-1 mt-4 pl-4">
-            <li>Engaged customers through energetic brand presentations, product briefings, and campaigns.</li>
-            <li>Built strong customer rapport and enhanced commercial brand loyalty.</li>
-            <li>Achieved exceptional sales records and received high recognition for sales excellence.</li>
-          </ul>
-        </div>
-
-        <div class="reveal bg-darkBg/40 border border-borderNeon/40 rounded-xl p-5 hover:border-neonPurple transition-all">
-          <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
-            <div>
-              <span class="text-[10px] font-cyber tracking-widest text-textGray bg-cardBg px-2 py-0.5 rounded border border-borderNeon">BAKKWA PROMOTER</span>
-              <h2 class="font-cyber font-bold text-sm text-white mt-2">Bakkwa Promoter / New Eastern BBQ Meats, Singapore</h2>
-              <p class="text-[10px] text-textGray mt-1">Jan 2024 - Feb 2024</p>
-            </div>
-            <div class="text-right">
-              <span class="text-[10px] font-cyber text-textGray block">SINGAPORE FIELD</span>
-            </div>
-          </div>
-          <ul class="list-disc list-inside text-xs text-textGray space-y-1 mt-4 pl-4">
-            <li>Promoted traditional meat products and actively engaged regional and international customers to drive peak holiday sales.</li>
-            <li>Maintained eye-catching product showcases and ensured strict hygiene and cleanliness.</li>
-          </ul>
-        </div>
-
-        <div class="reveal bg-darkBg/40 border border-borderNeon/40 rounded-xl p-5 hover:border-neonPurple transition-all">
-          <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
-            <div>
-              <span class="text-[10px] font-cyber tracking-widest text-textGray bg-cardBg px-2 py-0.5 rounded border border-borderNeon">CASHIER</span>
-              <h2 class="font-cyber font-bold text-sm text-white mt-2">Cashier / Everrise Pandungan Branch, Sarawak, Malaysia</h2>
-              <p class="text-[10px] text-textGray mt-1">Dec 2019 - Jan 2020</p>
-            </div>
-            <div class="text-right">
-              <span class="text-[10px] font-cyber text-textGray block">TRANSACTION TRUST</span>
-            </div>
-          </div>
-          <ul class="list-disc list-inside text-xs text-textGray space-y-1 mt-4 pl-4">
-            <li>Operated POS system with zero discrepancies, handling complex multi-method financial transactions daily.</li>
-            <li>Processed customer bills with absolute precision while delivering polite, highly professional service.</li>
-          </ul>
-        </div>
-
-        <div class="reveal bg-darkBg/40 border border-borderNeon/40 rounded-xl p-5 hover:border-neonPurple transition-all">
-          <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
-            <div>
-              <span class="text-[10px] font-cyber tracking-widest text-textGray bg-cardBg px-2 py-0.5 rounded border border-borderNeon">WAITER</span>
-              <h2 class="font-cyber font-bold text-sm text-white mt-2">Waiter / Hong Kong Noodle House, Sarawak, Malaysia</h2>
-              <p class="text-[10px] text-textGray mt-1">Nov 2017 - Dec 2017</p>
-            </div>
-            <div class="text-right">
-              <span class="text-[10px] font-cyber text-textGray block">FIRST STEPS</span>
-            </div>
-          </div>
-          <ul class="list-disc list-inside text-xs text-textGray space-y-1 mt-4 pl-4">
-            <li>Delivered prompt, friendly, and patient service, organizing and dispatching table orders efficiently.</li>
-          </ul>
-        </div>
+      <div id="experience-list" class="mt-6 space-y-4">
+        <div class="skeleton h-20 rounded-xl"></div>
+        <div class="skeleton h-20 rounded-xl"></div>
       </div>
+      <p id="experience-empty" class="hidden text-center text-xs font-code text-textGray py-10" data-i18n="career.no_experience">Your story starts with a single role.</p>
     </section>
 
-    <!-- Achievements -->
+    <!-- Projects (Career CMS: career_projects) -->
+    <section id="projects" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 class="font-cyber font-black text-3xl text-white" data-i18n="career.projects">Projects</h1>
+          <p class="text-textGray mt-3">Personal projects, internships, final year project, and coursework.</p>
+        </div>
+        <button id="add-project-btn" type="button" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+          <i class="fa-solid fa-plus mr-1.5"></i> <span data-i18n="career.add_project">Add Project</span>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray mt-4">
+        <button data-category="all" class="project-category-tab text-neonPurple px-3 py-1.5 rounded-full hover:bg-neonPurple/10 transition-colors">All</button>
+        <button data-category="personal" class="project-category-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Personal</button>
+        <button data-category="internship" class="project-category-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Internship</button>
+        <button data-category="fyp" class="project-category-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">FYP</button>
+        <button data-category="coursework" class="project-category-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Coursework</button>
+        <button data-category="work" class="project-category-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors">Work</button>
+      </div>
+
+      <div id="featured-projects-section" class="hidden mt-6">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3" data-i18n="career.featured_projects">Featured Projects</p>
+        <div id="featured-projects-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <div id="projects-list" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <p id="projects-empty" class="hidden text-center text-xs font-code text-textGray py-10" data-i18n="career.no_projects">Every great career starts with a first project.</p>
+    </section>
+
+    <!-- Certificates (Career CMS: career_certificates) -->
+    <section id="certificates" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 class="font-cyber font-black text-3xl text-white" data-i18n="career.certificates">Certificates</h1>
+          <p class="text-textGray mt-3">Professional certificates and completed workshops.</p>
+        </div>
+        <button id="add-certificate-btn" type="button" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+          <i class="fa-solid fa-plus mr-1.5"></i> <span data-i18n="career.add_certificate">Add Certificate</span>
+        </button>
+      </div>
+      <div id="certificates-list" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <p id="certificates-empty" class="hidden text-center text-xs font-code text-textGray py-10" data-i18n="career.no_certificates">Certificates you earn will show up here.</p>
+    </section>
+
+    <!-- Awards (Career CMS: career_awards) + static Skills grid -->
     <section id="inventory" class="reveal scroll-mt-24 bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 class="font-cyber font-black text-3xl text-white">Achievements & Skills</h1>
-          <p class="text-textGray mt-3">Awards, certifications, and core skills from the resume dashboard.</p>
+          <h1 class="font-cyber font-black text-3xl text-white" data-i18n="career.awards">Awards</h1>
+          <p class="text-textGray mt-3">Awards, competition results, and core skills.</p>
         </div>
+        <button id="add-award-btn" type="button" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+          <i class="fa-solid fa-plus mr-1.5"></i> <span data-i18n="career.add_award">Add Award</span>
+        </button>
       </div>
+      <div id="awards-list" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+      <p id="awards-empty" class="hidden text-center text-xs font-code text-textGray py-10" data-i18n="career.no_awards">Recognition will find its place here.</p>
 
-      <div class="reveal-group mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-xl p-5 hover:border-neonPurple transition-all">
-          <i class="fa-solid fa-trophy text-amber-400 text-3xl mb-3"></i>
-          <h2 class="font-cyber font-bold text-xs text-white">Swinburne Competition</h2>
-          <p class="text-[10px] text-neonPurple font-code mt-1">1st Runner Up - Web Dev</p>
-        </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-xl p-5 hover:border-neonBlue transition-all">
-          <i class="fa-solid fa-plane text-neonBlue text-3xl mb-3"></i>
-          <h2 class="font-cyber font-bold text-xs text-white">Aircraft Designing</h2>
-          <p class="text-[10px] text-neonBlue font-code mt-1">Designed MYAIRLINE plane body at ME Info Media</p>
-        </div>
-        <div class="reveal bg-darkBg/60 border border-borderNeon rounded-xl p-5 hover:border-emerald-400 transition-all">
-          <i class="fa-solid fa-file-signature text-emerald-400 text-3xl mb-3"></i>
-          <h2 class="font-cyber font-bold text-xs text-white">Workshop Complete</h2>
-          <p class="text-[10px] text-emerald-400 font-code mt-1">Awarded completion certificates for professional workshops</p>
-        </div>
-      </div>
-
-      <div class="reveal-group mt-6 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div class="reveal-group mt-8 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
         <div class="reveal bg-darkBg/80 p-4 rounded-xl border border-borderNeon hover:border-neonPurple hover:scale-105 transition-all duration-300 text-center relative">
           <div class="w-12 h-12 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple text-xl mb-3"><i class="fa-brands fa-python"></i></div>
           <span class="block font-cyber font-bold text-xs text-white">Python 3</span>
@@ -507,72 +267,323 @@
         </div>
       </div>
     </section>
+
+    <!-- Download CV: prints the page itself (see the @media print rules in styles.css) -->
+    <section id="download-cv" class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+      <div>
+        <h2 class="font-cyber font-bold text-lg text-white">Download CV</h2>
+        <p class="text-textGray text-sm mt-1">Export this page as a clean, printable resume.</p>
+      </div>
+      <button id="download-cv-btn" type="button" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-sm font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
+        <i data-lucide="download"></i> Download CV
+      </button>
+    </section>
   </main>
+
+  <!-- Experience form modal -->
+  <div id="experience-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="experience-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-lg bg-cardBg neon-border-purple rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-cyber font-bold text-lg text-white">Experience</h2>
+        <button id="experience-modal-close" type="button" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <form id="experience-form" class="space-y-4">
+        <input type="hidden" id="experience-form-id">
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Company</label>
+          <input id="experience-company" type="text" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Role (English)</label>
+            <input id="experience-role-en" type="text" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Role (中文)</label>
+            <input id="experience-role-zh" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Start Date</label>
+            <input id="experience-start" type="month" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">End Date (blank = present)</label>
+            <input id="experience-end" type="month" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Location</label>
+          <input id="experience-location" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Description (English)</label>
+          <textarea id="experience-description-en" rows="3" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Description (中文)</label>
+          <textarea id="experience-description-zh" rows="3" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Skills (comma-separated)</label>
+          <input id="experience-skills" type="text" placeholder="Python, SQL, Team Leadership" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+        </div>
+        <div class="flex items-center gap-4 text-xs font-code text-textGray">
+          <label class="flex items-center gap-1.5"><input type="radio" name="experience-visibility" value="public" checked> Public</label>
+          <label class="flex items-center gap-1.5"><input type="radio" name="experience-visibility" value="private"> Private</label>
+        </div>
+        <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">SAVE</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Project form modal -->
+  <div id="project-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="project-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-lg bg-cardBg neon-border-purple rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-cyber font-bold text-lg text-white">Project</h2>
+        <button id="project-modal-close" type="button" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <form id="project-form" class="space-y-4">
+        <input type="hidden" id="project-form-id">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Title (English)</label>
+            <input id="project-title-en" type="text" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Title (中文)</label>
+            <input id="project-title-zh" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Summary (English)</label>
+            <input id="project-summary-en" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Summary (中文)</label>
+            <input id="project-summary-zh" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Description (English)</label>
+            <textarea id="project-description-en" rows="3" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Description (中文)</label>
+            <textarea id="project-description-zh" rows="3" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5" data-i18n="career.reflection">Reflection</label>
+          <textarea id="project-reflection-en" rows="3" data-i18n-placeholder="career.reflection_placeholder" placeholder="What did you learn? Challenges? Solutions? Future improvements?" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60 mb-2"></textarea>
+          <textarea id="project-reflection-zh" rows="3" placeholder="学到了什么？挑战？解决方案？未来的改进？" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Tech Stack (comma-separated)</label>
+          <input id="project-tech-stack" type="text" placeholder="React, Firebase, Tailwind" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Category</label>
+            <select id="project-category" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white">
+              <option value="personal">Personal</option>
+              <option value="internship">Internship</option>
+              <option value="fyp">FYP</option>
+              <option value="coursework">Coursework</option>
+              <option value="work">Work</option>
+            </select>
+          </div>
+          <div class="flex items-end pb-2">
+            <label class="flex items-center gap-2 text-xs font-code text-textGray"><input id="project-featured" type="checkbox"> Featured project</label>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">GitHub URL</label>
+            <input id="project-github-url" type="url" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Demo URL</label>
+            <input id="project-demo-url" type="url" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Add Images</label>
+          <input id="project-image-files" type="file" accept="image/*" multiple class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
+          <span id="project-images-existing" data-value="[]"></span>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Add Documents (PDF etc.)</label>
+          <input id="project-document-files" type="file" multiple class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
+          <span id="project-documents-existing" data-value="[]"></span>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-code text-textGray">
+          <label class="flex items-center gap-1.5"><input type="radio" name="project-visibility" value="public" checked> Public</label>
+          <label class="flex items-center gap-1.5"><input type="radio" name="project-visibility" value="private"> Private</label>
+        </div>
+        <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">SAVE</button>
+        <p id="project-status" class="text-xs font-code text-textGray text-center"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Project detail modal (read-only) -->
+  <div id="project-detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="project-detail-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-2xl bg-cardBg neon-border-purple rounded-2xl p-7 max-h-[90vh] overflow-y-auto space-y-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <p id="project-detail-category" class="text-[10px] uppercase tracking-[0.2em] text-neonPurple font-code"></p>
+          <h2 id="project-detail-title" class="font-cyber font-bold text-2xl text-white mt-1"></h2>
+        </div>
+        <button id="project-detail-close" type="button" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+      </div>
+
+      <!-- Overview -->
+      <div>
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-2">Overview</p>
+        <p id="project-detail-summary" class="text-sm text-white"></p>
+        <p id="project-detail-description" class="text-sm text-textGray mt-2 leading-relaxed" style="white-space: pre-wrap"></p>
+        <div id="project-detail-tech" class="flex flex-wrap gap-1.5 mt-3"></div>
+      </div>
+
+      <!-- Gallery -->
+      <div id="project-detail-gallery-section" class="hidden">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-2">Gallery</p>
+        <div id="project-detail-images" class="grid grid-cols-2 gap-2"></div>
+      </div>
+
+      <!-- Documents -->
+      <div id="project-detail-documents-section" class="hidden">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-2">Documents</p>
+        <div id="project-detail-documents" class="space-y-1"></div>
+      </div>
+
+      <!-- Reflection -->
+      <div id="project-detail-reflection-section" class="hidden">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-2" data-i18n="career.reflection">Reflection</p>
+        <p id="project-detail-reflection" class="text-sm text-textGray leading-relaxed" style="white-space: pre-wrap"></p>
+      </div>
+
+      <!-- Links -->
+      <div id="project-detail-links-section" class="hidden pt-2 border-t border-borderNeon/40">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-2">Links</p>
+        <p id="project-detail-links" class="text-xs"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Certificate form modal -->
+  <div id="certificate-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="certificate-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md bg-cardBg neon-border-purple rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-cyber font-bold text-lg text-white">Certificate</h2>
+        <button id="certificate-modal-close" type="button" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <form id="certificate-form" class="space-y-4">
+        <input type="hidden" id="certificate-form-id">
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Title (English)</label>
+          <input id="certificate-title-en" type="text" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Title (中文)</label>
+          <input id="certificate-title-zh" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Issuer</label>
+            <input id="certificate-issuer" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Issue Date</label>
+            <input id="certificate-issue-date" type="month" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Credential URL</label>
+          <input id="certificate-credential-url" type="url" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Or upload a file (PDF/image)</label>
+          <input id="certificate-file" type="file" class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
+          <span id="certificate-file-existing" data-value=""></span>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-code text-textGray">
+          <label class="flex items-center gap-1.5"><input type="radio" name="certificate-visibility" value="public" checked> Public</label>
+          <label class="flex items-center gap-1.5"><input type="radio" name="certificate-visibility" value="private"> Private</label>
+        </div>
+        <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">SAVE</button>
+        <p id="certificate-status" class="text-xs font-code text-textGray text-center"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Award form modal -->
+  <div id="award-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="award-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md bg-cardBg neon-border-purple rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-cyber font-bold text-lg text-white">Award</h2>
+        <button id="award-modal-close" type="button" class="text-textGray hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <form id="award-form" class="space-y-4">
+        <input type="hidden" id="award-form-id">
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Title (English)</label>
+          <input id="award-title-en" type="text" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Title (中文)</label>
+          <input id="award-title-zh" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Issuer</label>
+            <input id="award-issuer" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-code text-textGray mb-1.5">Date</label>
+            <input id="award-date" type="month" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Description (English)</label>
+          <textarea id="award-description-en" rows="2" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-code text-textGray mb-1.5">Description (中文)</label>
+          <textarea id="award-description-zh" rows="2" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-code text-textGray">
+          <label class="flex items-center gap-1.5"><input type="radio" name="award-visibility" value="public" checked> Public</label>
+          <label class="flex items-center gap-1.5"><input type="radio" name="award-visibility" value="private"> Private</label>
+        </div>
+        <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">SAVE</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/i18n.js"></script>
+  <footer class="max-w-7xl mx-auto px-4 mt-10 pb-6 text-center">
+    <p class="text-[11px] font-code text-textGray/70">EdenAtlas &middot; by Jun &middot; Version 2.5</p>
+  </footer>
 
   <script src="scripts.js" defer></script>
   <script type="module" src="auth-guard.js"></script>
+    <script type="module" src="global-search.js"></script>
+    <script type="module" src="js/mobile-nav.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="career.js"></script>
   <script>
-    Chart.defaults.color = '#a0aec0';
-    Chart.defaults.font.family = 'Fira Code, monospace';
-
-    const ctxLead = document.getElementById('leadershipChart').getContext('2d');
-    new Chart(ctxLead, {
-      type: 'doughnut',
-      data: {
-        labels: ['Chairperson', 'Program Leader', 'Technical Head', 'HR / Sponsorship'],
-        datasets: [{
-          data: [2, 1, 1, 2],
-          backgroundColor: ['rgba(217,70,239,0.7)','rgba(59,130,246,0.7)','rgba(16,185,129,0.7)','rgba(245,158,11,0.7)'],
-          borderColor: '#12121e',
-          borderWidth: 2,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { font: { size: 9 }, boxWidth: 10 }
-          }
-        },
-        cutout: '65%'
-      }
-    });
-
-    const ctxCap = document.getElementById('capabilitiesChart').getContext('2d');
-    new Chart(ctxCap, {
-      type: 'radar',
-      data: {
-        labels: ['Python Logic', 'Frontend Web', 'SQL Database', 'Team Leadership', 'BIS Business Insights'],
-        datasets: [{
-          label: 'Attribute Points',
-          data: [85,82,80,90,88],
-          borderColor: '#3b82f6',
-          borderWidth: 2,
-          backgroundColor: 'rgba(59,130,246,0.2)',
-          pointBackgroundColor: '#3b82f6',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: '#3b82f6'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          r: {
-            angleLines: { color: 'rgba(45,27,78,0.4)' },
-            grid: { color: 'rgba(45,27,78,0.4)' },
-            pointLabels: { font: { size: 9, family: 'Orbitron, sans-serif' }, color: '#a0aec0' },
-            ticks: { display: false },
-            min: 0,
-            max: 100
-          }
-        }
-      }
-    });
+    document.getElementById('download-cv-btn').addEventListener('click', () => window.print());
   </script>
 </body>
 </html>

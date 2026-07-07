@@ -1,4 +1,4 @@
-import { auth, googleProvider, db, getUserMode } from "./firebase-init.js";
+import { auth, googleProvider, db, getUserMode, canParticipate } from "./firebase-init.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -9,6 +9,12 @@ import {
   query,
   where,
   getDocs,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const WEATHER_API_KEY = "4708932833bff8ef44d180197bfc4664";
@@ -240,6 +246,166 @@ async function loadWeather() {
   }
 }
 
+// ---- Goals ----
+//
+// Always the signed-in user's own goals, same shape as Expenses (no `visibility` — personal
+// targets have no public story). Write-gated by canParticipate() like every other "New X".
+
+let cachedGoals = [];
+
+async function loadGoals() {
+  const section = document.getElementById("goals-section");
+  section.classList.toggle("hidden", !canParticipate());
+  if (!canParticipate()) return;
+  cachedGoals = await fetchMyCollection("goals");
+  renderGoals();
+}
+
+function renderGoals() {
+  const listEl = document.getElementById("goals-list");
+  const emptyEl = document.getElementById("goals-empty");
+  emptyEl.classList.toggle("hidden", cachedGoals.length > 0);
+  listEl.replaceChildren(
+    ...cachedGoals.map((g) => {
+      const pct = g.target > 0 ? Math.min(100, Math.round(((g.current || 0) / g.target) * 100)) : 0;
+      const deadline = g.deadline?.toDate ? g.deadline.toDate().toLocaleDateString(undefined, { dateStyle: "medium" }) : null;
+      const el = document.createElement("div");
+      el.className = "bg-darkBg/40 border border-borderNeon rounded-xl p-4";
+      el.innerHTML = `
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <p class="text-sm font-semibold text-white truncate">${g.title}</p>
+          <button class="goal-delete-btn text-textGray hover:text-rose-400 text-xs flex-shrink-0"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="h-2 rounded-full bg-borderNeon/60 overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-neonViolet to-neonPurple" style="width:${pct}%"></div>
+        </div>
+        <div class="flex items-center justify-between mt-2 text-[11px] font-code text-textGray">
+          <span>${g.current || 0} / ${g.target} ${g.unit || ""} &middot; ${pct}%</span>
+          ${deadline ? `<span>Due ${deadline}</span>` : ""}
+        </div>
+        <div class="flex items-center gap-2 mt-3">
+          <input type="number" step="any" class="goal-progress-input w-24 bg-darkBg/60 border border-borderNeon rounded-lg px-2 py-1 text-xs text-white" placeholder="Update">
+          <button class="goal-progress-btn px-3 py-1 bg-neonPurple/15 text-neonPurple rounded-lg text-[11px] font-code hover:bg-neonPurple/25 transition-colors">Update progress</button>
+        </div>`;
+
+      el.querySelector(".goal-delete-btn").addEventListener("click", async () => {
+        try {
+          await deleteDoc(doc(db, "goals", g.id));
+          cachedGoals = cachedGoals.filter((x) => x.id !== g.id);
+          renderGoals();
+        } catch (err) {
+          console.error("[dashboard] goal delete failed:", err.code || err);
+        }
+      });
+      el.querySelector(".goal-progress-btn").addEventListener("click", async () => {
+        const input = el.querySelector(".goal-progress-input");
+        const next = parseFloat(input.value);
+        if (Number.isNaN(next)) return;
+        try {
+          await updateDoc(doc(db, "goals", g.id), { current: next });
+          g.current = next;
+          renderGoals();
+        } catch (err) {
+          console.error("[dashboard] goal progress update failed:", err.code || err);
+        }
+      });
+      return el;
+    })
+  );
+}
+
+const goalModal = document.getElementById("goal-modal");
+document.getElementById("new-goal-btn").addEventListener("click", () => goalModal.classList.remove("hidden"));
+document.getElementById("goal-modal-close").addEventListener("click", () => goalModal.classList.add("hidden"));
+document.getElementById("goal-modal-backdrop").addEventListener("click", () => goalModal.classList.add("hidden"));
+
+document.getElementById("goal-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const user = auth.currentUser;
+  if (!user || !canParticipate()) return;
+  const statusEl = document.getElementById("goal-status");
+  const deadlineVal = document.getElementById("goal-deadline").value;
+  statusEl.textContent = "Saving…";
+  try {
+    await addDoc(collection(db, "goals"), {
+      title: document.getElementById("goal-title").value.trim(),
+      target: parseFloat(document.getElementById("goal-target").value) || 0,
+      current: 0,
+      unit: document.getElementById("goal-unit").value.trim(),
+      deadline: deadlineVal ? Timestamp.fromDate(new Date(deadlineVal)) : null,
+      createdAt: serverTimestamp(),
+      uid: user.uid,
+    });
+    statusEl.textContent = "Saved.";
+    event.target.reset();
+    setTimeout(() => goalModal.classList.add("hidden"), 500);
+    loadGoals();
+  } catch (err) {
+    console.error("[dashboard] goal create failed:", err.code || err);
+    statusEl.textContent = "Couldn't save — check console.";
+  }
+});
+
+// ---- Achievements ----
+//
+// 100% data-driven from live counts/streaks (no hardcoded personal-history milestones — see
+// CLAUDE.md). Tiered so progress feels achievable rather than a single all-or-nothing target.
+
+function toDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function computeStreak(completedDates) {
+  const set = new Set(completedDates || []);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cursor = new Date(today);
+  if (!set.has(toDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (set.has(toDateKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+const ACHIEVEMENTS = [
+  { key: "photos", label: "Photos Uploaded", icon: "fa-image", tiers: [10, 50, 100, 500] },
+  { key: "journals", label: "Journal Entries", icon: "fa-book", tiers: [10, 50, 100, 365] },
+  { key: "expenses", label: "Expenses Recorded", icon: "fa-wallet", tiers: [10, 100, 250, 500] },
+  { key: "streak", label: "Longest Active Streak", icon: "fa-fire", tiers: [7, 30, 100, 365] },
+];
+
+function achievementTile(def, count) {
+  const unlockedTier = [...def.tiers].reverse().find((t) => count >= t) || null;
+  const nextTier = def.tiers.find((t) => count < t);
+  const pct = nextTier ? Math.round((count / nextTier) * 100) : 100;
+  const el = document.createElement("div");
+  el.className = `rounded-xl p-4 border ${unlockedTier ? "border-neonPurple/40 bg-neonPurple/5" : "border-borderNeon bg-darkBg/40"}`;
+  el.innerHTML = `
+    <div class="w-9 h-9 rounded-lg ${unlockedTier ? "bg-neonPurple/15 text-neonPurple" : "bg-darkBg/60 text-textGray"} flex items-center justify-center mb-2"><i class="fa-solid ${def.icon}"></i></div>
+    <p class="text-sm font-semibold text-white">${def.label}</p>
+    <p class="text-[11px] font-code text-textGray mt-0.5">${unlockedTier ? `${unlockedTier}+ reached` : "Not started"}</p>
+    ${nextTier ? `
+      <div class="h-1.5 rounded-full bg-borderNeon/60 overflow-hidden mt-2">
+        <div class="h-full bg-neonPurple" style="width:${pct}%"></div>
+      </div>
+      <p class="text-[10px] font-code text-textGray mt-1">${count} / ${nextTier}</p>` : `<p class="text-[10px] font-code text-emerald-400 mt-2">Max tier reached</p>`}`;
+  return el;
+}
+
+async function renderAchievements() {
+  const [photos, journals, expenses, habits] = await Promise.all([
+    fetchMyCollection("photos"), fetchMyCollection("journals"), fetchMyCollection("expenses"), fetchMyCollection("habits"),
+  ]);
+  const bestStreak = habits.length ? Math.max(...habits.map((h) => computeStreak(h.completedDates))) : 0;
+  const counts = { photos: photos.length, journals: journals.length, expenses: expenses.length, streak: bestStreak };
+  document.getElementById("achievements-list").replaceChildren(...ACHIEVEMENTS.map((def) => achievementTile(def, counts[def.key])));
+}
+
 function renderSignedOut() {
   authControl.innerHTML = `
     <button id="auth-signin-btn" class="px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
@@ -270,6 +436,10 @@ onAuthStateChanged(auth, (user) => {
   renderExpenseAnalytics();
   renderJournalAnalytics();
   loadUserDirectory();
+  if (user) {
+    loadGoals();
+    renderAchievements();
+  }
 });
 
 loadWeather();

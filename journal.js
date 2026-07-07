@@ -259,7 +259,19 @@ function renderSignedIn(user) {
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 
-  newJournalBtn.classList.toggle("hidden", !canParticipate());
+  const mayParticipate = canParticipate();
+  newJournalBtn.classList.toggle("hidden", !mayParticipate);
+  maybeAutoOpenFromQuickAdd(mayParticipate);
+}
+
+// Mobile Quick Add (js/mobile-nav.js) links here with ?new=1 to jump straight into the form.
+let autoOpenedFromQuickAdd = false;
+function maybeAutoOpenFromQuickAdd(mayParticipate) {
+  if (autoOpenedFromQuickAdd || !mayParticipate) return;
+  if (new URLSearchParams(location.search).get("new") === "1") {
+    autoOpenedFromQuickAdd = true;
+    openModal();
+  }
 }
 
 onAuthStateChanged(auth, (user) => {

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Career Migration | EdenAtlas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-darkBg text-white font-sans min-h-screen p-6">
+  <div class="max-w-xl mx-auto space-y-4">
+    <h1 class="text-xl font-semibold">Career CMS one-time migration</h1>
+    <p class="text-sm text-textGray">
+      Run this once, signed in as the Owner, to port the old static Education/Work-Experience/
+      Achievements content on resume.html into the new <code>career_experiences</code>/
+      <code>career_awards</code>/<code>career_certificates</code> Firestore collections. Not
+      linked from the nav, not auth-guarded — delete this file once you've run it.
+    </p>
+    <button id="signin-btn" class="px-4 py-2 bg-neonPurple/20 text-neonPurple rounded-xl text-sm">Sign in with Google</button>
+    <button id="run-btn" class="hidden px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-sm text-white">Run Migration</button>
+    <pre id="log" class="text-xs text-textGray whitespace-pre-wrap"></pre>
+  </div>
+
+  <script type="module">
+    import { auth, googleProvider, db, isOwner } from "./firebase-init.js";
+    import { onAuthStateChanged, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import { addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    const logEl = document.getElementById("log");
+    const log = (msg) => { logEl.textContent += msg + "\n"; };
+
+    document.getElementById("signin-btn").addEventListener("click", () => {
+      signInWithPopup(auth, googleProvider).catch((err) => log("Sign-in failed: " + err.message));
+    });
+
+    // Ported verbatim from the old static resume.html sections.
+    const EXPERIENCES = [
+      { company: "Tristar, Taman Perindu, Malaysia", role_en: "Carlsberg Brand Promoter", role_zh: "", startDate: "2026-01", endDate: "2026-01", location: "Malaysia", description_en: "Engaged customers through energetic brand presentations, product briefings, and campaigns. Built strong customer rapport and enhanced commercial brand loyalty. Achieved exceptional sales records and received high recognition for sales excellence.", description_zh: "", skills: [] },
+      { company: "New Eastern BBQ Meats, Singapore", role_en: "Bakkwa Promoter", role_zh: "", startDate: "2024-01", endDate: "2024-02", location: "Singapore", description_en: "Promoted traditional meat products and actively engaged regional and international customers to drive peak holiday sales. Maintained eye-catching product showcases and ensured strict hygiene and cleanliness.", description_zh: "", skills: [] },
+      { company: "Everrise Pandungan Branch, Sarawak, Malaysia", role_en: "Cashier", role_zh: "", startDate: "2019-12", endDate: "2020-01", location: "Sarawak, Malaysia", description_en: "Operated POS system with zero discrepancies, handling complex multi-method financial transactions daily. Processed customer bills with absolute precision while delivering polite, highly professional service.", description_zh: "", skills: [] },
+      { company: "Hong Kong Noodle House, Sarawak, Malaysia", role_en: "Waiter", role_zh: "", startDate: "2017-11", endDate: "2017-12", location: "Sarawak, Malaysia", description_en: "Delivered prompt, friendly, and patient service, organizing and dispatching table orders efficiently.", description_zh: "", skills: [] },
+    ];
+
+    const AWARDS = [
+      { title_en: "Swinburne Competition", title_zh: "", issuer: "Swinburne", date: "", description_en: "1st Runner Up - Web Dev", description_zh: "" },
+      { title_en: "Aircraft Designing", title_zh: "", issuer: "ME Info Media", date: "", description_en: "Designed MYAIRLINE plane body at ME Info Media", description_zh: "" },
+    ];
+
+    const CERTIFICATES = [
+      { title_en: "Workshop Completion", title_zh: "", issuer: "", issueDate: "", credentialUrl: "" },
+    ];
+
+    async function runMigration() {
+      const user = auth.currentUser;
+      log("Starting migration for uid " + user.uid + "...");
+      for (const exp of EXPERIENCES) {
+        await addDoc(collection(db, "career_experiences"), { ...exp, uid: user.uid, visibility: "public", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        log("Added experience: " + exp.role_en + " @ " + exp.company);
+      }
+      for (const award of AWARDS) {
+        await addDoc(collection(db, "career_awards"), { ...award, uid: user.uid, visibility: "public", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        log("Added award: " + award.title_en);
+      }
+      for (const cert of CERTIFICATES) {
+        await addDoc(collection(db, "career_certificates"), { ...cert, uid: user.uid, visibility: "public", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        log("Added certificate: " + cert.title_en);
+      }
+      log("Done. Review/edit everything on the Career page, then delete migrate-career.html.");
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      document.getElementById("signin-btn").classList.add("hidden");
+      if (!isOwner(user)) {
+        log("Signed in as " + user.email + " — not the Owner, migration refused.");
+        return;
+      }
+      const runBtn = document.getElementById("run-btn");
+      runBtn.classList.remove("hidden");
+      runBtn.addEventListener("click", () => runMigration().catch((err) => log("Failed: " + err.message)));
+    });
+  </script>
+</body>
+</html>

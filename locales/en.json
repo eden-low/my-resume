@@ -1,0 +1,156 @@
+{
+  "nav": {
+    "home": "Home",
+    "career": "Career",
+    "memories": "Memories",
+    "journey": "Journey",
+    "people": "People",
+    "reports": "Reports",
+    "inbox": "Inbox",
+    "settings": "Settings",
+    "journal": "Journal",
+    "finance": "Finance",
+    "calendar": "Calendar",
+    "habits": "Habits",
+    "ai": "AI",
+    "contact": "Contact",
+    "logout": "Log Out"
+  },
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "couldnt_save": "Couldn't save — check console.",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "upload": "Upload",
+    "uploading": "Uploading…",
+    "uploaded": "Uploaded.",
+    "search": "Search",
+    "add": "Add",
+    "new": "New",
+    "close": "Close",
+    "loading": "Loading…",
+    "back": "Back",
+    "sign_in": "Sign In",
+    "sign_out": "Sign Out",
+    "public": "Public",
+    "private": "Private",
+    "none_yet": "Nothing here yet."
+  },
+  "footer": {
+    "line": "EdenAtlas · by Jun · Version 2.5"
+  },
+  "home": {
+    "greeting_morning": "Good Morning",
+    "greeting_afternoon": "Good Afternoon",
+    "greeting_evening": "Good Evening",
+    "greeting_night": "Good Night",
+    "tagline": "Your life, beautifully organized.",
+    "today": "Today",
+    "memories": "Memories",
+    "recent_memories": "Recent Memories",
+    "this_month": "This Month",
+    "quick_actions": "Quick Actions",
+    "add_expense": "Add Expense",
+    "journal": "Journal",
+    "upload_photo": "Upload Photo"
+  },
+  "career": {
+    "title": "Career",
+    "subtitle": "Experience, projects, certificates, and awards.",
+    "highlights": "Highlights",
+    "experience": "Experience",
+    "projects": "Projects",
+    "featured_projects": "Featured Projects",
+    "certificates": "Certificates",
+    "awards": "Awards",
+    "add_experience": "Add Experience",
+    "add_project": "Add Project",
+    "add_certificate": "Add Certificate",
+    "add_award": "Add Award",
+    "no_experience": "Your story starts with a single role.",
+    "no_projects": "Every great career starts with a first project.",
+    "no_certificates": "Certificates you earn will show up here.",
+    "no_awards": "Recognition will find its place here.",
+    "reflection": "Reflection",
+    "reflection_placeholder": "What did you learn? What challenges came up? How did you solve them? What would you improve next time?",
+    "view_project": "View Project"
+  },
+  "memories": {
+    "title": "Memories",
+    "subtitle": "Photo moments, organized into albums.",
+    "new_post": "New Post",
+    "no_posts": "Every journey starts with a single memory.",
+    "album_travel": "Travel",
+    "album_projects": "Projects",
+    "album_events": "Events",
+    "album_dailylife": "Daily Life",
+    "album_favorites": "Favorites"
+  },
+  "journal": {
+    "title": "Journal",
+    "new_entry": "New Entry",
+    "no_entries": "Write something today. Your future self will thank you."
+  },
+  "finance": {
+    "title": "Finance",
+    "add_expense": "Add Expense",
+    "no_expenses": "Track your first expense — small habits build a clear picture."
+  },
+  "journey": {
+    "title": "Journey",
+    "add_event": "New Event",
+    "no_events": "Every life has milestones worth remembering. Add your first."
+  },
+  "habits": {
+    "title": "Habits",
+    "add_habit": "New Habit",
+    "no_habits": "Small steps create lasting change. Start one today."
+  },
+  "calendar": {
+    "title": "Calendar"
+  },
+  "reports": {
+    "title": "Reports"
+  },
+  "people": {
+    "title": "People",
+    "search_placeholder": "Search by name, @username, or email…",
+    "goals": "Goals",
+    "new_goal": "New Goal",
+    "no_goals": "No goals yet — set one to start tracking progress.",
+    "achievements": "Achievements"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "mark_all_read": "Mark all read",
+    "no_notifications": "You're all caught up."
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "preferences": "Preferences",
+    "language": "Language",
+    "about": "About"
+  },
+  "contact": {
+    "title": "Contact"
+  },
+  "login": {
+    "title": "Sign in with Google to continue."
+  },
+  "mobilenav": {
+    "home": "Home",
+    "memories": "Memories",
+    "quick_add": "Quick Add",
+    "people": "People",
+    "me": "Me",
+    "add_expense": "Add Expense",
+    "write_journal": "Write Journal",
+    "upload_photo": "Upload Photo",
+    "add_timeline_event": "Add Timeline Event",
+    "add_habit": "Add Habit"
+  }
+}

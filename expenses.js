@@ -231,6 +231,17 @@ function renderSignedIn(user) {
   const mayParticipate = canParticipate();
   newExpenseBtn.classList.toggle("hidden", !mayParticipate);
   accessNote.classList.toggle("hidden", mayParticipate);
+  maybeAutoOpenFromQuickAdd(mayParticipate);
+}
+
+// Mobile Quick Add (js/mobile-nav.js) links here with ?new=1 to jump straight into the form.
+let autoOpenedFromQuickAdd = false;
+function maybeAutoOpenFromQuickAdd(mayParticipate) {
+  if (autoOpenedFromQuickAdd || !mayParticipate) return;
+  if (new URLSearchParams(location.search).get("new") === "1") {
+    autoOpenedFromQuickAdd = true;
+    openModal();
+  }
 }
 
 onAuthStateChanged(auth, (user) => {

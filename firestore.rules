@@ -33,6 +33,12 @@ service cloud.firestore {
       allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
     }
 
+    // Always-private: personal targets have no "public" story, same shape as expenses.
+    match /goals/{goalId} {
+      allow read, update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
+    }
+
     match /journals/{journalId} {
       allow read: if isMineOrPublic(resource.data);
       allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
@@ -49,6 +55,26 @@ service cloud.firestore {
       allow read: if isMineOrPublic(resource.data);
       allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
       allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // Career CMS (resume.html, nav-labeled "Career"): unlike the rest of the app, this is not
+    // a per-uid multi-tenant space — the page has always been about one person — so writes are
+    // Owner-only, not canParticipate()-gated. HR/Friends/Viewers only ever read public items.
+    match /career_experiences/{id} {
+      allow read: if isMineOrPublic(resource.data);
+      allow create, update, delete: if isOwner();
+    }
+    match /career_projects/{id} {
+      allow read: if isMineOrPublic(resource.data);
+      allow create, update, delete: if isOwner();
+    }
+    match /career_certificates/{id} {
+      allow read: if isMineOrPublic(resource.data);
+      allow create, update, delete: if isOwner();
+    }
+    match /career_awards/{id} {
+      allow read: if isMineOrPublic(resource.data);
+      allow create, update, delete: if isOwner();
     }
 
     match /photos/{photoId} {

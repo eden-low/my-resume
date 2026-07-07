@@ -4,9 +4,10 @@
     <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Low Fang Jun - Portfolio</title>
+    <title>Home | EdenAtlas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#09090e">
     <link rel="apple-touch-icon" href="images/icon-192.png">
@@ -35,241 +36,272 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
-    <header class="max-w-7xl mx-auto px-4 pt-6">
+    <header class="hidden max-w-7xl mx-auto px-4 pt-6">
         <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonViolet to-neonPurple flex items-center justify-center shadow-lg shadow-neonPurple/20">
-                    <i class="fa-solid fa-shield-halved text-white text-lg animate-pulse"></i>
+                    <i class="fa-solid fa-circle-user text-white text-lg animate-pulse"></i>
                 </div>
                 <div>
-                    <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
-                    <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
+                    <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">EdenAtlas</span>
+                    <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">DIGITAL ATLAS</span>
                 </div>
             </div>
-            <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
-                <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
-                <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
-                <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
-                <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> Journal</a>
-                <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
-                <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
-                <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
-        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
-        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
-        <a href="ai.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-robot text-xs"></i> AI</a>
-                <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
-                <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
-                <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
-                <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
-            </nav>
-            <div class="px-4 py-1.5 bg-gradient-to-r from-neonViolet/20 to-neonPurple/20 border border-neonPurple/40 rounded-full text-xs font-cyber font-bold tracking-wider text-neonPurple">
-                DEVELOPER MODE: ACTIVE
-            </div>
+                  <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
+        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> <span data-i18n="nav.home">Home</span></a>
+        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> <span data-i18n="nav.career">Career</span></a>
+        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> <span data-i18n="nav.memories">Memories</span></a>
+        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> <span data-i18n="nav.journey">Journey</span></a>
+        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> <span data-i18n="nav.people">People</span></a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> <span data-i18n="nav.reports">Reports</span></a>
+        <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> <span data-i18n="nav.inbox">Inbox</span> <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
+        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> <span data-i18n="nav.settings">Settings</span></a>
+        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> <span data-i18n="nav.journal">Journal</span></a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> <span data-i18n="nav.finance">Finance</span></a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> <span data-i18n="nav.calendar">Calendar</span></a>
+        <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> <span data-i18n="nav.habits">Habits</span></a>
+        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> <span data-i18n="nav.contact">Contact</span></a>
+      </nav>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 mt-8 space-y-6">
-        <!-- Identity strip -->
-        <section class="reveal flex items-center gap-5 px-2">
-            <div class="w-16 h-16 rounded-full bg-cover bg-center border border-borderNeon shadow-lg shadow-neonPurple/10 flex-shrink-0" style="background-image:url('images/profile.jpeg')"></div>
+    <main class="max-w-5xl mx-auto px-4 mt-8 space-y-8">
+        <!-- Greeting -->
+        <section class="reveal">
+            <h1 id="greeting-text" class="font-cyber font-semibold text-3xl tracking-tight">Good Morning</h1>
+            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-textGray">
+                <span id="greeting-date"></span>
+                <span class="text-borderNeon">&middot;</span>
+                <span id="greeting-clock" class="font-code"></span>
+                <span class="text-borderNeon">&middot;</span>
+                <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-cloud-sun text-amber-400"></i> <span id="weather-inline-temp">&mdash;&deg;</span> <span id="weather-inline-cond">Loading weather&hellip;</span></span>
+            </div>
+        </section>
+
+        <!-- Today's Overview: one consolidated card, not five -->
+        <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Today's Overview</p>
             <div>
-                <h1 class="font-cyber font-semibold text-2xl tracking-tight">Low Fang Jun</h1>
-                <p class="mt-1 text-sm text-textGray flex flex-wrap items-center gap-2">
-                    <span>BIS Analyst &middot; Software Engineer</span>
-                    <span class="text-borderNeon">&middot;</span>
-                    <span class="inline-flex items-center gap-1.5 text-emerald-400 font-code text-[11px] font-semibold tracking-wide">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.15)]"></span>
-                        SYSTEM ACTIVE
-                    </span>
-                </p>
+                <p class="text-xs text-textGray mb-2 flex items-center gap-1.5"><i data-lucide="list-checks" class="w-3.5 h-3.5"></i> Habits</p>
+                <div id="today-habits" class="space-y-1.5 text-sm"><p class="text-textGray text-xs">Loading&hellip;</p></div>
+            </div>
+            <div class="divide-y divide-borderNeon/50 text-sm mt-4 pt-1 border-t border-borderNeon/40">
+                <div class="flex items-center justify-between py-2.5">
+                    <span class="text-textGray flex items-center gap-1.5"><i data-lucide="wallet" class="w-3.5 h-3.5"></i> Spending</span>
+                    <span id="today-spending" class="font-code font-semibold">&mdash;</span>
+                </div>
+                <div class="flex items-center justify-between py-2.5">
+                    <span class="text-textGray flex items-center gap-1.5"><i data-lucide="book-open" class="w-3.5 h-3.5"></i> Journal</span>
+                    <span id="today-journal" class="text-sm">&mdash;</span>
+                </div>
+                <div class="flex items-center justify-between py-2.5">
+                    <span class="text-textGray flex items-center gap-1.5"><i data-lucide="image" class="w-3.5 h-3.5"></i> Photos</span>
+                    <span id="today-photos" class="text-sm">&mdash;</span>
+                </div>
+                <div class="flex items-center justify-between py-2.5">
+                    <span class="text-textGray flex items-center gap-1.5"><i data-lucide="bell" class="w-3.5 h-3.5"></i> Notifications</span>
+                    <span id="today-notifs" class="text-sm">&mdash;</span>
+                </div>
             </div>
         </section>
 
-        <!-- Dashboard grid -->
-        <section class="reveal-group grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
-            <!-- System status panel -->
-            <div class="reveal lg:col-span-5 bg-cardBg/90 neon-border-purple rounded-2xl p-6">
-                <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">System Status</p>
-                <div class="divide-y divide-borderNeon/60 text-sm">
-                    <div class="flex items-center justify-between py-2.5">
-                        <span class="text-textGray">Name</span>
-                        <span class="font-medium">Low Fang Jun</span>
-                    </div>
-                    <div class="flex items-center justify-between py-2.5">
-                        <span class="text-textGray">Role</span>
-                        <span class="font-medium">Developer &middot; Analyst</span>
-                    </div>
-                    <div class="flex items-center justify-between py-2.5">
-                        <span class="text-textGray">Current focus</span>
-                        <span class="font-medium text-right">Web Development &middot; Firebase Systems</span>
-                    </div>
-                    <div class="flex items-center justify-between py-2.5">
-                        <span class="text-textGray">Status</span>
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400 font-code text-[11px] font-semibold">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ACTIVE
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between py-2.5">
-                        <span class="text-textGray">Session</span>
-                        <span id="session-pill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 text-textGray font-code text-[11px] font-semibold">
-                            <span class="w-1.5 h-1.5 rounded-full bg-textGray/60"></span> CHECKING&hellip;
-                        </span>
-                    </div>
-                </div>
-            </div>
+        <!-- On This Day -->
+        <section id="memories-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">On This Day</p>
+            <div id="memories-list" class="space-y-1"></div>
+        </section>
 
-            <!-- Weather widget -->
-            <div class="reveal lg:col-span-4 bg-cardBg/90 neon-border-purple rounded-2xl p-6 flex flex-col">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p id="weather-city" class="text-sm font-semibold">Kuching</p>
-                        <p id="weather-region" class="text-[11px] text-textGray mt-0.5">Sarawak, Malaysia</p>
-                    </div>
-                    <div id="weather-icon" class="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-cloud-sun"></i>
-                    </div>
-                </div>
-                <div id="weather-temp" class="font-code font-semibold text-4xl mt-4 tabular-nums">&mdash;&deg;<span class="text-lg text-textGray font-medium ml-1">C</span></div>
-                <p id="weather-cond" class="mt-2 text-sm text-textGray">Loading&hellip;</p>
-                <p id="weather-updated" class="mt-auto pt-3 text-[10px] font-code text-textGray/70 tracking-wide"></p>
-            </div>
+        <!-- Recent Memories -->
+        <section id="recent-memories-section" class="hidden">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3 px-1">Recent Memories</p>
+            <div id="recent-memories-list" class="reveal-group grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        </section>
 
-            <!-- Today's Habits widget -->
-            <div class="reveal lg:col-span-3 bg-cardBg/90 neon-border-purple rounded-2xl p-6 flex flex-col">
-                <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3">Today's Habits</p>
-                <div id="habits-widget-list" class="space-y-2 text-sm flex-1">
-                    <p class="text-xs font-code text-textGray">Loading&hellip;</p>
-                </div>
-                <p id="habits-widget-streak" class="mt-3 pt-3 border-t border-borderNeon/40 text-xs font-code text-amber-400 font-semibold hidden"></p>
+        <!-- Continue Working: today's not-yet-done habits, an actionable nudge -->
+        <section id="continue-working-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Continue Working</p>
+            <div id="continue-working-list" class="space-y-2"></div>
+        </section>
+
+        <!-- Monthly Summary -->
+        <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-4">Monthly Summary</p>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div><p class="text-textGray text-xs">Expenses</p><p id="month-expenses" class="font-code font-semibold text-xl mt-1">&mdash;</p></div>
+                <div><p class="text-textGray text-xs">Habit completion</p><p id="month-habits" class="font-code font-semibold text-xl mt-1">&mdash;</p></div>
+                <div><p class="text-textGray text-xs">Journal entries</p><p id="month-journal" class="font-code font-semibold text-xl mt-1">&mdash;</p></div>
+                <div><p class="text-textGray text-xs">Photos uploaded</p><p id="month-photos" class="font-code font-semibold text-xl mt-1">&mdash;</p></div>
             </div>
         </section>
 
-        <!-- Recent Notifications -->
-        <section id="notif-widget-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6 mb-4">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code">Recent Notifications</p>
-                <a href="notifications.html" class="text-[11px] font-code text-neonPurple hover:underline">View all</a>
+        <!-- Quick Actions: one row of pills, not three cards -->
+        <section id="quick-actions-section" class="hidden">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3 px-1">Quick Actions</p>
+            <div class="flex flex-wrap gap-2">
+                <button id="qa-expense-btn" type="button" class="flex items-center gap-2 px-4 py-2.5 bg-cardBg/90 neon-border-purple rounded-xl text-sm text-white hover:border-neonPurple/40 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4 text-emerald-400"></i> Add Expense
+                </button>
+                <button id="qa-journal-btn" type="button" class="flex items-center gap-2 px-4 py-2.5 bg-cardBg/90 neon-border-purple rounded-xl text-sm text-white hover:border-neonPurple/40 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4 text-amber-400"></i> Journal
+                </button>
+                <button id="qa-photo-btn" type="button" class="flex items-center gap-2 px-4 py-2.5 bg-cardBg/90 neon-border-purple rounded-xl text-sm text-white hover:border-neonPurple/40 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4 text-neonBlue"></i> Upload Photo
+                </button>
             </div>
-            <div id="notif-widget-list" class="space-y-2 text-sm"></div>
         </section>
 
-        <!-- Quick links -->
-        <section class="reveal-group grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <a href="resume.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonPurple/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-sm"><i class="fa-solid fa-scroll"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Resume</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Profile, education, work &amp; leadership history</p>
-                </div>
-            </a>
-            <a href="gallery.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonBlue/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonBlue/10 text-neonBlue flex items-center justify-center text-sm"><i class="fa-solid fa-images"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Gallery</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Photo feed &mdash; public and private posts</p>
-                </div>
-            </a>
-            <a href="journal.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-amber-400/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center text-sm"><i class="fa-solid fa-book"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Journal</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Daily notes with markdown &amp; mood tags</p>
-                </div>
-            </a>
-            <a href="expenses.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-emerald-400/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-emerald-400/10 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-wallet"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Expenses</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Personal spend tracker with charts</p>
-                </div>
-            </a>
-            <a href="timeline.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonBlue/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonBlue/10 text-neonBlue flex items-center justify-center text-sm"><i class="fa-solid fa-timeline"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Timeline</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Life events grouped by year</p>
-                </div>
-            </a>
-            <a href="habits.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-amber-400/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center text-sm"><i class="fa-solid fa-list-check"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Habits</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Daily check-ins, streaks &amp; completion trends</p>
-                </div>
-            </a>
-            <a href="calendar.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonBlue/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonBlue/10 text-neonBlue flex items-center justify-center text-sm"><i class="fa-solid fa-calendar-days"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Calendar</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Your expenses, photos &amp; journal by day</p>
-                </div>
-            </a>
-            <a href="reports.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-emerald-400/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-emerald-400/10 text-emerald-400 flex items-center justify-center text-sm"><i class="fa-solid fa-chart-pie"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Reports</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Monthly spending &amp; activity insights</p>
-                </div>
-            </a>
-            <a href="ai.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonViolet/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonViolet/10 text-neonViolet flex items-center justify-center text-sm"><i class="fa-solid fa-robot"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">AI Assistant</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Chat to log expenses &amp; more</p>
-                </div>
-            </a>
-            <a href="dashboard.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonPurple/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-sm"><i class="fa-solid fa-chart-line"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Dashboard</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Analytics across Gallery, Expenses &amp; Journal</p>
-                </div>
-            </a>
-            <a href="notifications.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonBlue/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonBlue/10 text-neonBlue flex items-center justify-center text-sm"><i class="fa-solid fa-bell"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Notifications</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">System alerts &amp; activity</p>
-                </div>
-            </a>
-            <a href="contact.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-rose-400/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-rose-400/10 text-rose-400 flex items-center justify-center text-sm"><i class="fa-solid fa-envelope"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Contact</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Email, phone, and location</p>
-                </div>
-            </a>
-            <a href="settings.html" class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5 flex flex-col justify-between min-h-[120px] hover:border-neonViolet/40 transition-all">
-                <div class="w-9 h-9 rounded-lg bg-neonViolet/10 text-neonViolet flex items-center justify-center text-sm"><i class="fa-solid fa-gear"></i></div>
-                <div class="mt-4">
-                    <p class="text-sm font-semibold">Settings</p>
-                    <p class="text-[11px] text-textGray mt-1 leading-relaxed">Profile, preferences &amp; login history</p>
-                </div>
-            </a>
+        <!-- All pages -->
+        <section class="reveal flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-code text-textGray px-1 pt-2 border-t border-borderNeon/40">
+            <a href="resume.html" class="hover:text-neonPurple transition-colors">Resume</a>
+            <a href="gallery.html" class="hover:text-neonPurple transition-colors">Gallery</a>
+            <a href="journal.html" class="hover:text-neonPurple transition-colors">Journal</a>
+            <a href="expenses.html" class="hover:text-neonPurple transition-colors">Expenses</a>
+            <a href="timeline.html" class="hover:text-neonPurple transition-colors">Timeline</a>
+            <a href="habits.html" class="hover:text-neonPurple transition-colors">Habits</a>
+            <a href="calendar.html" class="hover:text-neonPurple transition-colors">Calendar</a>
+            <a href="reports.html" class="hover:text-neonPurple transition-colors">Reports</a>
+            <a href="dashboard.html" class="hover:text-neonPurple transition-colors">Dashboard</a>
+            <a href="notifications.html" class="hover:text-neonPurple transition-colors">Notifications</a>
+            <a href="contact.html" class="hover:text-neonPurple transition-colors">Contact</a>
+            <a href="settings.html" class="hover:text-neonPurple transition-colors">Settings</a>
         </section>
     </main>
-    <script src="scripts.js" defer></script>
+
+    <!-- Quick Add: Expense -->
+    <div id="qa-expense-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="qa-backdrop absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-sm bg-cardBg neon-border-purple rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-cyber font-bold text-lg text-white">Add Expense</h2>
+                <button type="button" class="qa-close text-textGray hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <form id="qa-expense-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-expense-amount">Amount (RM)</label>
+                    <input id="qa-expense-amount" type="number" step="0.01" min="0" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-expense-category">Category</label>
+                    <select id="qa-expense-category" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white">
+                        <option value="food">Food</option>
+                        <option value="transport">Transport</option>
+                        <option value="shopping">Shopping</option>
+                        <option value="bills">Bills</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-expense-note">Note</label>
+                    <input id="qa-expense-note" type="text" placeholder="Optional" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+                </div>
+                <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">SAVE</button>
+                <p id="qa-expense-status" class="text-xs font-code text-textGray text-center"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Add: Journal -->
+    <div id="qa-journal-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="qa-backdrop absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-cardBg neon-border-purple rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-cyber font-bold text-lg text-white">New Journal Entry</h2>
+                <button type="button" class="qa-close text-textGray hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <form id="qa-journal-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-journal-title">Title</label>
+                    <input id="qa-journal-title" type="text" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-journal-content">What's on your mind?</label>
+                    <textarea id="qa-journal-content" rows="4" required class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-code text-textGray">
+                    <label class="flex items-center gap-1.5"><input type="radio" name="qa-journal-visibility" value="public" checked> Public</label>
+                    <label class="flex items-center gap-1.5"><input type="radio" name="qa-journal-visibility" value="private"> Private</label>
+                </div>
+                <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">SAVE</button>
+                <p id="qa-journal-status" class="text-xs font-code text-textGray text-center"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Add: Photo -->
+    <div id="qa-photo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="qa-backdrop absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-cardBg neon-border-purple rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-cyber font-bold text-lg text-white">Upload Photo</h2>
+                <button type="button" class="qa-close text-textGray hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <form id="qa-photo-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-photo-file">Image</label>
+                    <input id="qa-photo-file" type="file" accept="image/*" required class="w-full text-xs text-textGray file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-borderNeon file:bg-darkBg/60 file:text-white file:text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-code text-textGray mb-1.5" for="qa-photo-caption">Caption</label>
+                    <input id="qa-photo-caption" type="text" placeholder="Optional" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex-1">
+                        <label class="block text-xs font-code text-textGray mb-1.5" for="qa-photo-category">Album</label>
+                        <select id="qa-photo-category" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white">
+                            <option value="travel">Travel</option>
+                            <option value="projects">Projects</option>
+                            <option value="events">Events</option>
+                            <option value="dailylife" selected>Daily Life</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs font-code text-textGray">
+                        <label class="flex items-center gap-1.5"><input type="radio" name="qa-photo-visibility" value="public" checked> Public</label>
+                        <label class="flex items-center gap-1.5"><input type="radio" name="qa-photo-visibility" value="private"> Private</label>
+                    </div>
+                </div>
+                <button type="submit" class="w-full px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">UPLOAD</button>
+                <p id="qa-photo-status" class="text-xs font-code text-textGray text-center"></p>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/i18n.js"></script>
+  <footer class="max-w-7xl mx-auto px-4 mt-10 pb-6 text-center">
+    <p class="text-[11px] font-code text-textGray/70">EdenAtlas &middot; by Jun &middot; Version 2.5</p>
+  </footer>
+
+  <script src="scripts.js" defer></script>
     <script type="module" src="auth-guard.js"></script>
+    <script type="module" src="global-search.js"></script>
+    <script type="module" src="js/mobile-nav.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
     <script type="module">
-        import { auth, db, isOwner } from "./firebase-init.js";
+        import { auth, db, storage, canParticipate } from "./firebase-init.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-        import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        import { collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
-        onAuthStateChanged(auth, (user) => {
-            const pill = document.getElementById("session-pill");
-            if (user) {
-                pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-neonPurple"></span> SIGNED IN';
-                pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neonPurple/10 text-neonPurple font-code text-[11px] font-semibold";
-            } else {
-                pill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-textGray/60"></span> SIGNED OUT';
-                pill.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 text-textGray font-code text-[11px] font-semibold";
-            }
-            loadHabitsWidget(user);
-            loadNotifWidget(user);
-        });
+        // ---- Greeting ----
 
-        // Minimal, self-contained fetch+streak logic for the homepage widget — duplicated from
-        // habits.js rather than imported, matching this codebase's per-page fetch/cache pattern.
+        function greetingWord() {
+            const h = new Date().getHours();
+            if (h < 12) return "Good Morning";
+            if (h < 17) return "Good Afternoon";
+            if (h < 21) return "Good Evening";
+            return "Good Night";
+        }
+
+        function firstName(user) {
+            return (user.displayName || "").split(" ")[0] || "there";
+        }
+
+        function tickClock() {
+            document.getElementById("greeting-clock").textContent = new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+            document.getElementById("greeting-date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+        }
+
+        // ---- Habit date-key helpers (same convention as habits.js) ----
+
         function toDateKey(d) {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -277,106 +309,320 @@
             return `${y}-${m}-${day}`;
         }
 
-        function computeStreak(completedDates) {
-            const set = new Set(completedDates || []);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const cursor = new Date(today);
-            if (!set.has(toDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-            let streak = 0;
-            while (set.has(toDateKey(cursor))) {
-                streak++;
-                cursor.setDate(cursor.getDate() - 1);
-            }
-            return streak;
+        function monthKey(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
         }
 
-        async function loadHabitsWidget(user) {
-            const listEl = document.getElementById("habits-widget-list");
-            const streakEl = document.getElementById("habits-widget-streak");
+        function isSameDay(a, b) {
+            return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+        }
+
+        function isThisMonth(a, b) {
+            return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+        }
+
+        // ---- Data: this Home is strictly personal (mine only), matching dashboard.js's convention ----
+
+        async function fetchMine(name) {
+            const user = auth.currentUser;
+            if (!user) return [];
             try {
-                const habitMap = new Map();
-                const publicSnap = await getDocs(query(collection(db, "habits"), where("visibility", "==", "public")));
-                publicSnap.forEach((d) => habitMap.set(d.id, d.data()));
-                if (user) {
-                    try {
-                        const mineSnap = await getDocs(query(collection(db, "habits"), where("uid", "==", user.uid)));
-                        mineSnap.forEach((d) => habitMap.set(d.id, d.data()));
-                    } catch (err) {
-                        console.error("[habits-widget] own habits query failed:", err.code || err);
-                    }
-                }
-                const habits = [...habitMap.values()];
-
-                if (!habits.length) {
-                    listEl.innerHTML = '<p class="text-xs font-code text-textGray">No habits yet. <a href="habits.html" class="text-neonPurple hover:underline">Add one</a>.</p>';
-                    streakEl.classList.add("hidden");
-                    return;
-                }
-
-                const todayKey = toDateKey(new Date());
-                listEl.innerHTML = habits.map((h) => {
-                    const done = (h.completedDates || []).includes(todayKey);
-                    return `<div class="flex items-center gap-2">
-                        <i class="fa-solid ${done ? "fa-square-check text-emerald-400" : "fa-square text-textGray/50"}"></i>
-                        <span class="${done ? "text-white" : "text-textGray"}">${h.icon || ""} ${h.title}</span>
-                    </div>`;
-                }).join("");
-
-                const bestStreak = Math.max(...habits.map((h) => computeStreak(h.completedDates)));
-                if (bestStreak > 0) {
-                    streakEl.textContent = `🔥 ${bestStreak} day${bestStreak === 1 ? "" : "s"}`;
-                    streakEl.classList.remove("hidden");
-                } else {
-                    streakEl.classList.add("hidden");
-                }
+                const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
+                return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
             } catch (err) {
-                console.error("[habits-widget] failed:", err);
-                listEl.innerHTML = '<p class="text-xs font-code text-textGray">Unavailable.</p>';
+                console.error(`[home] ${name} fetch failed:`, err.code || err);
+                return [];
             }
         }
 
-        async function loadNotifWidget(user) {
-            const section = document.getElementById("notif-widget-section");
-            const listEl = document.getElementById("notif-widget-list");
-            if (!isOwner(user)) {
+        async function loadAllMyData() {
+            const [photos, journals, events, habits, expenses] = await Promise.all([
+                fetchMine("photos"), fetchMine("journals"), fetchMine("life_events"), fetchMine("habits"), fetchMine("expenses"),
+            ]);
+            return { photos, journals, events, habits, expenses };
+        }
+
+        // ---- Today ----
+
+        function renderHabitsToday(habits) {
+            const listEl = document.getElementById("today-habits");
+            if (!habits.length) {
+                listEl.innerHTML = '<p class="text-textGray">No habits yet. <a href="habits.html" class="text-neonPurple hover:underline">Add one</a>.</p>';
+                return;
+            }
+            const todayKey = toDateKey(new Date());
+            listEl.innerHTML = habits.map((h) => {
+                const done = (h.completedDates || []).includes(todayKey);
+                return `<div class="flex items-center gap-2">
+                    <i class="fa-solid ${done ? "fa-square-check text-emerald-400" : "fa-square text-textGray/50"}"></i>
+                    <span class="${done ? "text-white" : "text-textGray"} truncate">${h.icon || ""} ${h.title}</span>
+                </div>`;
+            }).join("");
+        }
+
+        function renderToday(data) {
+            const today = new Date();
+
+            renderHabitsToday(data.habits);
+
+            const todaySpend = data.expenses
+                .filter((e) => e.createdAt?.toDate && isSameDay(e.createdAt.toDate(), today))
+                .reduce((sum, e) => sum + (e.amount || 0), 0);
+            document.getElementById("today-spending").textContent = `RM ${todaySpend.toFixed(2)}`;
+
+            const journalToday = data.journals.some((j) => j.createdAt?.toDate && isSameDay(j.createdAt.toDate(), today));
+            document.getElementById("today-journal").innerHTML = journalToday
+                ? '<span class="text-emerald-400"><i class="fa-solid fa-check mr-1"></i>Written today</span>'
+                : '<a href="journal.html" class="text-textGray hover:text-neonPurple">Nothing yet &rarr;</a>';
+
+            const photosToday = data.photos.filter((p) => p.uploadedAt?.toDate && isSameDay(p.uploadedAt.toDate(), today)).length;
+            document.getElementById("today-photos").innerHTML = photosToday > 0
+                ? `<span class="text-emerald-400"><i class="fa-solid fa-check mr-1"></i>${photosToday} uploaded</span>`
+                : '<a href="gallery.html" class="text-textGray hover:text-neonPurple">Nothing yet &rarr;</a>';
+        }
+
+        async function loadNotifCount(user) {
+            const el = document.getElementById("today-notifs");
+            try {
+                const snap = await getDocs(query(collection(db, "notifications"), where("uid", "==", user.uid), where("read", "==", false)));
+                el.innerHTML = snap.size > 0
+                    ? `<a href="notifications.html" class="text-amber-400 hover:underline">${snap.size} unread</a>`
+                    : '<span class="text-textGray">All caught up</span>';
+            } catch (err) {
+                console.error("[home] notif count failed:", err.code || err);
+                el.textContent = "—";
+            }
+        }
+
+        // ---- Memories ("On This Day") ----
+
+        function renderMemories(data) {
+            const today = new Date();
+            const hits = [];
+            const collect = (list, dateField, type) => {
+                list.forEach((item) => {
+                    const d = item[dateField]?.toDate?.();
+                    if (!d) return;
+                    if (d.getMonth() === today.getMonth() && d.getDate() === today.getDate() && d.getFullYear() !== today.getFullYear()) {
+                        hits.push({ type, item, yearsAgo: today.getFullYear() - d.getFullYear() });
+                    }
+                });
+            };
+            collect(data.photos, "uploadedAt", "photo");
+            collect(data.journals, "createdAt", "journal");
+            collect(data.events, "date", "event");
+
+            const section = document.getElementById("memories-section");
+            if (!hits.length) {
                 section.classList.add("hidden");
                 return;
             }
-            try {
-                const snap = await getDocs(query(collection(db, "notifications"), where("uid", "==", user.uid), where("read", "==", false)));
-                const notifs = snap.docs
-                    .map((d) => d.data())
-                    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
-                    .slice(0, 5);
-                if (!notifs.length) {
-                    section.classList.add("hidden");
-                    return;
-                }
-                section.classList.remove("hidden");
-                listEl.innerHTML = notifs.map((n) => `
-                    <div class="flex items-center gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-neonPurple flex-shrink-0"></span>
-                        <span class="text-white font-medium">${n.title}</span>
-                        <span class="text-textGray">&mdash; ${n.message}</span>
-                    </div>`).join("");
-            } catch (err) {
-                console.error("[notif-widget] failed:", err);
-                section.classList.add("hidden");
-            }
+            hits.sort((a, b) => a.yearsAgo - b.yearsAgo);
+            section.classList.remove("hidden");
+            document.getElementById("memories-list").replaceChildren(
+                ...hits.map((h) => {
+                    const href = h.type === "photo" ? "gallery.html" : h.type === "journal" ? "journal.html" : "timeline.html";
+                    const icon = h.type === "photo" ? "fa-image" : h.type === "journal" ? "fa-book" : "fa-timeline";
+                    const label = h.item.caption || h.item.title || "Untitled";
+                    const el = document.createElement("a");
+                    el.href = href;
+                    el.className = "flex items-center gap-3 p-2.5 rounded-xl hover:bg-darkBg/40 transition-colors";
+                    el.innerHTML = `
+                        <span class="w-8 h-8 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-xs flex-shrink-0"><i class="fa-solid ${icon}"></i></span>
+                        <span class="min-w-0 text-sm text-white truncate flex-1">${label}</span>
+                        <span class="text-[10px] font-code text-textGray flex-shrink-0">${h.yearsAgo} year${h.yearsAgo === 1 ? "" : "s"} ago</span>`;
+                    return el;
+                })
+            );
         }
 
+        // ---- Recent Memories ----
+
+        function memoryCard(href, icon, label, text) {
+            const el = document.createElement("a");
+            el.href = href;
+            el.className = "reveal card-lift bg-cardBg/90 neon-border-purple rounded-2xl p-4 flex items-center gap-3 hover:border-neonPurple/40 transition-all";
+            el.innerHTML = `
+                <span class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-sm flex-shrink-0"><i class="fa-solid ${icon}"></i></span>
+                <span class="min-w-0">
+                    <span class="block text-[10px] uppercase tracking-wider text-textGray font-code">${label}</span>
+                    <span class="block text-sm text-white truncate">${text}</span>
+                </span>`;
+            return el;
+        }
+
+        function renderRecentMemories(data) {
+            const section = document.getElementById("recent-memories-section");
+            const latestPhoto = [...data.photos].sort((a, b) => (b.uploadedAt?.toMillis?.() || 0) - (a.uploadedAt?.toMillis?.() || 0))[0];
+            const latestJournal = [...data.journals].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))[0];
+            const recentEvents = [...data.events].sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0)).slice(0, 2);
+
+            const cards = [];
+            if (latestPhoto) cards.push(memoryCard("gallery.html", "fa-image", "Latest Photo", latestPhoto.caption || "Untitled"));
+            if (latestJournal) cards.push(memoryCard("journal.html", "fa-book", "Latest Journal", latestJournal.title || "Untitled"));
+            recentEvents.forEach((e) => cards.push(memoryCard("timeline.html", "fa-timeline", "Timeline", e.title || "Untitled")));
+
+            if (!cards.length) {
+                section.classList.add("hidden");
+                return;
+            }
+            section.classList.remove("hidden");
+            document.getElementById("recent-memories-list").replaceChildren(...cards);
+        }
+
+        // ---- This Month ----
+
+        function renderThisMonth(data) {
+            const now = new Date();
+
+            const monthExpenses = data.expenses
+                .filter((e) => e.createdAt?.toDate && isThisMonth(e.createdAt.toDate(), now))
+                .reduce((sum, e) => sum + (e.amount || 0), 0);
+            document.getElementById("month-expenses").textContent = `RM ${monthExpenses.toFixed(2)}`;
+
+            document.getElementById("month-journal").textContent = data.journals.filter((j) => j.createdAt?.toDate && isThisMonth(j.createdAt.toDate(), now)).length;
+            document.getElementById("month-photos").textContent = data.photos.filter((p) => p.uploadedAt?.toDate && isThisMonth(p.uploadedAt.toDate(), now)).length;
+
+            const daysElapsed = now.getDate();
+            const key = monthKey(now);
+            const totalCheckins = data.habits.reduce((sum, h) => sum + (h.completedDates || []).filter((d) => d.startsWith(key)).length, 0);
+            const possible = data.habits.length * daysElapsed;
+            const pct = possible > 0 ? Math.round((totalCheckins / possible) * 100) : 0;
+            document.getElementById("month-habits").textContent = data.habits.length ? `${pct}%` : "—";
+        }
+
+        // ---- Continue Working: today's not-yet-checked-off habits, an actionable nudge ----
+
+        function renderContinueWorking(data) {
+            const section = document.getElementById("continue-working-section");
+            const todayKey = toDateKey(new Date());
+            const unfinished = data.habits.filter((h) => !(h.completedDates || []).includes(todayKey));
+
+            if (!unfinished.length) {
+                section.classList.add("hidden");
+                return;
+            }
+            section.classList.remove("hidden");
+            document.getElementById("continue-working-list").innerHTML = unfinished.map((h) => `
+                <a href="habits.html" class="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-darkBg/40 transition-colors">
+                    <span class="flex items-center gap-2.5 text-sm text-white truncate"><i data-lucide="circle-dashed" class="w-4 h-4 text-textGray flex-shrink-0"></i>${h.icon || ""} ${h.title}</span>
+                    <span class="text-[10px] font-code text-textGray flex-shrink-0">Not done yet</span>
+                </a>`).join("");
+        }
+
+        // ---- Load + refresh ----
+
+        async function refreshHome() {
+            const data = await loadAllMyData();
+            renderToday(data);
+            renderMemories(data);
+            renderRecentMemories(data);
+            renderContinueWorking(data);
+            renderThisMonth(data);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        // ---- Quick Actions ----
+
+        function wireModal(modalId, openBtnId) {
+            const modal = document.getElementById(modalId);
+            const openBtn = document.getElementById(openBtnId);
+            openBtn.addEventListener("click", () => modal.classList.remove("hidden"));
+            modal.querySelectorAll(".qa-close, .qa-backdrop").forEach((el) => el.addEventListener("click", () => modal.classList.add("hidden")));
+        }
+        wireModal("qa-expense-modal", "qa-expense-btn");
+        wireModal("qa-journal-modal", "qa-journal-btn");
+        wireModal("qa-photo-modal", "qa-photo-btn");
+
+        document.getElementById("qa-expense-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const user = auth.currentUser;
+            if (!user || !canParticipate()) return;
+            const statusEl = document.getElementById("qa-expense-status");
+            statusEl.textContent = "Saving…";
+            try {
+                await addDoc(collection(db, "expenses"), {
+                    amount: parseFloat(document.getElementById("qa-expense-amount").value) || 0,
+                    category: document.getElementById("qa-expense-category").value,
+                    note: document.getElementById("qa-expense-note").value.trim(),
+                    createdAt: serverTimestamp(),
+                    uid: user.uid,
+                });
+                statusEl.textContent = "Saved.";
+                event.target.reset();
+                setTimeout(() => document.getElementById("qa-expense-modal").classList.add("hidden"), 500);
+                refreshHome();
+            } catch (err) {
+                console.error("[home] quick expense failed:", err.code || err);
+                statusEl.textContent = "Couldn't save — check console.";
+            }
+        });
+
+        document.getElementById("qa-journal-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const user = auth.currentUser;
+            if (!user || !canParticipate()) return;
+            const statusEl = document.getElementById("qa-journal-status");
+            statusEl.textContent = "Saving…";
+            try {
+                await addDoc(collection(db, "journals"), {
+                    title: document.getElementById("qa-journal-title").value.trim(),
+                    content: document.getElementById("qa-journal-content").value.trim(),
+                    mood: "calm",
+                    tags: [],
+                    imageUrl: null,
+                    visibility: event.target.querySelector('input[name="qa-journal-visibility"]:checked').value,
+                    createdAt: serverTimestamp(),
+                    uid: user.uid,
+                });
+                statusEl.textContent = "Saved.";
+                event.target.reset();
+                setTimeout(() => document.getElementById("qa-journal-modal").classList.add("hidden"), 500);
+                refreshHome();
+            } catch (err) {
+                console.error("[home] quick journal failed:", err.code || err);
+                statusEl.textContent = "Couldn't save — check console.";
+            }
+        });
+
+        document.getElementById("qa-photo-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const user = auth.currentUser;
+            if (!user || !canParticipate()) return;
+            const file = document.getElementById("qa-photo-file").files[0];
+            if (!file) return;
+            const statusEl = document.getElementById("qa-photo-status");
+            const category = document.getElementById("qa-photo-category").value;
+            const visibility = event.target.querySelector('input[name="qa-photo-visibility"]:checked').value;
+            statusEl.textContent = "Uploading…";
+            try {
+                const storagePath = `gallery/${user.uid}/${visibility}/${category}/${Date.now()}-${file.name}`;
+                const fileRef = ref(storage, storagePath);
+                await uploadBytes(fileRef, file);
+                const url = await getDownloadURL(fileRef);
+                await addDoc(collection(db, "photos"), {
+                    url,
+                    storagePath,
+                    category,
+                    visibility,
+                    featured: false,
+                    caption: document.getElementById("qa-photo-caption").value.trim() || file.name,
+                    uploadedAt: serverTimestamp(),
+                    uid: user.uid,
+                });
+                statusEl.textContent = "Uploaded.";
+                event.target.reset();
+                setTimeout(() => document.getElementById("qa-photo-modal").classList.add("hidden"), 500);
+                refreshHome();
+            } catch (err) {
+                console.error("[home] quick photo failed:", err.code || err);
+                statusEl.textContent = "Upload failed — check console.";
+            }
+        });
+
+        // ---- Weather (compact, inline in the greeting) ----
+
         const WEATHER_API_KEY = "4708932833bff8ef44d180197bfc4664";
-        const WEATHER_ICONS = {
-            Clear: ["fa-sun", "text-amber-400", "bg-amber-400/10"],
-            Clouds: ["fa-cloud", "text-textGray", "bg-white/5"],
-            Rain: ["fa-cloud-rain", "text-neonBlue", "bg-neonBlue/10"],
-            Drizzle: ["fa-cloud-rain", "text-neonBlue", "bg-neonBlue/10"],
-            Thunderstorm: ["fa-bolt", "text-amber-400", "bg-amber-400/10"],
-            Snow: ["fa-snowflake", "text-neonBlue", "bg-neonBlue/10"],
-            Mist: ["fa-smog", "text-textGray", "bg-white/5"],
-            Haze: ["fa-smog", "text-textGray", "bg-white/5"],
-        };
 
         function getBrowserLocation() {
             return new Promise((resolve) => {
@@ -393,49 +639,39 @@
         }
 
         async function loadWeather() {
-            const tempEl = document.getElementById("weather-temp");
-            const condEl = document.getElementById("weather-cond");
-            const updatedEl = document.getElementById("weather-updated");
-            const iconEl = document.getElementById("weather-icon");
-            const cityEl = document.getElementById("weather-city");
-            const regionEl = document.getElementById("weather-region");
+            const tempEl = document.getElementById("weather-inline-temp");
+            const condEl = document.getElementById("weather-inline-cond");
             try {
                 const coords = await getBrowserLocation();
                 const endpoint = coords
                     ? `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${WEATHER_API_KEY}`
                     : `https://api.openweathermap.org/data/2.5/weather?q=Kuching,MY&units=metric&appid=${WEATHER_API_KEY}`;
-
                 const res = await fetch(endpoint);
                 if (!res.ok) throw new Error(`Weather API ${res.status}`);
                 const data = await res.json();
-                const main = data.weather?.[0]?.main || "Clouds";
-                const [icon, textClass, bgClass] = WEATHER_ICONS[main] || ["fa-cloud-sun", "text-amber-400", "bg-amber-400/10"];
-
-                if (coords) {
-                    cityEl.textContent = data.name || "My Location";
-                    regionEl.textContent = data.sys?.country || "";
-                } else {
-                    cityEl.textContent = "Kuching";
-                    regionEl.textContent = "Sarawak, Malaysia";
-                }
-
-                tempEl.innerHTML = `${Math.round(data.main.temp)}&deg;<span class="text-lg text-textGray font-medium ml-1">C</span>`;
+                tempEl.textContent = `${Math.round(data.main.temp)}°`;
                 condEl.textContent = data.weather?.[0]?.description
                     ? data.weather[0].description.replace(/\b\w/g, (c) => c.toUpperCase())
-                    : main;
-                iconEl.className = `w-10 h-10 rounded-xl ${bgClass} ${textClass} flex items-center justify-center text-lg`;
-                iconEl.innerHTML = `<i class="fa-solid ${icon}"></i>`;
-                updatedEl.textContent = `UPDATED ${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+                    : "—";
             } catch (err) {
                 console.error("[weather] failed:", err);
                 condEl.textContent = "Weather unavailable";
-                updatedEl.textContent = "";
             }
         }
 
-        loadWeather();
-        setInterval(loadWeather, 15 * 60 * 1000);
+        // ---- Boot ----
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) return;
+            document.getElementById("greeting-text").textContent = `${greetingWord()}, ${firstName(user)}`;
+            document.getElementById("quick-actions-section").classList.toggle("hidden", !canParticipate());
+            tickClock();
+            setInterval(tickClock, 30000);
+            loadWeather();
+            setInterval(loadWeather, 15 * 60 * 1000);
+            loadNotifCount(user);
+            refreshHome();
+        });
     </script>
 </body>
 </html>
-

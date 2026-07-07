@@ -1,6 +1,28 @@
-# Personal OS — Dark Glass System Dashboard
+# EdenAtlas
 
-A 16-page **login-first**, **multi-tenant** personal system ("Personal OS") built around **Low Fang Jun**, styled as a dark glassmorphism "system dashboard" (near-black canvas, translucent blurred cards, a single soft violet accent, Apple system fonts). The owner and any number of approved "friends" each get their own private expenses/journal/photos/timeline/habits space, isolated by Firebase Auth `uid`; anyone else who signs in is a read-only Viewer limited to public content. Every page requires Google sign-in via `login.html` before it renders — see [Login gate](#login-gate-auth-guardjs--loginhtml) below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no dependencies to install. Installable as a PWA (`manifest.json` + `service-worker.js`, real `images/icon-192.png`/`icon-512.png` app icons) with offline shell caching.
+*A personal digital atlas for memories, growth, career, and life.*
+
+A 15-page **login-first**, **multi-tenant**, **bilingual (English/中文)** personal system built
+around Low Fang Jun ("Jun"), styled as a dark glassmorphism product (near-black canvas,
+translucent blurred cards, a single soft violet accent, Apple system fonts). The owner and any
+number of approved "friends" each get their own private expenses/journal/photos/timeline/habits
+space, isolated by Firebase Auth `uid`; anyone else who signs in is a read-only Viewer limited to
+public content — including HR visitors reviewing the public **Career** page. Every page requires
+Google sign-in via `login.html` before it renders — see [Login gate](#login-gate-auth-guardjs--loginhtml)
+below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no
+dependencies to install. Installable as a PWA (`manifest.json` + `service-worker.js`, real
+`images/icon-192.png`/`icon-512.png` app icons) with offline shell caching. Desktop uses a
+permanent left [sidebar](#desktop-sidebar-jssidebarjs); mobile (below the `md` breakpoint) uses
+a fixed top bar, slide-in drawer, bottom nav, and Quick Add sheet — see
+[Mobile navigation](#mobile-navigation-jsmobile-navjs) below. See [design-system.md](design-system.md)
+for the full visual language.
+
+**v2.6** was a product-design pass, not a feature pass: the AI Assistant module was removed
+entirely (it didn't fit "organize your life"); the horizontal top-nav was replaced by a
+permanent desktop sidebar; Home, Career, and Profile were each calmed down (fewer cards, less
+"portfolio" framing); empty states got warmer copy; Lucide was adopted as the icon standard for
+newly-touched surfaces; and a handful of restrained animations (page fade-in, card hover lift,
+loading skeletons) were added. See `CLAUDE.md`'s version history for the full breakdown.
 
 ## Roles
 
@@ -14,22 +36,26 @@ Nobody is ever signed out or blocked at login — everyone gets in, access just 
 
 | Page | File | Content |
 |---|---|---|
-| Login | [login.html](login.html) | The one page reachable while signed out — "Sign in with Google," resolves the signer's role, then redirects into the app |
-| Home | [index.html](index.html) | Dashboard layout: identity strip, System Status, live Weather widget, a "Today's Habits" widget, and quick-link cards to every other page |
-| Resume | [resume.html](resume.html) | Combined resume — Profile, Matrix, Education, Leadership & Events, Work Experience, Achievements & Skills sections with a sticky in-page sub-nav |
-| Gallery | [gallery.html](gallery.html) | Instagram-style feed — your own photos (any visibility) plus everyone's public ones; likes, comments, and per-post view analytics visible only to that post's own creator |
+Nav labels below reflect the current EdenAtlas naming; file names are unchanged from the
+original build to avoid a risky site-wide route rename (see the Brand & navigation section).
+
+| Nav label | File | Content |
+|---|---|---|
+| (none) | [login.html](login.html) | The one page reachable while signed out — "Sign in with Google," resolves the signer's role, then redirects into the app |
+| Home | [index.html](index.html) | A daily-habit landing page, not a dashboard: a time-of-day greeting + live clock + weather, a **Today** strip (habits/spending/journal/photos/notifications), an "On This Day" **Memories** flashback, **Recent Memories** (latest photo/journal/timeline events), a **This Month** recap, and **Quick Actions** (add an expense/journal entry/photo without leaving the page) |
+| Career | [resume.html](resume.html) | HR-friendly Career CMS — Profile/Highlights/Education/Leadership sections stay static; **Experience**, **Projects** (with Featured strip + detail modal + Reflection), **Certificates**, and **Awards** are Firestore-backed and owner-editable, everyone else sees public items read-only. See [Career CMS](#career-cms-careerjs) below |
+| Memories | [gallery.html](gallery.html) | Instagram-style feed — your own photos (any visibility) plus everyone's public ones, organized into albums (Travel/Projects/Events/Daily Life) plus a cross-cutting Favorites star; likes, comments, and per-post view analytics visible only to that post's own creator |
 | Journal | [journal.html](journal.html) | Daily journal — markdown entries with mood + tags, optional image; your own entries plus everyone's public ones |
-| Expenses | [expenses.html](expenses.html) | Personal spend tracker — always private, never shared; daily-spending and by-category Chart.js charts |
-| Timeline | [timeline.html](timeline.html) | Life events grouped by year — your own events plus everyone's public ones |
+| Finance | [expenses.html](expenses.html) | Personal spend tracker — always private, never shared; daily-spending and by-category Chart.js charts |
+| Journey | [timeline.html](timeline.html) | Life events grouped by year — your own events plus everyone's public ones |
 | Habits | [habits.html](habits.html) | Habit tracker — daily check-ins, streaks, a 7-day weekly strip, and a monthly completion ring per habit |
 | Calendar | [calendar.html](calendar.html) | Monthly 7-column grid of your own expenses/photos/journal entries, bucketed by day |
 | Reports | [reports.html](reports.html) | Monthly recap of your own activity — total spend, top category, weekday-vs-weekend spending comparison, photo/journal counts |
-| AI Assistant | [ai.html](ai.html) | Chat interface backed by Alibaba Cloud's Qwen (Tongyi) API — natural-language function calling to log expenses (e.g. "spent RM12 on lunch") directly into your Expenses collection |
-| Dashboard | [dashboard.html](dashboard.html) | Read-only analytics of your own Gallery/Expenses/Journal activity, plus **Search People** to find another signed-in user by name/@username/email |
-| Profile | [profile.html](profile.html) | Read-only IG-style profile (`?uid=`) opened from Search People — avatar/name/@username, public-activity stats, and a public photo grid you can like/comment on but not edit. Not in the nav — only reachable via a search result, same as `login.html` |
-| Notifications | [notifications.html](notifications.html) | Your own notification center — login/expense/journal/habit/gallery alerts, unread badge in the nav, mark-as-read |
+| People | [dashboard.html](dashboard.html) | **Search People** (find another signed-in user by name/@username/email) plus read-only analytics of your own Memories/Finance/Journal activity, **Goals** (target/progress/deadline tracking), and auto-generated **Achievements** (tiered, data-driven badges) |
+| (search result only) | [profile.html](profile.html) | Read-only GitHub+Instagram-style profile (`?uid=`) opened from Search People — avatar/name/@username/bio/location/joined date, public stats (incl. habit completion %), public Achievement badges, Recent Activity, photo **Albums** (Travel/Projects/Events/Daily Life/Favorites), and public Timeline/Journal lists — all public content only, nothing editable. Not in the nav — only reachable via a search result, same as `login.html` |
+| Inbox | [notifications.html](notifications.html) | Your own notification center — login/expense/journal/habit/gallery alerts, unread badge in the nav, mark-as-read |
 | Contact | [contact.html](contact.html) | Email / phone / location, with a one-click "send message" CTA |
-| Settings | [settings.html](settings.html) | Profile (incl. setting a unique @username), preferences, Export & Backup (any signed-in user), and — owner-only — login history and Whitelist Friend Management |
+| Settings | [settings.html](settings.html) | Profile (incl. @username, bio, location), **language switcher**, preferences, Export & Backup (any signed-in user), and — owner-only — login history and Whitelist Friend Management |
 
 ## Running locally
 
@@ -44,6 +70,64 @@ npx serve .
 Every page except `login.html` is gated: a single `<script type="module" src="auth-guard.js"></script>` tag checks `onAuthStateChanged` and redirects to `login.html?redirect=<page>` if signed out, or reveals the page once a user is confirmed. `login.html` resolves the signer's role (Owner / Friend / Viewer, cached to `localStorage` as `lfj:userMode`), upserts a `users/{uid}` directory doc, writes a `login_logs` doc, and writes a "new login" notification — all before redirecting into the app. This gate is a UX convenience, not the security boundary — real access control is (and remains) enforced by `firestore.rules`/`storage.rules`.
 
 On iPhone, an installed "Add to Home Screen" PWA can't reliably complete Google sign-in inside its own standalone window — `login.html` detects that (`isStandalone()`) and swaps the button for an "Open in Safari to Sign In" link instead, which hands off to real Safari where the normal popup flow works; the installed app picks up the resulting session on next launch.
+
+## i18n: `js/i18n.js` + `locales/*.json`
+
+A third shared module, loaded first (before `scripts.js`) on every protected page. English and
+Simplified Chinese dictionaries live in [locales/en.json](locales/en.json) and
+[locales/zh-CN.json](locales/zh-CN.json); any element with `data-i18n="nav.home"` (or
+`data-i18n-placeholder="..."` for inputs) gets its text swapped in automatically. Language is
+stored in `localStorage` (instant, no flash) and reconciled against `users/{uid}.lang` once auth
+resolves (Firestore wins if it differs, so a choice made on one device follows you to another).
+Switch it from Settings' Preferences or the mobile drawer — both call the same `setLang()`,
+which re-applies translations immediately (no reload) and fires an `eden:langchange` event that
+`career.js` listens for, since Career's bilingual **content** fields (`title_en`/`title_zh`,
+etc.) are a separate mechanism from `data-i18n` UI chrome.
+
+## Career CMS: `career.js`
+
+`resume.html` (nav-labeled "Career") is no longer purely static — **Experience**, **Projects**,
+**Certificates**, and **Awards** are backed by four new Firestore collections
+(`career_experiences`, `career_projects`, `career_certificates`, `career_awards`), each doc
+carrying `uid`/`visibility`/`createdAt`/`updatedAt` plus bilingual content fields. Unlike every
+other collection in this app, Career is **not** per-user multi-tenant — the page has always been
+about one person — so writes are Owner-only (`isOwner()`), not `canParticipate()`-gated; HR
+visitors and Friends only ever read `visibility:"public"` items. Profile/Highlights/Education/
+Leadership stay static prose (out of CMS scope); Projects adds a Featured strip, category
+filter, a detail modal, and a Reflection field. Uploads go to
+`career/{uid}/{public,private}/...` in Storage. A one-time, manually-run
+[migrate-career.html](migrate-career.html) ports the old static Education/Work-Experience/
+Achievements prose into the new collections — delete it after running once.
+
+## Desktop Sidebar: `js/sidebar.js`
+
+A fifth shared module (v2.6), self-injecting like the others. The old horizontal top-nav
+header is now permanently hidden on every breakpoint; on desktop, `js/sidebar.js` injects a
+fixed left sidebar instead — Home/Career/Memories/Journey/Finance/Journal/Calendar/People/
+Reports/Inbox/Settings as the primary list, Habits/Contact as a smaller secondary group (real
+pages that would otherwise have no nav entry), then Profile/Logout/Collapse pinned to the
+bottom. Collapses to an icon-only rail (`localStorage`-persisted) via a `--sidebar-w` CSS
+variable that `body`'s `padding-left` reads, so every page reflows without its own layout change.
+
+## Mobile navigation: `js/mobile-nav.js`
+
+A fourth shared module. Below the `md` breakpoint, the sidebar and the old desktop header both
+stay hidden in favor of an injected fixed top bar (hamburger — brand — avatar), a slide-in
+drawer (full page list + language switcher + logout), a fixed bottom nav (Home / Memories /
+Quick Add / People / Me), and a **Quick Add** bottom sheet (Add Expense / Write Journal / Upload
+Photo / Add Timeline Event / Add Habit) that deep-links to `{page}.html?new=1` — the five target
+pages' own scripts auto-open their existing "New X" modal when that param is present, rather
+than duplicating the form. All touch targets are ≥44px.
+
+## Global Search
+
+[global-search.js](global-search.js) is a second shared module (alongside `auth-guard.js`) loaded on every protected page — it injects its own `Ctrl/Cmd-K` command palette into the header's nav rather than requiring per-page markup. Searches People/Gallery/Journal/Timeline/Habits/Expenses in one box, grouped results with a per-group count, each linking straight to the relevant page. Expenses are only ever searched against your own (never another uid — they stay strictly private by construction of the query itself).
+
+## Memories, Goals & Achievements
+
+- **Memories** ("On This Day," on the Home page) compares today's date against your own past photos/journal entries/timeline events from previous years and surfaces any matches as "N years ago" flashbacks.
+- **Goals** (Dashboard) — personal targets with a title, target/current amount, unit, and deadline; always private, same shape as Expenses.
+- **Achievements** (Dashboard, full set; Profile, public subset) are 100% computed from live Firestore counts — tiered badges for Photos Uploaded, Journal Entries, Expenses Recorded, and Longest Active Habit Streak. No hardcoded personal-history milestones. Profile only ever shows the badges derivable from *public* data (expenses are always private, so that badge never appears on anyone else's profile).
 
 ## Tech stack
 
@@ -79,10 +163,6 @@ All four follow the same shape: your own entries (any visibility) plus everyone'
 
 [calendar.js](calendar.js) renders a monthly grid of your own expenses/photos/journal entries bucketed by day (fetched in full per collection, filtered client-side to the visible month — avoids needing a composite index for an equality-plus-date-range query). [insights.js](insights.js) computes a current-month recap: total spend, top category, a weekday-vs-weekend average-spend comparison with a warning banner, and photo/journal counts.
 
-## AI Assistant
-
-[ai.html](ai.html) / [ai-agent.js](ai-agent.js) is a chat interface backed by Alibaba Cloud's Qwen (Tongyi) API, called directly via `fetch()` against DashScope's OpenAI-compatible endpoint (`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`, model `qwen3.5-omni-flash`) — no SDK, no npm install. It's configured with one tool, `addExpense`, so a message like "spent RM12 on lunch" gets logged straight into the same `expenses` collection every other page reads, without opening a form. **Requires your own DashScope API key** — set `QWEN_API_KEY` in `ai-agent.js` before this page will work; treat it as sensitive, since a leaked key is directly billable (unlike this app's other hardcoded client-side keys). Expense-logging is gated by `canParticipate()` like every other write in the app.
-
 ## Notifications
 
 Each user sees only their own notifications ([notifications.js](notifications.js)). Every alert is self-written by whichever client observed the triggering condition — a login alert from `login.html`, a spending alert from `expenses.js` (RM1000/month threshold), a journal reminder from `journal.js` (3+ days quiet), a habit-streak alert from `habits.js` (30/60/90-day milestones), and a "someone liked your photo" alert from `gallery.js`. Deduped via `localStorage` checkpoints per condition. [auth-guard.js](auth-guard.js) lights up an unread badge next to the nav's Notifications link.
@@ -99,6 +179,14 @@ Available to any signed-in user from Settings ([export.js](export.js)) — downl
 
 **Profile** (read-only off `auth.currentUser`) and **Preferences** (`localStorage`) are available to everyone. **Export & Backup** is available to any signed-in user. **System Logs** (last 20 `login_logs`) and **Whitelist — Friend Management** (promote/demote `friends/{email}` docs) are owner-only.
 
+## Brand & navigation
+
+Renamed sitewide from "Low Fang Jun / Personal OS" to **EdenAtlas** — nav labels changed
+(Gallery→Memories, Timeline→Journey, Expenses→Finance, Notifications→Inbox, Resume→Career,
+Dashboard→People) but **file names were deliberately left unchanged** to avoid the risk of a
+site-wide route rename (broken bookmarks, PWA cache, internal links) for a purely cosmetic win.
+Every page footer reads `EdenAtlas · by Jun · Version 2.5`.
+
 ## Structure notes
 
-Every page repeats the same header/nav and Tailwind theme config — there's no shared layout include, so changes to the nav or color palette need to be applied to each `.html` file individually. See [CLAUDE.md](CLAUDE.md) for details if editing with Claude Code.
+Every page repeats the same header/nav and Tailwind theme config — there's no shared layout include, so changes to the nav or color palette need to be applied to each `.html` file individually (the old top-nav header itself is now permanently hidden everywhere, superseded by the sidebar/mobile nav below, but its markup was left in place rather than deleted). The five sanctioned exceptions are `js/i18n.js` (translations, loaded first), `auth-guard.js` (the login gate), `global-search.js` (the command palette), `js/mobile-nav.js` (mobile chrome), and `js/sidebar.js` (desktop chrome) — all self-contained modules that inject their own DOM. See [CLAUDE.md](CLAUDE.md) and [design-system.md](design-system.md) for details if editing with Claude Code.

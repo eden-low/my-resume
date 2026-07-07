@@ -1,6 +1,6 @@
 {
-  "name": "Personal OS",
-  "short_name": "PersonalOS",
+  "name": "EdenAtlas",
+  "short_name": "EdenAtlas",
   "start_url": "index.html",
   "scope": ".",
   "display": "standalone",

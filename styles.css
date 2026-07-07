@@ -10,6 +10,8 @@ body {
   background-color: #0a0a0e;
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  opacity: 1;
+  transition: opacity 0.25s ease;
 }
 
 /* Glass card: soft translucency + blur + hairline border, no colored glow */
@@ -22,7 +24,28 @@ body {
 
 .neon-border-purple:hover {
   border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 36px -16px rgba(0, 0, 0, 0.6);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Opt-in lift for genuinely clickable cards (project/memory cards, quick actions) — a class,
+   not baked into .neon-border-purple itself, since that base class is also used on non-card
+   surfaces (sticky sub-nav, modal panels) where a hover lift would look like a UI glitch. */
+.card-lift {
+  transition: transform 0.2s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-lift {
+    transition: none;
+  }
+  .card-lift:hover {
+    transform: none;
+  }
 }
 
 .neon-text-purple {
@@ -100,9 +123,18 @@ body {
 
 /* Hides the page until auth-guard.js (or login.html's own check) resolves the auth state,
    avoiding a flash of gated content before a redirect. visibility (not display) keeps layout
-   intact so scripts.js's IntersectionObserver can still register .reveal elements while hidden. */
+   intact so scripts.js's IntersectionObserver can still register .reveal elements while hidden.
+   opacity:0 here + the transition on the base `body` rule above means the moment auth-guard.js
+   removes this class, the page fades in over ~0.25s instead of popping in instantly. */
 body.auth-check-pending {
   visibility: hidden;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
 }
 
 /* Light theme: a simple, functional override, not a full redesign. Uses attribute substring
@@ -141,4 +173,142 @@ html[data-theme="light"] ::-webkit-scrollbar-track {
 
 html[data-theme="light"] ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.18);
+}
+
+/* Mobile nav (js/mobile-nav.js): the injected fixed top bar / bottom bar need body clearance
+   below the `md` breakpoint. !important is required since each page's own Tailwind `pb-*`
+   utility class would otherwise win on specificity-tie (declaration order). */
+@media (max-width: 767px) {
+  body {
+    padding-top: 4rem !important;
+    padding-bottom: 6rem !important;
+  }
+}
+
+/* Desktop sidebar (js/sidebar.js). --sidebar-w is toggled between 240px/72px by the collapse
+   button; body reflows via padding-left rather than every page needing its own flex/margin
+   layout change. */
+:root {
+  --sidebar-w: 240px;
+}
+
+@media (min-width: 768px) {
+  body {
+    padding-left: var(--sidebar-w);
+    transition: padding-left 0.2s ease;
+  }
+}
+
+#eden-sidebar {
+  transition: width 0.2s ease;
+}
+
+#eden-sidebar.eden-sidebar-collapsed .eden-sidebar-label {
+  display: none;
+}
+
+#eden-sidebar.eden-sidebar-collapsed nav a,
+#eden-sidebar.eden-sidebar-collapsed > div a,
+#eden-sidebar.eden-sidebar-collapsed button {
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  #eden-sidebar {
+    transition: none;
+  }
+}
+
+/* Career's "Download CV" (resume.html) just prints the page itself — hide all chrome/nav/
+   buttons/modals and let the browser's Save-as-PDF produce a clean single-column resume. */
+@media print {
+  #eden-sidebar,
+  #mobile-topbar,
+  #mobile-bottomnav,
+  #mobile-drawer-overlay,
+  #quickadd-sheet-overlay,
+  #global-search-overlay,
+  header,
+  footer,
+  .sticky,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  main {
+    max-width: 100% !important;
+  }
+}
+
+#mobile-drawer {
+  animation: eden-drawer-in 0.2s ease-out;
+}
+
+/* Every centered modal in this app shares the same structural pattern — an overlay
+   (`.fixed.inset-0.z-50`) wrapping a backdrop and a `.relative` panel — so this one rule gives
+   all of them a fade+pop entrance with no per-modal HTML changes. Higher-specificity ID rules
+   (the mobile drawer, the Quick Add bottom sheet) already override this where a different
+   entrance direction makes more sense. */
+.fixed.inset-0.z-50 > .relative {
+  animation: eden-modal-pop 0.15s ease-out;
+}
+
+@keyframes eden-modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#quickadd-sheet-overlay .relative {
+  animation: eden-sheet-up 0.2s ease-out;
+}
+
+@keyframes eden-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes eden-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mobile-drawer,
+  #quickadd-sheet-overlay .relative,
+  .fixed.inset-0.z-50 > .relative {
+    animation: none;
+  }
+}
+
+/* Lightweight loading skeleton — used sparingly (Career/Profile's initial fetch), not
+   retrofitted everywhere, since most pages resolve fast enough that a skeleton would just flash. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0.5rem;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: eden-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes eden-skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
 }

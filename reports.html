@@ -4,10 +4,11 @@
   <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reports | Low Fang Jun</title>
+  <title>Reports | EdenAtlas</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#09090e">
@@ -36,32 +37,31 @@
   </script>
 </head>
 <body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
-  <header class="max-w-7xl mx-auto px-4 pt-6">
+  <header class="hidden max-w-7xl mx-auto px-4 pt-6">
     <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonViolet to-neonPurple flex items-center justify-center shadow-lg shadow-neonPurple/20">
-          <i class="fa-solid fa-shield-halved text-white text-lg animate-pulse"></i>
+          <i class="fa-solid fa-circle-user text-white text-lg animate-pulse"></i>
         </div>
         <div>
-          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">LOW FANG JUN</span>
-          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">SYSTEM PROFILE</span>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">EdenAtlas</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">DIGITAL ATLAS</span>
         </div>
       </div>
-      <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
-        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> Home</a>
-        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> Resume</a>
-        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Gallery</a>
-        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> Journal</a>
-        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> Expenses</a>
-        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> Timeline</a>
-        <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> Habits</a>
-        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> Calendar</a>
-        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> Reports</a>
-        <a href="ai.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-robot text-xs"></i> AI</a>
-        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> Dashboard</a>
-        <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> Notifications <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
-        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> Contact</a>
-        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> Settings</a>
+            <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
+        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> <span data-i18n="nav.home">Home</span></a>
+        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> <span data-i18n="nav.career">Career</span></a>
+        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> <span data-i18n="nav.memories">Memories</span></a>
+        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> <span data-i18n="nav.journey">Journey</span></a>
+        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> <span data-i18n="nav.people">People</span></a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> <span data-i18n="nav.reports">Reports</span></a>
+        <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> <span data-i18n="nav.inbox">Inbox</span> <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
+        <a href="settings.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-gear text-xs"></i> <span data-i18n="nav.settings">Settings</span></a>
+        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> <span data-i18n="nav.journal">Journal</span></a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> <span data-i18n="nav.finance">Finance</span></a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> <span data-i18n="nav.calendar">Calendar</span></a>
+        <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> <span data-i18n="nav.habits">Habits</span></a>
+        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> <span data-i18n="nav.contact">Contact</span></a>
       </nav>
     </div>
   </header>
@@ -107,8 +107,16 @@
     </section>
   </main>
 
+  <script type="module" src="js/i18n.js"></script>
+  <footer class="max-w-7xl mx-auto px-4 mt-10 pb-6 text-center">
+    <p class="text-[11px] font-code text-textGray/70">EdenAtlas &middot; by Jun &middot; Version 2.5</p>
+  </footer>
+
   <script src="scripts.js" defer></script>
   <script type="module" src="auth-guard.js"></script>
+    <script type="module" src="global-search.js"></script>
+    <script type="module" src="js/mobile-nav.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
   <script type="module" src="insights.js"></script>
 </body>
 </html>
