@@ -233,7 +233,7 @@ pages, no Firestore/Storage schema changes, no rules changes. Four surfaces were
    was updated to match). No `brand-book.md` exists in this repo — `design-system.md` remained
    the single source of truth for tokens/spacing/motion throughout this pass.
 
-**"EdenAtlas v2.9" (most recent) — "Living Memories"** finishes sitewide i18n and adds two
+**"EdenAtlas v2.9" — "Living Memories"** finishes sitewide i18n and adds two
 always-private emotional-checkpoint features. No AI, no Firebase architecture changes, no schema
 changes to any pre-existing collection.
 1. **Full i18n completion.** The gap this pass closed: `js/i18n.js`'s `applyTranslations()` was
@@ -303,6 +303,58 @@ changes to any pre-existing collection.
 5. **Brand & navigation**: every page footer bumped from `Version 2.8` to `Version 2.9`
    (including `login.html`'s stacked-footer variant). No nav *label* changes — Time Capsule is
    the only new nav entry, added as a secondary item per the brief.
+
+**"EdenAtlas v3.0" (most recent) — "Identity & Motion"** is a brand/experience pass — no AI, no
+backend, no Firebase architecture or schema changes, no rules changes, no new nav pages. Four
+things:
+1. **Splash screen** — [js/splash.js](js/splash.js), a sixth sanctioned shared module (after
+   `i18n.js`/`auth-guard.js`/`global-search.js`/`mobile-nav.js`/`sidebar.js`), loaded before
+   `js/i18n.js` on every protected page (and on `login.html`). While `body.auth-check-pending`
+   is present it shows a full-viewport overlay (mark + "EdenAtlas" wordmark + a
+   `data-i18n="splash.message"` tagline) appended to `<html>` directly — a sibling of `<body>`,
+   not a descendant, for the same reason `styles.css`'s pre-existing `html::before` pulse mark
+   (which still fires from the very first paint, zero JS, as an instant fallback) is painted
+   there rather than inside body. A `MutationObserver` (not a fixed timer) fades it out the
+   moment `auth-check-pending` is removed, with a 6s hard fallback for paths that navigate away
+   without ever clearing that class (`login.html`'s session-restore redirect); skips mounting
+   entirely if auth already resolved by the time the script runs, so a fast session never gets
+   artificially delayed. New i18n keys: `splash.message` ("Opening your atlas…" /
+   "正在打开你的数字地图…").
+2. **Branded loading states** — a new `common.loading_atlas` i18n key ("Loading your atlas…" /
+   "正在整理你的数字地图…") for the rare inline case a skeleton doesn't fit; everywhere else,
+   `.skeleton` placeholder blocks (Career's Experience list already had these) were added
+   directly into a container's *static* HTML on Memories' feed, Collections' grid, and Time
+   Capsule's three sections — shaped roughly like the real content, on screen immediately, wiped
+   for free the moment that page's existing `replaceChildren(...)` render call runs. No fetch/
+   render logic touched on any page.
+3. **Brand motion** — one new `styles.css` rule gives every element already using the sitewide
+   `hover:scale-105` button convention a matching `:active { transform: scale(0.97) }` press-
+   down (an attribute-substring selector reading the Tailwind utility name out of the class
+   attribute, the same trick `html[data-theme="light"]`'s overrides use), so new buttons get
+   press feedback for free without a markup change. Everything else the brief asked for
+   (page fade-in, card lift, sidebar hover, modal pop, reduced-motion handling) already existed
+   from v2.6/v2.8 and needed no change.
+4. **Identity docs** — [brand-book.md](brand-book.md) is new: a short, high-level identity doc
+   (tagline, voice, logo do's/don'ts, first-impression principles) separate from
+   `design-system.md`'s component-level detail, superseding the earlier "no brand-book.md exists"
+   note from v2.8. `design-system.md` gained Logo system / Splash screen / Loading states
+   sections and a button-press-feedback bullet. The logo itself needed no file changes — audited
+   every reference (`login.html`, `js/splash.js`, `js/sidebar.js`, `js/mobile-nav.js`) and all of
+   them already pointed at the one canonical `images/logo-mark.png`, just at different sizes per
+   context (now tabulated in `design-system.md`); per the brief, PNG was kept as-is rather than
+   converted to SVG.
+5. **Favicon** — every page gained `<link rel="icon" type="image/png" sizes="192x192"
+   href="images/icon-192.png">` next to its existing `apple-touch-icon` tag; there was
+   previously no favicon link at all sitewide (browsers fell back to a generic/broken tab icon).
+   `manifest.json` and `theme-color` were already correct and needed no change.
+6. **Brand & navigation**: every page footer bumped from `Version 2.9` (or `2.9.1` on
+   `time-capsule.html`, `2.8` on the handful of pages an earlier pass's footer-i18n sweep had
+   missed) to `Version 3.0` — the missing `data-i18n="footer.line"` attribute was added to those
+   pages at the same time, closing a real i18n gap (their footer previously never translated).
+   Login's tagline changed from "Your digital home." to "Your life, beautifully organized." /
+   "把生活、回忆与成长，安静地整理在一起。", matching `design-system.md`'s pre-existing "Homepage line."
+   Memory Constellation (the brief's optional Task 9) was deliberately skipped given the size of
+   the rest of this pass — recommended as a v3.1 candidate rather than risking this one.
 
 ## Architecture
 

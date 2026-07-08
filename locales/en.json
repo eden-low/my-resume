@@ -37,6 +37,7 @@
     "new": "New",
     "close": "Close",
     "loading": "Loading…",
+    "loading_atlas": "Loading your atlas…",
     "back": "Back",
     "sign_in": "Sign In",
     "sign_out": "Sign Out",
@@ -79,7 +80,7 @@
     "year_ago": "1 year ago"
   },
   "footer": {
-    "line": "EdenAtlas · by Jun · Version 2.9"
+    "line": "EdenAtlas · by Jun · Version 3.0"
   },
   "home": {
     "greeting_morning": "Good Morning",
@@ -406,10 +407,13 @@
   },
   "login": {
     "title": "Sign in with Google to continue.",
-    "tagline": "Your digital home.",
+    "tagline": "Your life, beautifully organized.",
     "continue_google": "Continue with Google",
     "privacy": "Your data stays private — only you decide what to share.",
-    "footer_line": "Built by Jun · Version 2.9"
+    "footer_line": "Built by Jun · Version 3.0"
+  },
+  "splash": {
+    "message": "Opening your atlas…"
   },
   "mobilenav": {
     "home": "Home",

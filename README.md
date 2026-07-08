@@ -270,10 +270,10 @@ Dashboard→People, and as of v2.7, People→Connections, Settings→Me) but **f
 deliberately left unchanged** to avoid the risk of a site-wide route rename (broken bookmarks,
 PWA cache, internal links) for a purely cosmetic win — `dashboard.html` is "Connections" and
 `settings.html` is now a redirect to the new `me.html`. Every page footer reads
-`EdenAtlas · by Jun · Version 2.9` as of this pass (`login.html`'s footer is a stacked
-EdenAtlas / Built by Jun / Version 2.9 layout instead, part of its v2.8 rebuild; every other
+`EdenAtlas · by Jun · Version 3.0` as of this pass (`login.html`'s footer is a stacked
+EdenAtlas / Built by Jun / Version 3.0 layout instead, part of its v2.8 rebuild; every other
 page kept its existing single-line layout and just had the version number bumped).
 
 ## Structure notes
 
-Every page repeats the same header/nav and Tailwind theme config — there's no shared layout include, so changes to the nav or color palette need to be applied to each `.html` file individually (the old top-nav header itself is now permanently hidden everywhere, superseded by the sidebar/mobile nav below, but its markup was left in place rather than deleted). The five sanctioned exceptions are `js/i18n.js` (translations, loaded first), `auth-guard.js` (the login gate), `global-search.js` (the command palette), `js/mobile-nav.js` (mobile chrome), and `js/sidebar.js` (desktop chrome) — all self-contained modules that inject their own DOM. See [CLAUDE.md](CLAUDE.md) and [design-system.md](design-system.md) for details if editing with Claude Code.
+Every page repeats the same header/nav and Tailwind theme config — there's no shared layout include, so changes to the nav or color palette need to be applied to each `.html` file individually (the old top-nav header itself is now permanently hidden everywhere, superseded by the sidebar/mobile nav below, but its markup was left in place rather than deleted). The six sanctioned exceptions are `js/splash.js` (the branded loading screen, loaded first), `js/i18n.js` (translations, loaded next), `auth-guard.js` (the login gate), `global-search.js` (the command palette), `js/mobile-nav.js` (mobile chrome), and `js/sidebar.js` (desktop chrome) — all self-contained modules that inject their own DOM. See [CLAUDE.md](CLAUDE.md), [design-system.md](design-system.md), and [brand-book.md](brand-book.md) for details if editing with Claude Code.

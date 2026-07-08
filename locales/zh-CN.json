@@ -37,6 +37,7 @@
     "new": "新建",
     "close": "关闭",
     "loading": "加载中…",
+    "loading_atlas": "正在整理你的数字地图…",
     "back": "返回",
     "sign_in": "登录",
     "sign_out": "退出登录",
@@ -79,7 +80,7 @@
     "year_ago": "1 年前"
   },
   "footer": {
-    "line": "EdenAtlas · by Jun · Version 2.9"
+    "line": "EdenAtlas · by Jun · Version 3.0"
   },
   "home": {
     "greeting_morning": "早上好",
@@ -406,10 +407,13 @@
   },
   "login": {
     "title": "使用 Google 账号登录以继续。",
-    "tagline": "你的数字家园。",
+    "tagline": "把生活、回忆与成长，安静地整理在一起。",
     "continue_google": "使用 Google 继续",
     "privacy": "你的数据始终私密——分享与否，由你决定。",
-    "footer_line": "Built by Jun · Version 2.9"
+    "footer_line": "Built by Jun · Version 3.0"
+  },
+  "splash": {
+    "message": "正在打开你的数字地图…"
   },
   "mobilenav": {
     "home": "首页",

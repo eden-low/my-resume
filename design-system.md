@@ -5,10 +5,37 @@
 - **Name**: EdenAtlas
 - **Positioning**: "A personal digital atlas for memories, growth, career, and life."
 - **Homepage line**: "Your life, beautifully organized."
-- **Footer**: `EdenAtlas · by Jun · Version 2.8` on every page (`login.html` uses a stacked
+- **Footer**: `EdenAtlas · by Jun · Version 3.0` on every page (`login.html` uses a stacked
   three-line variant of the same text as part of its v2.8 redesign).
 - **Visual style**: Apple + Notion + Linear inspired — dark glassmorphism, one soft accent
   color, generous whitespace, calm typography. Not a dashboard, not a portfolio, not a game.
+
+## Logo system (v3.0)
+
+One canonical mark, `images/logo-mark.png` (PNG, non-square source — always rendered inside a
+square `w-*`/`h-*` box with `object-contain`, never stretched) — referenced by exactly the same
+path everywhere it appears, no per-page copies. A separate square asset, `images/icon-192.png`
+(also used at `images/icon-512.png`), is the PWA/favicon/apple-touch-icon source — kept distinct
+from the mark because a favicon needs to read at 16–32px, where the mark's finer detail would
+muddy. Do not introduce a third logo asset or an SVG conversion unless the underlying artwork
+changes — see [CLAUDE.md](CLAUDE.md)'s "EdenAtlas v3.0" history entry for why PNG was kept as-is.
+
+| Context | Size | File |
+|---|---|---|
+| Splash screen mark | 48px | `logo-mark.png` |
+| Login card mark | 64px (`w-16 h-16`) | `logo-mark.png` |
+| Login post-sign-in transition mark | 56px (`w-14 h-14`) | `logo-mark.png` |
+| Desktop sidebar brand mark | 32px (`w-8 h-8`) | `logo-mark.png` |
+| Mobile drawer header mark | 24px (`w-6 h-6`) | `logo-mark.png` |
+| Mobile top bar mark | 20px (`w-5 h-5`) | `logo-mark.png` |
+| Favicon / apple-touch-icon / manifest icons | 192px / 512px | `icon-192.png` / `icon-512.png` |
+
+Usage rules: pair the mark with the "EdenAtlas" wordmark (the existing
+`bg-clip-text bg-gradient-to-r from-white to-neonPurple` gradient-text treatment) in nav
+chrome (sidebar, mobile top bar, mobile drawer) and the login card; use the mark alone
+(no wordmark) in tight contexts — splash screen, the login page's post-sign-in transition,
+favicon/app icon. Don't add the mark to card interiors, empty states, or as decoration — it
+marks *navigation and identity* moments only, never fills space.
 
 ## Removed vocabulary — do not reintroduce
 
@@ -124,6 +151,33 @@ button, or Escape. Animates with a 0.2s `translateX` transition, disabled under
 - Body gets `padding-top`/`padding-bottom` on mobile (`styles.css`) so the fixed bars never
   cover content — any new page must not fight this with its own conflicting padding.
 
+## Splash screen (v3.0)
+
+`js/splash.js` — a sixth sanctioned shared module, loaded before `js/i18n.js` on every
+protected page (and on `login.html`). While `body.auth-check-pending` is present it renders a
+full-viewport overlay (mark + "EdenAtlas" wordmark + a `data-i18n="splash.message"` tagline,
+`"Loading your atlas…"`/`"正在打开你的数字地图…"`) appended to `<html>` directly — a sibling of
+`<body>`, not a descendant, so `body.auth-check-pending`'s own `opacity:0`/`visibility:hidden`
+can't hide it (same reasoning as the pre-existing `html::before` pulse mark it layers on top
+of, which still fires from the very first paint with zero JS as an instant fallback). Fades out
+the moment `auth-check-pending` is removed from `body` (a `MutationObserver`, not a fixed
+timer — so a fast-resolving auth check never gets artificially delayed) with a 6s hard fallback
+in case that class is never removed on that page (e.g. `login.html`'s session-restore path,
+which navigates away instead). Skips mounting entirely if auth has already resolved by the time
+the script runs — no flash, no unnecessary delay. Respects `prefers-reduced-motion`.
+
+## Loading states (v3.0)
+
+Prefer `.skeleton` placeholder blocks (see below) shaped roughly like the real content, written
+directly into a container's *static* HTML so they're on screen immediately and are wiped for
+free the moment a page's existing `replaceChildren(...)`/`innerHTML =` render call runs — no
+extra loading-state JS needed. Used on Career's Experience list (pre-existing), Memories'
+feed, Collections' grid, and Time Capsule's three sections. Reserve `common.loading_atlas`
+("Loading your atlas…" / "正在整理你的数字地图…") for places a skeleton doesn't fit — a short
+inline status line, not a full-page state (the splash screen above already owns the
+full-page moment). Don't use it for small contextual loads (weather, comment panels, analytics)
+that already have their own specific copy — `common.loading` remains correct there.
+
 ## Animation rules
 
 - `.reveal` / `.reveal-group` (`styles.css` + `scripts.js`'s `IntersectionObserver`): fade +
@@ -131,6 +185,13 @@ button, or Escape. Animates with a 0.2s `translateX` transition, disabled under
   `prefers-reduced-motion: reduce`.
 - Transitions elsewhere: `transition-all` / `transition-colors`, typically 150–200ms, no bounce
   or spring easing — motion should read as calm, not playful.
+- **Button press feedback (v3.0)**: any element carrying the sitewide `hover:scale-105`
+  convention automatically gets a matching `:active { transform: scale(0.97) }` from a single
+  attribute-substring rule in `styles.css` — no per-button markup change needed, new buttons get
+  it for free just by following the existing Primary/Secondary button style below. Disabled
+  under `prefers-reduced-motion: reduce`.
+- **First-impression principle**: every fade/scale in this system is 150–300ms, never longer —
+  motion should confirm an action already happened, not make the user wait for it.
 
 ## Icon rules
 

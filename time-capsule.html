@@ -12,6 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#09090e">
   <link rel="apple-touch-icon" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
   <script>
     tailwind.config = {
       theme: {
@@ -102,17 +103,24 @@
 
     <section>
       <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3 px-1" data-i18n="time_capsule.ready_to_open">Ready to Open</p>
-      <div id="capsules-ready" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      <div id="capsules-ready" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="skeleton h-24 rounded-xl"></div>
+      </div>
     </section>
 
     <section>
       <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3 px-1" data-i18n="time_capsule.sealed">Sealed</p>
-      <div id="capsules-sealed" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      <div id="capsules-sealed" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="skeleton h-24 rounded-xl"></div>
+        <div class="skeleton h-24 rounded-xl"></div>
+      </div>
     </section>
 
     <section>
       <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3 px-1" data-i18n="time_capsule.opened">Opened</p>
-      <div id="capsules-opened" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      <div id="capsules-opened" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="skeleton h-24 rounded-xl"></div>
+      </div>
     </section>
 
     <div id="capsules-empty" class="hidden text-center py-14">
@@ -185,9 +193,10 @@
     </div>
   </div>
 
-  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/splash.js"></script>
+    <script type="module" src="js/i18n.js"></script>
   <footer class="max-w-7xl mx-auto px-4 mt-10 pb-6 text-center">
-    <p class="text-[11px] font-code text-textGray/70">EdenAtlas &middot; by Jun &middot; Version 2.9.1</p>
+    <p class="text-[11px] font-code text-textGray/70" data-i18n="footer.line">EdenAtlas &middot; by Jun &middot; Version 3.0</p>
   </footer>
 
   <script src="scripts.js" defer></script>
