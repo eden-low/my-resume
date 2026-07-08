@@ -166,9 +166,30 @@
     <!-- Profile -->
     <div id="tab-profile" class="me-panel hidden">
       <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
-        <div class="divide-y divide-borderNeon/60 text-sm">
+        <div class="mb-1">
+          <label for="displayname-input" class="text-xs text-textGray block mb-1.5"><span data-i18n="me.displayname_label">Display Name</span> <span class="text-textGray/60" data-i18n="me.displayname_hint">&mdash; what people see on your greeting and profile header</span></label>
+          <div class="flex items-center gap-2">
+            <input id="displayname-input" type="text" maxlength="40" data-i18n-placeholder="me.displayname_placeholder" placeholder="Your name" class="flex-1 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+            <button id="save-displayname-btn" class="px-4 py-2 bg-neonPurple/15 text-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider hover:bg-neonPurple/25 transition-colors" data-i18n="me.save_displayname">SAVE</button>
+          </div>
+          <p id="displayname-status" class="mt-2 text-xs font-code text-textGray"></p>
+        </div>
+        <div class="mt-5 pt-5 border-t border-borderNeon/40">
+          <label for="username-input" class="text-xs text-textGray block mb-1.5"><span data-i18n="me.username_label">Username</span> <span class="text-textGray/60" data-i18n="me.username_hint">&mdash; lets people find you by @handle on Connections</span></label>
+          <div class="flex items-center gap-2">
+            <span class="text-textGray font-code">@</span>
+            <input id="username-input" type="text" maxlength="24" placeholder="yourhandle" class="flex-1 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60 font-code">
+            <button id="save-username-btn" class="px-4 py-2 bg-neonPurple/15 text-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider hover:bg-neonPurple/25 transition-colors" data-i18n="me.save_username">SAVE</button>
+          </div>
+          <p class="mt-1.5 text-[11px] text-textGray/70" data-i18n="me.username_public_hint">People can find you by your username.</p>
+          <p id="username-status" class="mt-2 text-xs font-code text-textGray"></p>
+        </div>
+        <div class="mt-5 pt-5 border-t border-borderNeon/40 divide-y divide-borderNeon/60 text-sm">
           <div class="flex items-center justify-between py-2.5">
-            <span class="text-textGray" data-i18n="me.email_label">Email</span>
+            <span class="text-textGray flex items-center gap-1.5">
+              <span data-i18n="me.email_label">Email</span>
+              <span class="px-1.5 py-0.5 rounded-full border border-borderNeon text-[9px] font-code text-textGray/70" data-i18n="me.private_email">Private</span>
+            </span>
             <span id="profile-email" class="font-medium">&mdash;</span>
           </div>
           <div class="flex items-center justify-between py-2.5">
@@ -179,15 +200,6 @@
             <span class="text-textGray" data-i18n="me.last_sign_in">Last sign-in</span>
             <span id="profile-last-login" class="font-medium">&mdash;</span>
           </div>
-        </div>
-        <div class="mt-5 pt-5 border-t border-borderNeon/40">
-          <label for="username-input" class="text-xs text-textGray block mb-1.5"><span data-i18n="me.username_label">Username</span> <span class="text-textGray/60" data-i18n="me.username_hint">&mdash; lets people find you by @handle on Connections</span></label>
-          <div class="flex items-center gap-2">
-            <span class="text-textGray font-code">@</span>
-            <input id="username-input" type="text" maxlength="20" placeholder="yourhandle" class="flex-1 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60 font-code">
-            <button id="save-username-btn" class="px-4 py-2 bg-neonPurple/15 text-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider hover:bg-neonPurple/25 transition-colors" data-i18n="me.save_username">SAVE</button>
-          </div>
-          <p id="username-status" class="mt-2 text-xs font-code text-textGray"></p>
         </div>
         <div class="mt-5 pt-5 border-t border-borderNeon/40 space-y-4">
           <div>

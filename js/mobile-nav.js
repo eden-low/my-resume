@@ -20,6 +20,7 @@ const DRAWER_LINKS = [
   { href: "notifications.html", icon: "fa-bell", key: "nav.inbox", label: "Inbox" },
   { href: "timeline.html", icon: "fa-timeline", key: "nav.journey", label: "Journey" },
   { href: "time-capsule.html", icon: "fa-box-archive", key: "nav.time_capsule", label: "Time Capsule" },
+  { href: "constellation.html", icon: "fa-star", key: "nav.constellation", label: "Constellation" },
   { href: "me.html", icon: "fa-circle-user", key: "nav.me", label: "Me" },
 ];
 

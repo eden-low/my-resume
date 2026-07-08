@@ -170,9 +170,11 @@
     // signed-in user, unlike `friends` which is owner-only) so Search People can pre-filter
     // results by role without needing to read the whitelist itself. `merge: true` is required
     // here — without it this write would blow away a `username`/`bio`/`location` set later
-    // from Settings on the next login. `createdAt` is only included on the very first write
-    // (checked via a read first) so the public "joined" date on profile.html stays stable
-    // across every later session-restore instead of resetting on each login.
+    // from Settings on the next login. `createdAt` and `displayName` are only included on the
+    // very first write (checked via a read first): `createdAt` so the public "joined" date on
+    // profile.html stays stable across every later session-restore, and `displayName` (v3.1) so
+    // a Display Name the user later cleans up from Me -> Profile (e.g. Google's raw "君JUN")
+    // never gets clobbered back to the raw Google name on the next login.
     async function upsertUserProfile(user, mode) {
       const userRef = doc(db, "users", user.uid);
       let isNewUser = true;
@@ -186,10 +188,9 @@
         await setDoc(userRef, {
           uid: user.uid,
           email: user.email,
-          displayName: user.displayName || "",
           photoURL: user.photoURL || "",
           role: mode.toLowerCase(),
-          ...(isNewUser ? { createdAt: serverTimestamp() } : {}),
+          ...(isNewUser ? { displayName: user.displayName || "", createdAt: serverTimestamp() } : {}),
         }, { merge: true });
       } catch (err) {
         console.error("[login] users profile upsert failed:", err);

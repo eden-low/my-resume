@@ -1,5 +1,6 @@
 import { auth, db, getUserMode } from "./firebase-init.js";
 import { t as i18nT } from "./js/i18n.js";
+import { publicDisplayName, formatHandle } from "./js/identity.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -32,7 +33,12 @@ function albumOf(post) {
   return LEGACY_CATEGORY_ALIAS[post.category] || post.category;
 }
 
-const targetUid = new URLSearchParams(location.search).get("uid");
+// v3.1: profile.html?u=username (preferred, resolved to a uid via usernames/{usernameLower}
+// below) alongside the original ?uid=... form, kept for backward compatibility with every
+// existing link (Search People results before this pass, bookmarks, etc.).
+const urlParams = new URLSearchParams(location.search);
+const targetUsername = (urlParams.get("u") || "").trim().toLowerCase();
+const targetUidParam = urlParams.get("uid");
 
 const headerEl = document.getElementById("profile-header");
 const privateNotice = document.getElementById("private-notice");
@@ -78,8 +84,8 @@ function renderHeader(person) {
         ${person.photoURL ? `<img src="${person.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-2xl"></i>`}
       </div>
       <div class="min-w-0">
-        <h1 class="font-cyber font-black text-2xl text-white truncate">${person.displayName || person.email}</h1>
-        <p class="text-textGray font-code text-sm mt-0.5">${person.username ? "@" + person.username : person.email}</p>
+        <h1 class="font-cyber font-black text-2xl text-white truncate">${publicDisplayName(person)}</h1>
+        ${formatHandle(person.username) ? `<p class="text-textGray font-code text-sm mt-0.5">${formatHandle(person.username)}</p>` : ""}
       </div>
     </div>
     ${person.bio ? `<p class="mt-4 text-sm text-white">${person.bio}</p>` : ""}
@@ -495,6 +501,25 @@ function rerenderAll() {
 }
 
 async function loadProfile() {
+  let targetUid = targetUidParam;
+
+  // ?u=username is preferred (v3.1): resolve it via the usernames/{usernameLower} reservation
+  // doc, the same collection Me's username-uniqueness flow writes to — no new schema.
+  if (targetUsername) {
+    try {
+      const handleSnap = await getDoc(doc(db, "usernames", targetUsername));
+      if (!handleSnap.exists()) {
+        headerEl.innerHTML = `<p class="text-sm text-textGray">${i18nT("profile.username_not_found")}</p>`;
+        return;
+      }
+      targetUid = handleSnap.data().uid;
+    } catch (err) {
+      console.error("[profile] username lookup failed:", err.code || err);
+      headerEl.innerHTML = `<p class="text-sm text-textGray">${i18nT("profile.could_not_load")}</p>`;
+      return;
+    }
+  }
+
   if (!targetUid) {
     headerEl.innerHTML = `<p class="text-sm text-textGray">${i18nT("profile.no_profile_specified")}</p>`;
     return;

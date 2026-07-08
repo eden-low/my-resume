@@ -7,6 +7,7 @@ import { auth, db, getUserMode } from "./firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { init as initI18n, applyTranslations, t } from "./js/i18n.js";
+import { publicDisplayName } from "./js/identity.js";
 
 // "Reports" isn't its own searchable collection (reports.html/insights.js has no documents of
 // its own — it's a derived analytics view over `expenses`), so that bucket is mapped to the
@@ -14,7 +15,7 @@ import { init as initI18n, applyTranslations, t } from "./js/i18n.js";
 // Labels reuse the existing sidebar/nav translation keys (each of these result types maps
 // cleanly onto one nav section) rather than inventing parallel global_search.category_* keys.
 const GROUPS = [
-  { key: "users", labelKey: "nav.people", icon: "fa-user", href: (r) => `profile.html?uid=${encodeURIComponent(r.uid)}` },
+  { key: "users", labelKey: "nav.people", icon: "fa-user", href: (r) => r.username ? `profile.html?u=${encodeURIComponent(r.username)}` : `profile.html?uid=${encodeURIComponent(r.uid)}` },
   { key: "photos", labelKey: "nav.memories", icon: "fa-image", href: () => "gallery.html" },
   { key: "journals", labelKey: "nav.journal", icon: "fa-book", href: () => "journal.html" },
   { key: "life_events", labelKey: "nav.journey", icon: "fa-timeline", href: () => "timeline.html" },
@@ -158,7 +159,7 @@ function matchText(values, q) {
 }
 
 function resultLabel(key, r) {
-  if (key === "users") return r.displayName || r.email;
+  if (key === "users") return publicDisplayName(r);
   if (key === "photos") return r.caption || "Untitled photo";
   if (key === "journals") return r.title || "Untitled entry";
   if (key === "life_events") return r.title || "Untitled event";
@@ -179,7 +180,8 @@ function renderResults(raw) {
   }
 
   const matches = {
-    users: cachedData.users.filter((u) => matchText([u.displayName, u.username, u.email], q)),
+    // Username/Display Name only — never matched against the private account email (v3.1).
+    users: cachedData.users.filter((u) => matchText([u.displayName, u.username], q)),
     photos: cachedData.photos.filter((p) => matchText([p.caption], q)),
     journals: cachedData.journals.filter((j) => matchText([j.title, j.content, ...(j.tags || [])], q)),
     life_events: cachedData.life_events.filter((e) => matchText([e.title, e.description], q)),

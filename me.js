@@ -1,5 +1,6 @@
 import { auth, db, isOwner, OWNER_EMAIL, canParticipate } from "./firebase-init.js";
 import { getLang, setLang, init as initI18n, t } from "./js/i18n.js";
+import { resolveDisplayName, computeDisplayName, invalidateIdentityCache } from "./js/identity.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -105,12 +106,12 @@ async function renderHeader(user) {
     avatarImg.classList.add("hidden");
     avatarFallback.classList.remove("hidden");
   }
-  document.getElementById("me-name").textContent = user.displayName || user.email;
-
   try {
     const snap = await getDoc(doc(db, "users", user.uid));
     const data = snap.data() || {};
-    document.getElementById("me-username").textContent = data.username ? `@${data.username}` : user.email;
+    document.getElementById("me-name").textContent = computeDisplayName(data, user);
+    // @username is the public handle — never falls back to showing the private email here.
+    document.getElementById("me-username").textContent = data.username ? `@${data.username}` : "";
     document.getElementById("me-bio").textContent = data.bio || "";
     document.getElementById("me-location").innerHTML = data.location ? `<i class="fa-solid fa-location-dot mr-1"></i>${data.location}` : "";
     document.getElementById("me-joined").innerHTML = data.createdAt?.toDate
@@ -118,6 +119,7 @@ async function renderHeader(user) {
       : "";
   } catch (err) {
     console.error("[me] header directory fetch failed:", err.code || err);
+    document.getElementById("me-name").textContent = user.displayName || "User";
   }
 }
 
@@ -138,10 +140,47 @@ document.getElementById("signout-btn").addEventListener("click", async () => {
   location.href = "login.html";
 });
 
+const displaynameInput = document.getElementById("displayname-input");
+const displaynameStatus = document.getElementById("displayname-status");
+const saveDisplaynameBtn = document.getElementById("save-displayname-btn");
+
+async function loadDisplayName(user) {
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    displaynameInput.value = computeDisplayName(snap.data() || {}, user);
+  } catch (err) {
+    console.error("[me] display name load failed:", err);
+  }
+}
+
+saveDisplaynameBtn.addEventListener("click", async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+  const next = displaynameInput.value.trim();
+  if (!next) {
+    displaynameStatus.textContent = t("me.invalid_display_name");
+    return;
+  }
+  displaynameStatus.textContent = t("common.saving");
+  saveDisplaynameBtn.disabled = true;
+  try {
+    await setDoc(doc(db, "users", user.uid), { uid: user.uid, displayName: next }, { merge: true });
+    invalidateIdentityCache(user.uid);
+    displaynameStatus.textContent = t("common.saved");
+    renderHeader(user);
+  } catch (err) {
+    console.error("[me] display name save failed:", err.code || err);
+    displaynameStatus.textContent = t("common.couldnt_save");
+  }
+  saveDisplaynameBtn.disabled = false;
+});
+
 const usernameInput = document.getElementById("username-input");
 const usernameStatus = document.getElementById("username-status");
 const saveUsernameBtn = document.getElementById("save-username-btn");
-const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+// 3-24 chars: lowercase letters, numbers, underscore, dot — always stored lowercase (see
+// CLAUDE.md's identity model, v3.1).
+const USERNAME_RE = /^[a-z0-9_.]{3,24}$/;
 let currentUsername = "";
 
 async function loadUsername(user) {
@@ -155,12 +194,12 @@ async function loadUsername(user) {
 }
 
 async function describeUsernameFailure(username, err) {
-  if (err.code !== "permission-denied") return "Couldn't save — check console.";
+  if (err.code !== "permission-denied") return t("common.couldnt_save");
   try {
     const snap = await getDoc(doc(db, "usernames", username));
-    return snap.exists() ? "That username is already taken." : "Couldn't save — check console.";
+    return snap.exists() ? t("me.username_unavailable") : t("common.couldnt_save");
   } catch {
-    return "Couldn't save — check that firestore.rules has been deployed to the Firebase Console.";
+    return t("common.couldnt_save");
   }
 }
 
@@ -172,7 +211,7 @@ saveUsernameBtn.addEventListener("click", async () => {
 
   if (next === currentUsername) return;
   if (!USERNAME_RE.test(next)) {
-    usernameStatus.textContent = "3-20 characters: lowercase letters, numbers, underscore only.";
+    usernameStatus.textContent = t("me.invalid_username");
     return;
   }
 
@@ -198,11 +237,12 @@ saveUsernameBtn.addEventListener("click", async () => {
   try {
     await setDoc(doc(db, "users", user.uid), { uid: user.uid, username: next }, { merge: true });
     currentUsername = next;
-    usernameStatus.textContent = t("common.saved");
+    invalidateIdentityCache(user.uid);
+    usernameStatus.textContent = t("me.username_saved");
     renderHeader(user);
   } catch (err) {
     console.error("[me] username profile update failed:", err);
-    usernameStatus.textContent = "Handle reserved, but profile update failed — check console.";
+    usernameStatus.textContent = t("common.couldnt_save");
   }
   saveUsernameBtn.disabled = false;
 });
@@ -522,8 +562,8 @@ async function renderJournalAnalytics() {
   document.getElementById("jnl-top-tags").textContent = topTags || "—";
 }
 
-function renderSystemStatus(user) {
-  document.getElementById("sys-session").textContent = user ? `${user.displayName || user.email}` : "Signed out";
+async function renderSystemStatus(user) {
+  document.getElementById("sys-session").textContent = user ? await resolveDisplayName(user) : "Signed out";
 }
 
 async function loadWeather() {
@@ -709,9 +749,10 @@ async function renderAchievements() {
 
 // ---- Auth control ----
 
-function renderSignedIn(user) {
+async function renderSignedIn(user) {
+  const name = await resolveDisplayName(user);
   authControl.innerHTML = `
-    <span class="text-xs text-textGray font-code hidden sm:inline">${t("common.signed_in_as")} <span class="text-white">${user.displayName || user.email}</span></span>`;
+    <span class="text-xs text-textGray font-code hidden sm:inline">${t("common.signed_in_as")} <span class="text-white">${name}</span></span>`;
 }
 
 onAuthStateChanged(auth, (user) => {
@@ -719,6 +760,7 @@ onAuthStateChanged(auth, (user) => {
   renderSignedIn(user);
   renderHeader(user);
   renderProfile(user);
+  loadDisplayName(user);
   loadUsername(user);
   loadAbout(user);
   renderSystemStatus(user);

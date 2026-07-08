@@ -1,5 +1,6 @@
 import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
 import { t as i18nT } from "./js/i18n.js";
+import { resolveDisplayName } from "./js/identity.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -195,11 +196,12 @@ function renderSignedOut() {
   if (activeFilter === "private") setFilter("all");
 }
 
-function renderSignedIn(user) {
+async function renderSignedIn(user) {
+  const name = await resolveDisplayName(user);
   authControl.innerHTML = `
-    <span class="text-xs text-textGray font-code">Signed in as <span class="text-white">${user.displayName || user.email}</span></span>
+    <span class="text-xs text-textGray font-code">${i18nT("common.signed_in_as")} <span class="text-white">${name}</span></span>
     <button id="auth-signout-btn" class="px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-neonPurple transition-all">
-      SIGN OUT
+      ${i18nT("common.sign_out")}
     </button>`;
   document.getElementById("auth-signout-btn").addEventListener("click", () => signOut(auth));
 

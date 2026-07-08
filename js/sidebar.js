@@ -34,6 +34,7 @@ const SECONDARY_LINKS = [
   { href: "timeline.html", icon: "compass", key: "nav.journey", label: "Journey" },
   { href: "habits.html", icon: "list-checks", key: "nav.habits", label: "Habits" },
   { href: "time-capsule.html", icon: "hourglass", key: "nav.time_capsule", label: "Time Capsule" },
+  { href: "constellation.html", icon: "sparkles", key: "nav.constellation", label: "Constellation" },
   { href: "contact.html", icon: "mail", key: "nav.contact", label: "Contact" },
 ];
 

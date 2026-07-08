@@ -18,6 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 import { t } from "./js/i18n.js";
+import { resolveDisplayName } from "./js/identity.js";
 
 const authControl = document.getElementById("auth-control");
 const accessNote = document.getElementById("capsule-access-note");
@@ -269,8 +270,8 @@ function renderSignedOut() {
   newCapsuleBtn.classList.add("hidden");
 }
 
-function renderSignedIn(user) {
-  const displayLabel = (user.displayName || user.email || "").trim() || "User";
+async function renderSignedIn(user) {
+  const displayLabel = await resolveDisplayName(user);
   authControl.innerHTML = `
     <span class="text-xs text-textGray font-code">${t("common.signed_in_as")} <span class="text-white truncate max-w-[10rem] inline-block align-bottom">${displayLabel}</span></span>
     <button id="auth-signout-btn" class="px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-neonPurple transition-all">

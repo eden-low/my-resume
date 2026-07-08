@@ -1,5 +1,6 @@
 import { auth, googleProvider, db, getUserMode } from "./firebase-init.js";
 import { t } from "./js/i18n.js";
+import { resolveDisplayName, publicDisplayName, formatHandle } from "./js/identity.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -68,33 +69,49 @@ async function publicCollectionsCount(uid) {
 
 // ---- Card rendering (shared by Recommended / Your Connections / Search Results) ----
 
+// Card never renders `person.email` anywhere — Search People/Connections is a discovery
+// surface by @username or Display Name only, never by the private account email (see
+// js/identity.js's publicDisplayName()/formatHandle(), which are deliberately email-blind).
 function personCard(person) {
-  const el = document.createElement("a");
-  el.href = `profile.html?uid=${encodeURIComponent(person.uid)}`;
-  el.className = "card-lift flex items-start gap-3 p-4 rounded-xl border border-borderNeon bg-darkBg/40 hover:border-neonPurple/40 transition-colors";
+  const handle = formatHandle(person.username);
+  const el = document.createElement("div");
+  el.className = "flex items-start gap-3 p-4 rounded-xl border border-borderNeon bg-darkBg/40 hover:border-neonPurple/40 transition-colors";
   el.innerHTML = `
-    <div class="w-11 h-11 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple text-sm overflow-hidden flex-shrink-0">
-      ${person.photoURL ? `<img src="${person.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user"></i>`}
-    </div>
-    <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-1.5 min-w-0">
-        <p class="text-sm font-semibold text-white truncate">${person.displayName || person.email}</p>
-        ${person.role === "owner" ? `<i class="fa-solid fa-star text-neonPurple text-[10px]" title="${t("people.owner_badge")}"></i>` : ""}
+    <a href="profile.html?${person.username ? "u=" + encodeURIComponent(person.username) : "uid=" + encodeURIComponent(person.uid)}" class="card-lift flex items-start gap-3 min-w-0 flex-1">
+      <div class="w-11 h-11 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple text-sm overflow-hidden flex-shrink-0">
+        ${person.photoURL ? `<img src="${person.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user"></i>`}
       </div>
-      <p class="text-[11px] text-textGray font-code truncate">${person.username ? "@" + person.username : person.email}</p>
-      ${person.bio ? `<p class="text-xs text-white/80 mt-1.5 line-clamp-2">${person.bio}</p>` : ""}
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[10px] font-code text-textGray">
-        ${person.location ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${person.location}</span>` : ""}
-        <span class="collections-count-slot"><i class="fa-solid fa-layer-group mr-1"></i>&hellip;</span>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <p class="text-sm font-semibold text-white truncate">${publicDisplayName(person)}</p>
+          ${person.role === "owner" ? `<i class="fa-solid fa-star text-neonPurple text-[10px]" title="${t("people.owner_badge")}"></i>` : ""}
+        </div>
+        ${handle ? `<p class="text-[11px] text-textGray font-code truncate">${handle}</p>` : ""}
+        ${person.bio ? `<p class="text-xs text-white/80 mt-1.5 line-clamp-2">${person.bio}</p>` : ""}
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[10px] font-code text-textGray">
+          ${person.location ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${person.location}</span>` : ""}
+          <span class="collections-count-slot"><i class="fa-solid fa-layer-group mr-1"></i>&hellip;</span>
+        </div>
+        <span class="inline-flex items-center gap-1.5 mt-3 text-[11px] font-code text-neonPurple">
+          <span data-i18n="people.open_profile">Open Profile</span> <i class="fa-solid fa-arrow-right text-[9px]"></i>
+        </span>
       </div>
-      <span class="inline-flex items-center gap-1.5 mt-3 text-[11px] font-code text-neonPurple">
-        <span data-i18n="people.open_profile">Open Profile</span> <i class="fa-solid fa-arrow-right text-[9px]"></i>
-      </span>
-    </div>`;
+    </a>
+    <button type="button" class="connect-btn flex-shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-code text-textGray border border-borderNeon hover:border-neonPurple/40 hover:text-neonPurple transition-colors" data-i18n="people.connect">${t("people.connect")}</button>`;
 
   const countSlot = el.querySelector(".collections-count-slot");
   publicCollectionsCount(person.uid).then((count) => {
     countSlot.innerHTML = `<i class="fa-solid fa-layer-group mr-1"></i>${count} ${count === 1 ? t("people.collection") : t("people.collections")}`;
+  });
+
+  // No connection-request graph exists in Firestore (same "future placeholder, no backing
+  // data" decision as the Connection Requests card below) — this only ever shows a one-line
+  // acknowledgement, never writes anything.
+  const connectBtn = el.querySelector(".connect-btn");
+  connectBtn.addEventListener("click", () => {
+    connectBtn.textContent = t("people.connect_sent");
+    connectBtn.disabled = true;
+    connectBtn.classList.add("opacity-60");
   });
 
   return el;
@@ -112,7 +129,7 @@ function renderBrowseSections() {
   recommendedList.replaceChildren(...recommended.map(personCard));
 
   const connections = [...searchable].sort((a, b) =>
-    (a.displayName || a.email).localeCompare(b.displayName || b.email)
+    publicDisplayName(a).localeCompare(publicDisplayName(b))
   );
   connectionsEmpty.classList.toggle("hidden", connections.length > 0);
   connectionsList.replaceChildren(...connections.map(personCard));
@@ -130,8 +147,10 @@ peopleSearchInput.addEventListener("input", (event) => {
   browseSections.classList.add("hidden");
   searchResultsSection.classList.remove("hidden");
 
+  // Username/Display Name only — never matched against email (see CLAUDE.md/js/identity.js:
+  // Connections discovery is by @handle or name, the private account email is not a search key).
   const matches = searchableUsers()
-    .filter((p) => (p.displayName || "").toLowerCase().includes(q) || (p.username || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q))
+    .filter((p) => (p.displayName || "").toLowerCase().includes(q) || (p.username || "").toLowerCase().includes(q))
     .slice(0, 12);
 
   searchResultsEmpty.classList.toggle("hidden", matches.length > 0);
@@ -148,9 +167,10 @@ function renderSignedOut() {
   });
 }
 
-function renderSignedIn(user) {
+async function renderSignedIn(user) {
+  const name = await resolveDisplayName(user);
   authControl.innerHTML = `
-    <span class="text-xs text-textGray font-code hidden sm:inline">${t("common.signed_in_as")} <span class="text-white">${user.displayName || user.email}</span></span>`;
+    <span class="text-xs text-textGray font-code hidden sm:inline">${t("common.signed_in_as")} <span class="text-white">${name}</span></span>`;
 }
 
 onAuthStateChanged(auth, (user) => {

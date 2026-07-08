@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Constellation | EdenAtlas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#09090e">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            darkBg: '#0a0a0e',
+            cardBg: '#17151f',
+            borderNeon: '#2a2833',
+            neonPurple: '#a78bfa',
+            neonBlue: '#6ea8fe',
+            neonViolet: '#8b7cf0',
+            textGray: '#9793ab',
+          },
+          fontFamily: {
+            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
+  <header class="hidden max-w-7xl mx-auto px-4 pt-6">
+    <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonViolet to-neonPurple flex items-center justify-center shadow-lg shadow-neonPurple/20">
+          <i class="fa-solid fa-circle-user text-white text-lg animate-pulse"></i>
+        </div>
+        <div>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">EdenAtlas</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">DIGITAL ATLAS</span>
+        </div>
+      </div>
+      <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
+        <a href="index.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> <span data-i18n="nav.home">Home</span></a>
+        <a href="atlas.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-xs"></i> <span data-i18n="nav.atlas">Atlas</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 mt-8 space-y-6">
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <a href="atlas.html" class="text-xs font-code text-textGray hover:text-white transition-colors"><i class="fa-solid fa-arrow-left mr-1.5"></i><span data-i18n="constellation.back_to_atlas">Back to Atlas</span></a>
+          <h1 class="font-cyber font-semibold text-2xl mt-2" data-i18n="constellation.title">Memory Constellation</h1>
+          <p class="text-textGray mt-2 text-sm" data-i18n="constellation.subtitle">See how your life chapters connect.</p>
+        </div>
+        <div id="auth-control" class="flex items-center gap-3"></div>
+      </div>
+      <p id="constellation-owner-note" class="hidden mt-4 text-xs font-code text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2">
+        <i class="fa-solid fa-lock mr-1.5"></i> This prototype is only available to the account owner for now.
+      </p>
+    </section>
+
+    <div id="constellation-body" class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <!-- Node map -->
+      <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-4">
+        <div id="constellation-canvas" class="relative w-full aspect-square max-h-[560px] mx-auto">
+          <svg id="constellation-lines" class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div id="constellation-nodes" class="absolute inset-0 skeleton rounded-2xl"></div>
+        </div>
+      </section>
+
+      <!-- Side panel -->
+      <aside class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-5">
+        <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-3" data-i18n="common.view_details">Details</p>
+        <div id="constellation-panel-empty" class="text-xs text-textGray py-8 text-center" data-i18n="constellation.select_node">Select a node to see its details.</div>
+        <div id="constellation-panel" class="hidden space-y-3">
+          <div class="flex items-center gap-2.5">
+            <span id="panel-icon" class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-circle"></i></span>
+            <div class="min-w-0">
+              <p id="panel-title" class="text-sm font-semibold text-white truncate">&mdash;</p>
+              <p id="panel-type" class="text-[11px] font-code text-textGray"></p>
+            </div>
+          </div>
+          <div class="text-xs text-textGray flex items-center justify-between border-t border-borderNeon/40 pt-3">
+            <span data-i18n="constellation.count_label">Items</span>
+            <span id="panel-count" class="font-code text-white">0</span>
+          </div>
+          <div id="panel-related-wrap" class="border-t border-borderNeon/40 pt-3">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code mb-2" data-i18n="constellation.related_items">Related Items</p>
+            <div id="panel-related" class="space-y-1.5 text-xs text-white/90"></div>
+          </div>
+          <a id="panel-open-btn" href="#" class="mt-2 inline-flex items-center gap-1.5 text-xs font-code text-neonPurple hover:underline">
+            <span data-i18n="constellation.open">Open</span> <i class="fa-solid fa-arrow-right text-[9px]"></i>
+          </a>
+        </div>
+      </aside>
+    </div>
+
+    <p id="constellation-empty" class="hidden text-center text-xs font-code text-textGray py-10 leading-relaxed" data-i18n="constellation.empty">
+      Your constellation will grow as you add memories, journals, and life chapters.
+    </p>
+    <div id="constellation-empty-actions" class="hidden flex items-center justify-center gap-3">
+      <a href="gallery.html?new=1" class="px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
+        <i class="fa-solid fa-plus mr-1.5"></i> <span data-i18n="constellation.add_memory">Add Memory</span>
+      </a>
+      <a href="collections.html?new=1" class="px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-neonPurple transition-all">
+        <i class="fa-solid fa-layer-group mr-1.5"></i> <span data-i18n="constellation.create_collection">Create Collection</span>
+      </a>
+    </div>
+  </main>
+
+  <script type="module" src="js/splash.js"></script>
+    <script type="module" src="js/i18n.js"></script>
+  <footer class="max-w-7xl mx-auto px-4 mt-10 pb-6 text-center">
+    <p class="text-[11px] font-code text-textGray/70" data-i18n="footer.line">EdenAtlas &middot; by Jun &middot; Version 3.0</p>
+  </footer>
+
+  <script src="scripts.js" defer></script>
+  <script type="module" src="auth-guard.js"></script>
+    <script type="module" src="global-search.js"></script>
+    <script type="module" src="js/mobile-nav.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="constellation.js"></script>
+</body>
+</html>

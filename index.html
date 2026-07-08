@@ -192,6 +192,7 @@
             <a href="dashboard.html" class="hover:text-neonPurple transition-colors" data-i18n="nav.people">Connections</a>
             <a href="notifications.html" class="hover:text-neonPurple transition-colors" data-i18n="nav.inbox">Inbox</a>
             <a href="time-capsule.html" class="hover:text-neonPurple transition-colors" data-i18n="nav.time_capsule">Time Capsule</a>
+            <a href="constellation.html" class="hover:text-neonPurple transition-colors" data-i18n="nav.constellation">Constellation</a>
             <a href="contact.html" class="hover:text-neonPurple transition-colors" data-i18n="nav.contact">Contact</a>
             <a href="me.html" class="hover:text-neonPurple transition-colors" data-i18n="nav.me">Me</a>
         </section>
@@ -312,6 +313,7 @@
         import { collection, query, where, getDocs, getDoc, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
         import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
         import { t } from "./js/i18n.js";
+        import { resolveDisplayName } from "./js/identity.js";
 
         // ---- Greeting ----
 
@@ -323,8 +325,11 @@
             return t("home.greeting_night");
         }
 
-        function firstName(user) {
-            return (user.displayName || "").split(" ")[0] || "there";
+        // Whichever name resolveDisplayName() picks (a Firestore Display Name, the raw Google
+        // name, @username, or an email prefix — see js/identity.js) is shown as-is here, never
+        // split or concatenated with anything else, so it can't read like "Good Afternoon, 君JUN".
+        async function greetingName(user) {
+            return resolveDisplayName(user);
         }
 
         function tickClock() {
@@ -810,7 +815,9 @@
 
         onAuthStateChanged(auth, (user) => {
             if (!user) return;
-            document.getElementById("greeting-text").textContent = `${greetingWord()}, ${firstName(user)}`;
+            greetingName(user).then((name) => {
+                document.getElementById("greeting-text").textContent = `${greetingWord()}, ${name}`;
+            });
             document.getElementById("quick-actions-section").classList.toggle("hidden", !canParticipate());
             tickClock();
             setInterval(tickClock, 30000);
@@ -824,7 +831,9 @@
 
         document.addEventListener("eden:langchange", () => {
             const user = auth.currentUser;
-            if (user) document.getElementById("greeting-text").textContent = `${greetingWord()}, ${firstName(user)}`;
+            if (user) greetingName(user).then((name) => {
+                document.getElementById("greeting-text").textContent = `${greetingWord()}, ${name}`;
+            });
             if (lastData) {
                 renderToday(lastData);
                 renderMemories(lastData);
