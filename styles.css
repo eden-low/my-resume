@@ -309,20 +309,18 @@ canvas {
     padding-top: calc(56px + env(safe-area-inset-top)) !important;
     padding-bottom: calc(120px + env(safe-area-inset-bottom)) !important;
   }
-
-  /* Defensive scroll guarantee: body is the actual scroll container in this shell (there's no
-     separate inner scroll wrapper), so it must always be scrollable except during the one
-     deliberate exception — an open drawer, which locks it via body.drawer-open (added/removed
-     in js/mobile-nav.js's openDrawer()/closeDrawer()). Nothing else in this stylesheet sets
-     overflow/position on body outside of that class, but this makes the "always scrollable
-     unless the drawer says otherwise" invariant explicit and self-healing rather than relying on
-     every other rule in this file to keep not touching it. */
-  body:not(.drawer-open) {
-    overflow-y: auto !important;
-    position: static !important;
-    touch-action: auto !important;
-  }
 }
+
+/* Reverted: a previous pass added `body:not(.drawer-open) { overflow-y:auto !important;
+   position:static !important; touch-action:auto !important; }` here as a defensive "always
+   scrollable" guarantee for a Reports-page scroll bug. Explicitly setting `overflow` on body is
+   exactly the kind of change that can make mobile WebKit treat `position:fixed` children
+   (#mobile-topbar/#mobile-bottomnav/#mobile-drawer) as positioned relative to body's own box
+   instead of the viewport in some iOS versions — body's *default* (no explicit overflow
+   property at all, so the page scrolls natively) is the more reliable configuration for
+   position:fixed children on iOS Safari, and removing this is the next concrete thing to try
+   for "hamburger only works after scrolling all the way down," since neither the CSS z-index/
+   compositing hardening nor the JS reflow/resize nudge (both still in place) changed anything. */
 
 /* #mobile-topbar / #mobile-bottomnav (js/mobile-nav.js) — position/inset/z-index are declared
    directly here rather than left to the Tailwind `fixed`/`inset-x-0`/`top-0`/`bottom-0`/`z-*`
