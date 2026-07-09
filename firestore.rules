@@ -159,6 +159,12 @@ service cloud.firestore {
         // fires when no doc exists yet), so the original sender may reset it back to pending.
         || (request.auth.uid == fromUid && resource.data.status in ['declined', 'cancelled']
           && request.resource.data.status == 'pending')
+        // Re-send after a later unfriend: removeFriend() only deletes the friendships/ mirror
+        // docs, never this request doc (per spec, user data is never deleted), so a former
+        // friend's request can still read 'accepted' here -- the original sender may reset it
+        // back to pending to request again.
+        || (request.auth.uid == fromUid && resource.data.status == 'accepted'
+          && request.resource.data.status == 'pending')
       );
       allow delete: if false;
     }
