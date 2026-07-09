@@ -579,6 +579,35 @@ canvas {
   padding-bottom: calc(120px + env(safe-area-inset-bottom));
 }
 
+/* Drawer nav item — real CSS backstop for the active-pill state, which used to be rendered only
+   via a Tailwind utility ternary (`bg-neonPurple/10` etc.) on dynamically-injected markup. Same
+   JIT-timing risk as everything else hardened in this shell: an opacity-suffixed utility can lag
+   behind on a cold Tailwind Play CDN context, which is what made the active pill silently
+   disappear on some page loads while still showing correctly on others. */
+.mobile-drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.75rem;
+  border-radius: 16px;
+  color: #ffffff;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mobile-drawer-link:hover {
+  background-color: rgba(10, 10, 14, 0.4);
+}
+
+.mobile-drawer-link.active {
+  background-color: rgba(167, 139, 250, 0.10);
+  color: #a78bfa;
+}
+
+.mobile-drawer-link.active i {
+  color: #a78bfa;
+}
+
 /* Belt-and-suspenders alongside the `md:hidden` Tailwind class already on these elements —
    guarantees none of the mobile app shell can ever show on desktop even if a Tailwind Play CDN
    JIT hiccup ever failed to generate that utility for a dynamically-injected node. */

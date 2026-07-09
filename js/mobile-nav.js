@@ -126,10 +126,24 @@ function topBarHTML() {
 
 function drawerHTML(isOwnerRole, user) {
   const visibleLinks = isOwnerRole ? DRAWER_LINKS : DRAWER_LINKS.filter((item) => !OWNER_ONLY_HREFS.has(item.href));
-  const links = visibleLinks.map((item) => `
-    <a href="${item.href}" class="flex items-center gap-3 px-3 py-3 min-h-[44px] rounded-xl ${item.href === here ? "text-neonPurple bg-neonPurple/10" : "text-white hover:bg-darkBg/40"} transition-colors">
+  // `.mobile-drawer-link`/`.mobile-drawer-link.active` are real semantic classes with hard CSS
+  // rules in styles.css — the active pill used to be rendered *only* via a Tailwind utility
+  // ternary (`text-neonPurple bg-neonPurple/10` vs `text-white hover:bg-darkBg/40`), which is
+  // exactly the same class of bug already found and fixed elsewhere in this shell (drawer
+  // transform, backdrop opacity, topbar sizing): a utility class on dynamically-injected content
+  // depends on the Tailwind Play CDN's runtime JIT compiling it in time, and an opacity-suffixed
+  // utility like `bg-neonPurple/10` is exactly the kind of less-common class that JIT can lag on.
+  // When it lagged, the active item silently lost its pill/color and looked like "the old design"
+  // — this is why Home (first page loaded, JIT warmed up) looked right while a page landed on
+  // directly (fresh JIT context) could look inconsistent. The Tailwind classes stay in the
+  // markup too (harmless redundancy); the semantic classes are now what's load-bearing.
+  const links = visibleLinks.map((item) => {
+    const isActive = item.href === here;
+    return `
+    <a href="${item.href}" class="mobile-drawer-link${isActive ? " active" : ""} flex items-center gap-3 px-3 py-3 min-h-[44px] rounded-xl ${isActive ? "text-neonPurple bg-neonPurple/10" : "text-white hover:bg-darkBg/40"} transition-colors">
       <i class="fa-solid ${item.icon} w-5 text-center"></i> <span data-i18n="${item.key}">${item.label}</span>
-    </a>`).join("");
+    </a>`;
+  }).join("");
   // Compact header line 2 — reuses the Auth user object already passed into injectUI(), no
   // extra users/{uid} fetch (that's what me.html's own header is for). Optional by design: if
   // neither is set, the header just shows the wordmark alone.
