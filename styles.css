@@ -186,6 +186,7 @@ html::before {
   position: fixed;
   inset: 0;
   z-index: -1;
+  pointer-events: none;
   background: #0a0a0e url("images/logo-mark.png") no-repeat center center;
   background-size: 44px 44px;
   animation: eden-auth-pulse 1.6s ease-in-out infinite;
@@ -337,14 +338,25 @@ canvas {
    z-index scheme for the whole mobile shell: content < topbar(9000) < bottomnav(8500 — below the
    drawer/backdrop is what matters, not below the topbar) < backdrop(9998) < drawer(9999), so an
    open drawer always overlays both bars. */
+/* !important + explicit pointer-events on top of the properties above: on some mobile browsers,
+   a `position:fixed` element that also uses `backdrop-filter` (this bar's `backdrop-blur-md`)
+   isn't promoted to its own compositor layer until the page's first scroll/repaint — until then
+   its painted position and its actual hit-test region can disagree, so a tap lands on whatever
+   was underneath instead of the bar itself. transform/will-change force that layer promotion
+   from the very first frame instead of waiting for a scroll to trigger it — this is what made
+   the hamburger "only work after scrolling down" on some pages while working immediately on
+   others (purely a paint-timing difference between pages, not a real per-page markup bug). */
 #mobile-topbar {
-  position: fixed;
+  position: fixed !important;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9000;
+  z-index: 9000 !important;
+  pointer-events: auto !important;
   min-height: 56px;
   padding-top: env(safe-area-inset-top);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 #mobile-topbar-brand img {
@@ -352,15 +364,26 @@ canvas {
   height: 20px;
 }
 
+/* Extra insurance on top of the topbar's own z-index: guarantees the hamburger itself is never
+   the element that loses a stacking tie, independent of anything else going on inside the bar. */
+#mobile-hamburger-btn {
+  position: relative;
+  z-index: 9001 !important;
+  pointer-events: auto !important;
+}
+
 #mobile-bottomnav {
-  position: fixed;
+  position: fixed !important;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 8500;
+  z-index: 8500 !important;
+  pointer-events: auto !important;
   height: 64px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 #mobile-bottomnav > a,
@@ -518,11 +541,12 @@ canvas {
    open/closed state correct from a plain external stylesheet with zero JIT dependency — the
    Tailwind utility classes stay in the markup too, but are now redundant rather than load-bearing. */
 #mobile-drawer {
+  position: fixed !important;
   top: 0;
   left: 0;
   width: min(84vw, 340px);
   height: 100dvh;
-  z-index: 9999;
+  z-index: 9999 !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -538,9 +562,16 @@ canvas {
   transform: translateX(-100%);
 }
 
-/* Same reasoning as #mobile-drawer above, for the backdrop's opacity/pointer-events pair. */
+/* Same reasoning as #mobile-drawer above, for the backdrop's opacity/pointer-events pair. Inset
+   is declared explicitly too (not left to Tailwind's `inset-0`) — a fixed element with no inset
+   values falls back to its normal-flow content size instead of covering the viewport. */
 #mobile-drawer-backdrop {
-  z-index: 9998;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998 !important;
   opacity: 0;
   pointer-events: none;
   transition: opacity 250ms ease;

@@ -396,6 +396,17 @@ function wireQuickAdd() {
   });
 }
 
+// Belt-and-suspenders per this module being `type="module"` (already deferred by spec, so
+// document.body always exists by the time any module script runs) — if that ever stopped being
+// true for some reason on some page, this retries on DOMContentLoaded instead of failing silently.
+function initMobileNav(user) {
+  if (!document.body) {
+    document.addEventListener("DOMContentLoaded", () => initMobileNav(user), { once: true });
+    return;
+  }
+  injectUI(user);
+}
+
 onAuthStateChanged(auth, (user) => {
-  if (user) injectUI(user);
+  if (user) initMobileNav(user);
 });
