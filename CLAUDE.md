@@ -529,6 +529,36 @@ Connections, no mobile-shell changes.
    not a new file). Footer version not bumped sitewide for this pass (a narrower, single-page-area
    fix rather than a full versioned release pass like v3.2's).
 
+**"EdenAtlas v3.2.3" (most recent) — resume viewer-mode shell fix.** v3.2.2 fixed *access* to a
+shared resume link but left the surrounding app shell untouched — a friend/connection/public HR
+visitor opening `resume.html?u=username` still saw the full private-app desktop sidebar/mobile
+nav (Finance, Inbox, Time Capsule, Me, etc.), and a non-owner viewer's sidebar was missing Career
+entirely (it's an owner-heavy-module link, dropped from `js/sidebar.js`'s `LIGHT_LINKS`/
+`js/mobile-nav.js`'s drawer for any non-owner regardless of what page they're actually on). Fixed
+purely at the shell layer, no access-control change:
+- `career.js` gained `applyViewerModeClass()`, toggling `resume-viewer-mode`/`resume-owner-mode`
+  on `<body>`. Viewer mode is `!canEdit && (hasTargetParam || !auth.currentUser)` — deliberately
+  *not* a bare `!canEdit`, so a non-owner who opens bare `resume.html` directly (no `?u=`/`?uid=`,
+  e.g. a stale bookmark) keeps their normal role-based nav instead of losing all navigation with
+  no way back. `canEdit` is now also reset to `false` at the top of `initCareerAccess()` (a
+  latent staleness bug: it was previously only ever reassigned mid-function, so an early-return
+  notice path after a prior call had granted edit access could theoretically leave a stale `true`
+  across an auth change).
+- `styles.css` gained a `body.resume-viewer-mode` block hiding `#eden-sidebar`/`#mobile-topbar`/
+  `#mobile-bottomnav`/`#mobile-drawer`/`#mobile-drawer-backdrop`/`#quickadd-sheet-overlay` (the
+  same selector list already used by the existing `@media print` rule, just gated by class
+  instead of print context) and zeroing the sidebar/mobile-nav body padding — no `sidebar.js`/
+  `mobile-nav.js` changes, so mobile shell behavior elsewhere in the app is untouched. This is
+  Option 1 from the fix brief (hide the shell entirely) rather than a minimal public sidebar,
+  since resume.html's own sticky `#career-subnav` already gives in-page navigation and a
+  `download-cv-btn`/Profile link already exists for wayfinding.
+- No `Public Resume Link` card, edit/upload controls, or Firestore/Storage rules changes were
+  needed — those were already correctly gated by `canEdit` from v3.2.2, only the sidebar/mobile
+  nav chrome was the gap.
+- Added a `TODO` comment above `resume.html`'s static Contact block (email/phone are hardcoded
+  markup, not read from `users/{uid}` or Auth, so this isn't a data-exposure regression) noting
+  that per-viewer contact visibility controls are a future improvement, not yet built.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

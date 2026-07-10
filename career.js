@@ -77,10 +77,26 @@ async function populateCollectionSelect(selectEl, selectedId) {
 const urlParams = new URLSearchParams(location.search);
 const targetUsernameParam = (urlParams.get("u") || "").trim().toLowerCase();
 const targetUidParam = urlParams.get("uid");
+// Known synchronously, before any Firestore read — true only for an explicit shared-link visit
+// (?u=/?uid=), never a bare resume.html open. Used below to decide chrome (sidebar/mobile-nav),
+// not access itself (that's still computeAccess()/canEdit).
+const hasTargetParam = !!(targetUsernameParam || targetUidParam);
 
 let targetUid = null;
 let canEdit = false; // true only when the signed-in user IS the app Owner AND is viewing their own uid
 let access = { pageAccessible: false, includeConnections: false, includeAllMine: false };
+
+// v3.2.3: resume.html's viewer-mode shell fix. `resume-viewer-mode`/`resume-owner-mode` on
+// <body> let styles.css hide the full private-app sidebar/mobile nav for anyone but the Owner
+// editing their own resume — a shared HR/friend/connection link should read as a clean resume
+// page, not the whole app shell. Deliberately scoped to an explicit ?u=/?uid= visit (or a
+// signed-out one) rather than bare `!canEdit`: a non-owner opening bare resume.html directly
+// (no shared link) keeps their normal role-based nav so they're never stranded without a way out.
+function applyViewerModeClass(user) {
+  const viewerMode = !canEdit && (hasTargetParam || !user);
+  document.body.classList.toggle("resume-viewer-mode", viewerMode);
+  document.body.classList.toggle("resume-owner-mode", !viewerMode);
+}
 
 // v3.2.2 hotfix: resolves an *explicit* ?u=/?uid= target only. The "no param at all" case is
 // handled directly in initCareerAccess() — it must resolve to the signed-in user's own uid with
@@ -248,9 +264,10 @@ async function loadAll() {
 // see — called once per auth-state change, before loadAll(). Replaces the old "just always fetch
 // every public item + my own" behavior with per-target, per-viewer access control.
 async function initCareerAccess(user) {
-  const hasParam = !!(targetUsernameParam || targetUidParam);
+  canEdit = false;
+  applyViewerModeClass(user);
 
-  if (!hasParam) {
+  if (!hasTargetParam) {
     // No ?u=/?uid= at all: this is never a shared HR link (those always carry an explicit
     // target) — it's someone opening resume.html directly. Signed in -> always their own resume,
     // full stop, resolved straight from auth with no Firestore read required to even get this
@@ -280,6 +297,7 @@ async function initCareerAccess(user) {
   // grant full access; careerVisibility below just falls back to its usual "undefined" default.
 
   canEdit = isSelf && isOwner(user);
+  applyViewerModeClass(user);
 
   let careerVisibility = person?.careerVisibility;
   // One-time default upgrade: the app historically treated Career as a public portfolio, so the

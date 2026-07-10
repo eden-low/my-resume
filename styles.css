@@ -489,6 +489,27 @@ canvas {
   }
 }
 
+/* resume.html viewer-mode shell (v3.2.3, career.js's applyViewerModeClass()): a friend/
+   connection/public HR visitor opening a shared ?u=/?uid= resume link (or a signed-out visitor)
+   should see a clean resume page, not the full private-app sidebar/mobile nav — same selector
+   list as the @media print rule below, just gated by class instead of print context, and without
+   forcing white/light colors. Owner mode (`resume-owner-mode`, editing their own resume) is
+   untouched. */
+body.resume-viewer-mode #eden-sidebar,
+body.resume-viewer-mode #mobile-topbar,
+body.resume-viewer-mode #mobile-bottomnav,
+body.resume-viewer-mode #mobile-drawer,
+body.resume-viewer-mode #mobile-drawer-backdrop,
+body.resume-viewer-mode #quickadd-sheet-overlay {
+  display: none !important;
+}
+
+body.resume-viewer-mode {
+  padding-left: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* Career's "Download CV" (resume.html) just prints the page itself — hide all chrome/nav/
    buttons/modals and let the browser's Save-as-PDF produce a clean single-column resume. */
 @media print {

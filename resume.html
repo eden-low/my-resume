@@ -127,6 +127,10 @@
       </div>
 
       <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- TODO: Future: add public contact visibility controls for resume contact fields.
+             Email/phone below are static markup (not read from users/{uid} or the auth provider),
+             so this is not itself a data exposure of any Firestore/Auth field — but there's no
+             per-viewer control over whether an anonymous HR visitor sees them either. -->
         <div class="bg-darkBg/60 border border-borderNeon rounded-xl p-6 text-sm text-textGray space-y-3">
           <h2 class="font-cyber font-bold text-white text-sm tracking-wider mb-1" data-i18n="career.contact_header">Contact</h2>
           <div class="flex justify-between"><span data-i18n="contact.email">Email</span><a href="mailto:jjun8647@gmail.com" class="text-white hover:text-neonPurple">jjun8647@gmail.com</a></div>
