@@ -82,16 +82,12 @@ let targetUid = null;
 let canEdit = false; // true only when the signed-in user IS the app Owner AND is viewing their own uid
 let access = { pageAccessible: false, includeConnections: false, includeAllMine: false };
 
-async function resolveOwnerUidFallback() {
-  try {
-    const snap = await getDocs(query(collection(db, "public_profiles"), where("role", "==", "owner")));
-    if (!snap.empty) return snap.docs[0].id;
-  } catch (err) {
-    console.error("[career] owner lookup failed:", err.code || err);
-  }
-  return null;
-}
-
+// v3.2.2 hotfix: resolves an *explicit* ?u=/?uid= target only. The "no param at all" case is
+// handled directly in initCareerAccess() — it must resolve to the signed-in user's own uid with
+// zero Firestore reads, never through here, so a bare resume.html visit can never depend on
+// public_profiles/usernames existing (public_profiles is only populated on a login.html visit,
+// not every session-restore, which is what caused the "resume could not be found" regression for
+// an already-signed-in Owner who reached resume.html without going through login.html again).
 async function resolveTargetUid() {
   if (targetUsernameParam) {
     try {
@@ -103,7 +99,7 @@ async function resolveTargetUid() {
     }
   }
   if (targetUidParam) return targetUidParam;
-  return resolveOwnerUidFallback();
+  return null;
 }
 
 // Signed in: read the richer users/{uid} doc (auth-required, has careerVisibility as the source
@@ -150,6 +146,7 @@ let lastNoticeReason = null;
 function noticeKey(reason) {
   if (reason === "not_found") return "career.resume_not_found";
   if (reason === "connections") return "career.resume_connections_notice";
+  if (reason === "signin_required") return "career.signin_required_notice";
   return "career.resume_private_notice";
 }
 
@@ -251,22 +248,40 @@ async function loadAll() {
 // see — called once per auth-state change, before loadAll(). Replaces the old "just always fetch
 // every public item + my own" behavior with per-target, per-viewer access control.
 async function initCareerAccess(user) {
-  targetUid = await resolveTargetUid();
-  if (!targetUid) {
-    showNotice("not_found");
-    return;
-  }
+  const hasParam = !!(targetUsernameParam || targetUidParam);
 
-  const person = await fetchPersonForTarget(targetUid);
-  if (!person) {
-    showNotice("not_found");
-    return;
+  if (!hasParam) {
+    // No ?u=/?uid= at all: this is never a shared HR link (those always carry an explicit
+    // target) — it's someone opening resume.html directly. Signed in -> always their own resume,
+    // full stop, resolved straight from auth with no Firestore read required to even get this
+    // far. Signed out -> ask them to sign in rather than silently guessing whose resume to show.
+    if (!user) {
+      targetUid = null;
+      showNotice("signin_required");
+      return;
+    }
+    targetUid = user.uid;
+  } else {
+    targetUid = await resolveTargetUid();
+    if (!targetUid) {
+      showNotice("not_found");
+      return;
+    }
   }
 
   const isSelf = !!user && user.uid === targetUid;
+  const person = await fetchPersonForTarget(targetUid);
+  if (!person && !isSelf) {
+    showNotice("not_found");
+    return;
+  }
+  // Self mode never hard-fails on a missing users/{uid} doc (e.g. a getDoc race right after a
+  // brand-new first login, before login.html's upsert has landed) — isSelf alone is enough to
+  // grant full access; careerVisibility below just falls back to its usual "undefined" default.
+
   canEdit = isSelf && isOwner(user);
 
-  let careerVisibility = person.careerVisibility;
+  let careerVisibility = person?.careerVisibility;
   // One-time default upgrade: the app historically treated Career as a public portfolio, so the
   // very first time the actual Owner loads their own resume with no careerVisibility ever set,
   // default it to "public" instead of leaving it at the (safer, rules-level) implicit "private" —

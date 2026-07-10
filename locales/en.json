@@ -168,7 +168,8 @@
     "visibility_saved": "Visibility saved.",
     "resume_private_notice": "This resume is private.",
     "resume_connections_notice": "This resume is only visible to trusted connections.",
-    "resume_not_found": "This resume could not be found."
+    "resume_not_found": "This resume could not be found.",
+    "signin_required_notice": "Sign in to view this resume."
   },
   "memories": {
     "title": "Memories",

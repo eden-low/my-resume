@@ -168,7 +168,8 @@
     "visibility_saved": "可见性已保存。",
     "resume_private_notice": "此简历为私密状态。",
     "resume_connections_notice": "此简历仅对好友可见。",
-    "resume_not_found": "未找到该简历。"
+    "resume_not_found": "未找到该简历。",
+    "signin_required_notice": "登录后即可查看此简历。"
   },
   "memories": {
     "title": "回忆",
