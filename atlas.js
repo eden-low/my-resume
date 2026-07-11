@@ -27,8 +27,11 @@ function bi(obj, field) {
   return obj[field + suffix] || obj[field + "_en"] || obj[field + "_zh"] || "";
 }
 
+// updatedAt participates first (v3.4.2 fix): an old item that just had a location added via
+// the edit modal counts as recent, so the Connections tab's 100-most-recent cap can't slice
+// out freshly-located old docs.
 function itemMillis(item) {
-  const ts = item.uploadedAt || item.createdAt || item.date;
+  const ts = item.updatedAt || item.uploadedAt || item.createdAt || item.date;
   return ts?.toMillis?.() || 0;
 }
 
@@ -321,6 +324,18 @@ onAuthStateChanged(auth, async (user) => {
   if (!map) initMap();
   cachedCollections = await mergeMinePublic("collections");
   await setScope("mine");
+});
+
+// v3.4.2 fix: the cluster caches used to live as long as the page did, so an Atlas kept open
+// in a PWA window/background tab never picked up a location added via another page's edit
+// modal — even re-clicking the scope tabs returned the stale cache. Returning to a visible
+// Atlas now drops both caches and refetches the active scope. A fresh navigation was always
+// fresh (module state resets), and bfcache restores already force a reload via auth-guard.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !map || !auth.currentUser) return;
+  mineClusters = null;
+  connectionsClusters = null;
+  setScope(activeScope);
 });
 
 // Re-render whatever's already on screen — the collection chips (bilingual title_en/title_zh)

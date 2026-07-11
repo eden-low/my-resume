@@ -795,6 +795,18 @@ backend, no API key, no rules changes, no field renames, no Atlas/profile code c
    those stay place-only by design; no reverse geocoding (the GPS button still saves bare
    coordinates without deriving a name); `index.html` Quick Add modals still have no location
    UI.
+7. **Edit/Atlas refresh hotfix (v3.4.2, follow-up pass)** — live testing reported "location
+   added via the edit modal doesn't show in Atlas." The audit re-verified the persistence
+   chain (all three pages' edit `updateDoc` payloads spread `readLocationFields()`, prefill
+   restores name/address/coords/precision-hint — that part was already correct); the real
+   defects were Atlas-side: (a) the module-level `mineClusters`/`connectionsClusters` caches
+   never invalidated while an Atlas page stayed alive (PWA window / background tab), so
+   content edited on another page never appeared until a full navigation — a `visibilitychange`
+   listener now drops both caches and refetches the active scope whenever Atlas becomes
+   visible again; (b) `itemMillis()` ignored `updatedAt`, so the Connections tab's
+   100-most-recent cap could slice out an *old* doc that just had its location added —
+   `updatedAt` now participates first. `service-worker.js` `CACHE` bumped to `eden-shell-v13`
+   so stale pre-v3.4.2 runtime-cached page JS gets purged on SW update.
 
 ## Architecture
 
