@@ -632,7 +632,7 @@ included. This pass closes that gap rather than opening new ones:
    `npx firebase-tools deploy --only firestore:rules,storage` (not run automatically by this
    pass) to actually publish the rules changes.
 
-**"HR-ready resume restructure" (most recent)** — `resume.html`'s static content was reorganized
+**"HR-ready resume restructure"** — `resume.html`'s static content was reorganized
 into a standard resume formula, HTML + locale keys only (no `career.js`, rules, nav, or schema
 changes; the CMS sections and viewer/owner modes are untouched). New section order in
 `#career-main`: `#profile` (name + one-line headline + inline contact row with email/phone/
@@ -647,6 +647,36 @@ Tools / Professional Skills). `#career-subnav` gained Education/Skills anchors a
 new order; section *ids* were still not renamed (`events`/`inventory` keep their legacy names).
 New `career.*` i18n keys in both locales: `summary_header`, `skills_header`, `skills_languages`,
 `skills_programming`, `skills_platforms`, `skills_tools`, `skills_soft`.
+
+**"Resume polish" (most recent)** — print quality + Owner-only resume exposure. No rules
+changes, no nav changes, no new pages.
+1. **A4 print styles** — `styles.css`'s `@media print` block (which used to just hide chrome and
+   force a white body) is now a full resume print stylesheet: `@page { size: A4; margin: 12mm }`;
+   also hides `#resume-public-topbar`/`#career-visibility-card`/`#auth-control`/`#eden-splash`/
+   all `button`s/all `.fixed` modals/a new opt-in `.print-hidden` class, plus the `html::before`
+   logo watermark; forces `.reveal { opacity: 1 }` so scripts.js's scroll-reveal never prints
+   below-the-fold sections invisible; flattens `#career-main` sections to plain blocks with
+   ruled 13pt headings (the `#profile` name prints as a 20pt unruled letterhead line); remaps
+   the dark-theme text utilities to print ink (#111/#444) with underlined http/mailto links;
+   forces the project/certificate/award grids single-column, hides cover images and the avatar
+   placeholder, and puts `break-inside: avoid` on every per-entry card (sections themselves may
+   still flow across pages).
+2. **Button label** — `#download-cv-btn` says "Print / Save PDF" (lucide `printer` icon), the
+   card copy explains it opens the browser print dialog; still `window.print()`, no PDF library.
+   New `career.*` keys in both locales: `download_cv`, `download_cv_hint`, `print_save_pdf`.
+3. **Owner-only View Resume CTA** — `profile.js`'s `renderResumeCta()` now requires the *target*
+   profile's `users/{uid}.role === "owner"` (threaded through `cachedProfileData` as
+   `targetRole`) before any per-viewer check runs, replacing the old `isOwner(viewer)` clause
+   that wrongly showed the CTA to the Owner on *friends'* profiles (friends have no resume —
+   Career is Owner-only-to-write). Within an owner-target profile the viewer gate is unchanged:
+   self, `careerVisibility === "public"`, or connections-tier for an accepted friend. A friend
+   viewing their *own* profile no longer sees the CTA either.
+4. **Resume-page backstop** — `career.js`'s `initCareerAccess()` shows the existing
+   `resume_not_found` notice when a shared `?u=`/`?uid=` link resolves to a non-owner target
+   (`person.role !== "owner"`), instead of rendering an empty resume wrapped around the Owner's
+   static Profile/Education/Leadership prose. Deliberately skipped for `isSelf` so a
+   `users/{uid}` getDoc race can never lock the Owner out of their own resume; bare
+   `resume.html` visits (no param) are untouched.
 
 ## Architecture
 

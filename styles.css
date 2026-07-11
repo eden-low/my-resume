@@ -510,9 +510,17 @@ body.resume-viewer-mode {
   padding-bottom: 0 !important;
 }
 
-/* Career's "Download CV" (resume.html) just prints the page itself — hide all chrome/nav/
-   buttons/modals and let the browser's Save-as-PDF produce a clean single-column resume. */
+/* Career's "Print / Save PDF" (resume.html) prints the page itself as a professional A4 resume:
+   every piece of app chrome and owner-only control is hidden, the dark glass cards flatten to
+   plain white/black typography with ruled section headings, and individual entries never split
+   across a page break. The generic hide-list also covers every other page's stray print. */
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  /* App chrome, owner controls, buttons, modals — nothing interactive belongs on paper */
   #eden-sidebar,
   #mobile-topbar,
   #mobile-bottomnav,
@@ -520,19 +528,137 @@ body.resume-viewer-mode {
   #mobile-drawer-backdrop,
   #quickadd-sheet-overlay,
   #global-search-overlay,
+  #eden-splash,
+  #resume-public-topbar,
+  #career-visibility-card,
+  #auth-control,
   header,
   footer,
   .sticky,
-  .no-print {
+  .no-print,
+  .print-hidden,
+  .fixed,
+  button {
     display: none !important;
+  }
+
+  /* White page — kill the html::before logo watermark and the .grid-bg ambient glow */
+  html::before {
+    display: none !important;
+    animation: none !important;
   }
   body {
     padding: 0 !important;
     background: #fff !important;
-    color: #000 !important;
+    background-image: none !important;
+    color: #111 !important;
   }
   main {
-    max-width: 100% !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* scripts.js's scroll-reveal must never leave below-the-fold sections invisible on paper */
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* Sections flatten from glass cards to plain resume blocks with a ruled heading… */
+  #career-main section {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 0 14pt !important;
+  }
+  #career-main section h1 {
+    color: #000 !important;
+    font-size: 13pt !important;
+    border-bottom: 1.5px solid #999;
+    padding-bottom: 3pt;
+    margin-bottom: 6pt;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* …except the name itself, which prints as the big unruled letterhead line */
+  #career-main #profile h1 {
+    font-size: 20pt !important;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  /* Inner entry cards lose the dark chip fill, keep a light separator */
+  #career-main .bg-darkBg\/60 {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #ddd !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 6pt 0 !important;
+  }
+
+  /* Dark-theme text utilities -> print-legible ink; links stay visible as underlined text */
+  #career-main,
+  #career-main .text-white,
+  #career-main .text-neonPurple,
+  #career-main .text-neonBlue,
+  #career-main .text-emerald-400,
+  #career-main .text-amber-400,
+  #career-main .text-rose-400,
+  #career-main a {
+    color: #111 !important;
+  }
+  #career-main .text-textGray {
+    color: #444 !important;
+  }
+  #career-main a[href^="http"],
+  #career-main a[href^="mailto:"] {
+    text-decoration: underline;
+  }
+
+  /* Skill/tech pills: outline only, no dark fill */
+  #career-main .rounded-full[class*="border"] {
+    background: transparent !important;
+    border-color: #bbb !important;
+    color: #333 !important;
+  }
+
+  /* Keep each entry intact across page breaks (sections themselves may still flow) */
+  #education .bg-darkBg\/60,
+  #events .bg-darkBg\/60,
+  #events .divide-y > div,
+  #experience-list > div,
+  #featured-projects-list > div,
+  #projects-list > div,
+  #certificates-list > div,
+  #awards-list > div,
+  #skills .flex {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Single-column, text-first lists on A4; drop cover images and the avatar placeholder */
+  #featured-projects-list,
+  #projects-list,
+  #certificates-list,
+  #awards-list {
+    display: block !important;
+  }
+  #featured-projects-list > div,
+  #projects-list > div,
+  #certificates-list > div,
+  #awards-list > div {
+    margin-bottom: 6pt;
+  }
+  #projects-list img,
+  #featured-projects-list img,
+  #profile .w-32 {
+    display: none !important;
   }
 }
 

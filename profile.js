@@ -1,4 +1,4 @@
-import { auth, db, getUserMode, isOwner } from "./firebase-init.js";
+import { auth, db, getUserMode } from "./firebase-init.js";
 import { t as i18nT } from "./js/i18n.js";
 import { publicDisplayName, formatHandle } from "./js/identity.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
@@ -250,13 +250,17 @@ function renderJournalList(journals) {
 }
 
 // ---- View Resume / View Career Profile CTA (v3.2.2) — links out to resume.html's own public/
-// friend viewer mode rather than duplicating any Career UI here. Shown when: I'm viewing my own
-// profile, I'm the app Owner (full access everywhere), the target's careerVisibility is public,
-// or it's connections-tier and I'm an accepted friend of the target. Missing careerVisibility
-// defaults to private (hidden), matching career.js's own default. ----
-function renderResumeCta({ careerVisibility, isSelf, isFriend, targetUid, username }) {
-  const canView = isSelf || isOwner(auth.currentUser) || careerVisibility === "public"
-    || (careerVisibility === "connections" && isFriend);
+// friend viewer mode rather than duplicating any Career UI here. Career is Owner-only-to-write
+// (no multi-user Career CMS yet), so the CTA only ever appears on the app Owner's profile
+// (targetRole === "owner") — any other target has no resume to show and the link would just land
+// on a locked notice; that includes the Owner *viewing* a friend's profile, which used to leak
+// the CTA via a bare isOwner(viewer) check. Within an owner-target profile, the same per-viewer
+// gate as career.js's computeAccess(): self, public, or connections-tier for an accepted friend.
+// Missing careerVisibility defaults to private (hidden), matching career.js's own default. ----
+function renderResumeCta({ careerVisibility, isSelf, isFriend, targetUid, username, targetRole }) {
+  const targetHasResume = targetRole === "owner";
+  const canView = targetHasResume
+    && (isSelf || careerVisibility === "public" || (careerVisibility === "connections" && isFriend));
   resumeCta.classList.toggle("hidden", !canView);
   if (!canView) return;
   resumeCta.href = username ? `resume.html?u=${encodeURIComponent(username)}` : `resume.html?uid=${encodeURIComponent(targetUid)}`;
@@ -531,9 +535,9 @@ let cachedProfilePerson = null;
 
 function rerenderAll() {
   if (!cachedProfileData) return;
-  const { photos, journals, events, habits, careerExperiences, careerProjects, careerVisibility, isSelf, isFriend, targetUid, username } = cachedProfileData;
+  const { photos, journals, events, habits, careerExperiences, careerProjects, careerVisibility, isSelf, isFriend, targetUid, username, targetRole } = cachedProfileData;
   renderStats({ photos, journals, events, habits });
-  renderResumeCta({ careerVisibility, isSelf, isFriend, targetUid, username });
+  renderResumeCta({ careerVisibility, isSelf, isFriend, targetUid, username, targetRole });
   renderCareer(careerExperiences, careerProjects);
   renderAlbumTiles(photos);
   renderPhotoGrid();
@@ -610,6 +614,7 @@ async function loadProfile() {
   cachedProfileData = {
     photos, journals, events, habits, careerExperiences, careerProjects,
     careerVisibility: person.careerVisibility, isSelf, isFriend, targetUid, username: person.username,
+    targetRole: person.role || "viewer",
   };
 
   contentSection.classList.remove("hidden");

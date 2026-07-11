@@ -319,6 +319,16 @@ async function initCareerAccess(user) {
   // brand-new first login, before login.html's upsert has landed) — isSelf alone is enough to
   // grant full access; careerVisibility below just falls back to its usual "undefined" default.
 
+  // No multi-user Career CMS yet — only the app Owner has a resume. A shared link (?u=/?uid=)
+  // resolving to anyone else (a friend's username, etc.) gets a clean "not found" notice instead
+  // of an empty resume rendered around the Owner's static Profile/Education/Leadership prose.
+  // Deliberately skipped for isSelf, so a possible users/{uid} getDoc race on the Owner's own
+  // visit (person null/role missing) can never lock the Owner out of their own resume.
+  if (hasTargetParam && !isSelf && person?.role !== "owner") {
+    showNotice("not_found");
+    return;
+  }
+
   canEdit = isSelf && isOwner(user);
   applyViewerModeClass(user);
 

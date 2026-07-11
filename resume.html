@@ -370,11 +370,11 @@
     <!-- Download CV: prints the page itself (see the @media print rules in styles.css) -->
     <section id="download-cv" class="reveal bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
       <div>
-        <h2 class="font-cyber font-bold text-lg text-white">Download CV</h2>
-        <p class="text-textGray text-sm mt-1">Export this page as a clean, printable resume.</p>
+        <h2 class="font-cyber font-bold text-lg text-white" data-i18n="career.download_cv">Download CV</h2>
+        <p class="text-textGray text-sm mt-1" data-i18n="career.download_cv_hint">Opens your browser's print dialog — choose "Save as PDF" for a clean A4 resume.</p>
       </div>
       <button id="download-cv-btn" type="button" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-sm font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all whitespace-nowrap">
-        <i data-lucide="download"></i> Download CV
+        <i data-lucide="printer"></i> <span data-i18n="career.print_save_pdf">Print / Save PDF</span>
       </button>
     </section>
   </main>
