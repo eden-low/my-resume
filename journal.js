@@ -70,19 +70,58 @@ function getBrowserLocation() {
   });
 }
 
-function wireUseLocationBtn(btn, nameInput, latInput, lonInput) {
+// v3.4.1: exact coordinates are an explicit, optional add-on — the button only fills the
+// hidden lat/lng inputs (never the visible name field, which used to get raw coordinates
+// baked into locationName, leaking them to anyone the entry was visible to). Mirrors
+// gallery.js's copy per the per-page duplication convention.
+function wireExactLocationControls(prefix) {
+  const btn = document.getElementById(`${prefix}-use-location-btn`);
+  const status = document.getElementById(`${prefix}-location-status`);
+  const clearBtn = document.getElementById(`${prefix}-clear-location-btn`);
+  const latInput = document.getElementById(`${prefix}-latitude`);
+  const lonInput = document.getElementById(`${prefix}-longitude`);
+  const sync = () => {
+    const has = latInput.value !== "" && lonInput.value !== "";
+    status.textContent = has ? i18nT("common.coordinates_saved") : "";
+    status.classList.toggle("hidden", !has);
+    clearBtn.classList.toggle("hidden", !has);
+  };
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     const original = btn.textContent;
-    btn.textContent = "Locating...";
+    btn.textContent = i18nT("common.locating");
     const loc = await getBrowserLocation();
     btn.disabled = false;
     btn.textContent = original;
     if (!loc) return;
     latInput.value = loc.lat;
     lonInput.value = loc.lon;
-    if (!nameInput.value.trim()) nameInput.value = `${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}`;
+    sync();
   });
+  clearBtn.addEventListener("click", () => {
+    latInput.value = "";
+    lonInput.value = "";
+    sync();
+  });
+  btn.closest("form")?.addEventListener("reset", () => setTimeout(sync, 0));
+  return sync;
+}
+
+// Standardized optional location fields (v3.4.1) — see gallery.js's readLocationFields.
+function readLocationFields(prefix) {
+  const locationName = document.getElementById(`${prefix}-location-name`).value.trim() || null;
+  const locationAddress = document.getElementById(`${prefix}-location-address`).value.trim() || null;
+  const latRaw = document.getElementById(`${prefix}-latitude`).value;
+  const lonRaw = document.getElementById(`${prefix}-longitude`).value;
+  const latitude = latRaw ? Number(latRaw) : null;
+  const longitude = lonRaw ? Number(lonRaw) : null;
+  return {
+    locationName,
+    locationAddress,
+    latitude,
+    longitude,
+    locationPrecision: latitude != null && longitude != null ? "exact" : locationName || locationAddress ? "place" : "none",
+  };
 }
 
 let cachedCollections = null;
@@ -405,18 +444,8 @@ journalEmptyCta.addEventListener("click", () => { populateCollectionSelect(docum
 journalModalClose.addEventListener("click", closeModal);
 journalModalBackdrop.addEventListener("click", closeModal);
 
-wireUseLocationBtn(
-  document.getElementById("journal-use-location-btn"),
-  document.getElementById("journal-location-name"),
-  document.getElementById("journal-latitude"),
-  document.getElementById("journal-longitude")
-);
-wireUseLocationBtn(
-  document.getElementById("journal-edit-use-location-btn"),
-  document.getElementById("journal-edit-location-name"),
-  document.getElementById("journal-edit-latitude"),
-  document.getElementById("journal-edit-longitude")
-);
+wireExactLocationControls("journal");
+const syncJournalEditLocation = wireExactLocationControls("journal-edit");
 
 journalForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -433,9 +462,6 @@ journalForm.addEventListener("submit", async (event) => {
   const visibility = journalForm.querySelector('input[name="journal-visibility"]:checked').value;
   const file = document.getElementById("journal-image").files[0];
   const collectionId = document.getElementById("journal-collection").value || null;
-  const locationName = document.getElementById("journal-location-name").value.trim() || null;
-  const latRaw = document.getElementById("journal-latitude").value;
-  const lonRaw = document.getElementById("journal-longitude").value;
   if (!title || !content) return;
 
   journalStatus.textContent = i18nT("common.saving");
@@ -458,9 +484,7 @@ journalForm.addEventListener("submit", async (event) => {
       createdAt: serverTimestamp(),
       uid: user.uid,
       collectionId,
-      locationName,
-      latitude: latRaw ? Number(latRaw) : null,
-      longitude: lonRaw ? Number(lonRaw) : null,
+      ...readLocationFields("journal"),
     });
 
     journalStatus.textContent = i18nT("common.saved");
@@ -481,8 +505,10 @@ async function openEditModal(entry) {
   document.querySelector(`#journal-edit-form input[name="journal-edit-visibility"][value="${entry.visibility || "public"}"]`).checked = true;
   document.getElementById("journal-edit-tags").value = (entry.tags || []).join(", ");
   document.getElementById("journal-edit-location-name").value = entry.locationName || "";
+  document.getElementById("journal-edit-location-address").value = entry.locationAddress || "";
   document.getElementById("journal-edit-latitude").value = entry.latitude ?? "";
   document.getElementById("journal-edit-longitude").value = entry.longitude ?? "";
+  syncJournalEditLocation();
   await populateCollectionSelect(document.getElementById("journal-edit-collection"), entry.collectionId);
   journalEditStatus.textContent = "";
   journalEditModal.classList.remove("hidden");
@@ -503,17 +529,13 @@ journalEditForm.addEventListener("submit", async (event) => {
   const entry = cachedEntries.find((e) => e.id === id);
   if (!entry || entry.uid !== user.uid) return;
 
-  const latRaw = document.getElementById("journal-edit-latitude").value;
-  const lonRaw = document.getElementById("journal-edit-longitude").value;
   const payload = {
     title: document.getElementById("journal-edit-title").value.trim(),
     content: document.getElementById("journal-edit-content").value.trim(),
     visibility: document.querySelector('#journal-edit-form input[name="journal-edit-visibility"]:checked').value,
     tags: document.getElementById("journal-edit-tags").value.split(",").map((t) => t.trim()).filter(Boolean),
     collectionId: document.getElementById("journal-edit-collection").value || null,
-    locationName: document.getElementById("journal-edit-location-name").value.trim() || null,
-    latitude: latRaw ? Number(latRaw) : null,
-    longitude: lonRaw ? Number(lonRaw) : null,
+    ...readLocationFields("journal-edit"),
     updatedAt: serverTimestamp(),
   };
   try {

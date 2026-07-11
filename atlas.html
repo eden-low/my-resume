@@ -79,6 +79,13 @@
     </section>
     <p id="atlas-empty" class="hidden text-center text-xs font-code text-textGray py-10" data-i18n="atlas.no_locations">The map will grow as your journey continues.</p>
 
+    <!-- v3.4.1: places recorded by name only — no coordinates required to live in the Atlas -->
+    <section id="saved-places-section" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <h2 class="font-cyber font-semibold text-base" data-i18n="atlas.saved_places">Saved Places</h2>
+      <p class="text-[11px] font-code text-textGray mt-0.5 mb-4" data-i18n="atlas.saved_places_hint">Places without map coordinates</p>
+      <div id="saved-places-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
     <section id="location-detail-panel" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
       <div class="flex items-center justify-between mb-3">
         <h2 id="location-detail-name" class="font-cyber font-semibold text-lg"></h2>

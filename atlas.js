@@ -87,37 +87,62 @@ async function mergeMinePublic(name) {
   return [...resultMap.values()];
 }
 
+// v3.4.1: two outputs — mapClusters (items with coordinates, pinned on the Leaflet map, same
+// behavior as before) and placeClusters (items with only a locationName/locationAddress,
+// grouped by name into the new Saved Places section — coordinates were never required for a
+// place to belong in the Atlas). Old docs missing every location field are skipped as before.
 function clusterItems(photos, journals, events, precision) {
   const clusters = new Map();
+  const places = new Map();
   function round(n) {
     return precision != null ? Number(n.toFixed(precision)) : n;
   }
-  function addItem(item, type) {
-    if (item.latitude == null || item.longitude == null) return;
-    const lat = round(item.latitude);
-    const lon = round(item.longitude);
-    const key = (item.locationName || `${lat},${lon}`).trim().toLowerCase() || `${lat},${lon}`;
-    if (!clusters.has(key)) {
-      clusters.set(key, {
-        name: item.locationName || `${lat}, ${lon}`,
-        lat, lon,
-        memories: 0, journal: 0, journey: 0,
-        collectionIds: new Set(),
-        photos: [],
-        latest: 0,
-      });
-    }
-    const c = clusters.get(key);
+  function bump(c, item, type) {
     if (type === "memories") { c.memories++; if (item.url) c.photos.push(item.url); }
     if (type === "journal") c.journal++;
     if (type === "journey") c.journey++;
     if (item.collectionId) c.collectionIds.add(item.collectionId);
     c.latest = Math.max(c.latest, itemMillis(item));
   }
+  function addItem(item, type) {
+    const placeText = item.locationName || item.locationAddress;
+    if (item.latitude != null && item.longitude != null) {
+      const lat = round(item.latitude);
+      const lon = round(item.longitude);
+      const key = (placeText || `${lat},${lon}`).trim().toLowerCase() || `${lat},${lon}`;
+      if (!clusters.has(key)) {
+        clusters.set(key, {
+          name: placeText || `${lat}, ${lon}`,
+          address: item.locationName ? item.locationAddress || null : null,
+          lat, lon,
+          memories: 0, journal: 0, journey: 0,
+          collectionIds: new Set(),
+          photos: [],
+          latest: 0,
+        });
+      }
+      bump(clusters.get(key), item, type);
+    } else if (placeText) {
+      const key = placeText.trim().toLowerCase();
+      if (!places.has(key)) {
+        places.set(key, {
+          name: placeText,
+          address: item.locationName ? item.locationAddress || null : null,
+          memories: 0, journal: 0, journey: 0,
+          collectionIds: new Set(),
+          photos: [],
+          latest: 0,
+        });
+      }
+      const c = places.get(key);
+      if (item.locationName && item.locationAddress && !c.address) c.address = item.locationAddress;
+      bump(c, item, type);
+    }
+  }
   photos.forEach((p) => addItem(p, "memories"));
   journals.forEach((j) => addItem(j, "journal"));
   events.forEach((e) => addItem(e, "journey"));
-  return [...clusters.values()];
+  return { mapClusters: [...clusters.values()], placeClusters: [...places.values()] };
 }
 
 async function loadMineClusters() {
@@ -224,9 +249,6 @@ function renderClusters(clusters, color) {
   activeDetailCluster = null;
   detailPanel.classList.add("hidden");
 
-  atlasEmpty.classList.toggle("hidden", clusters.length > 0);
-  atlasCount.textContent = clusters.length ? `${clusters.length} location${clusters.length === 1 ? "" : "s"}` : "";
-
   clusters.forEach((cluster) => {
     const marker = L.marker([cluster.lat, cluster.lon], { icon: makeIcon(color) }).addTo(map);
     marker.bindTooltip(cluster.name, { direction: "top", offset: [0, -8] });
@@ -240,6 +262,32 @@ function renderClusters(clusters, color) {
   }
 }
 
+// v3.4.1: Saved Places — name-only locations, rendered as cards beside the map. Clicking one
+// opens the same detail panel the map pins use (it never needed coordinates).
+const placesSection = document.getElementById("saved-places-section");
+const placesGrid = document.getElementById("saved-places-grid");
+
+function renderPlaces(places) {
+  placesSection.classList.toggle("hidden", places.length === 0);
+  placesGrid.replaceChildren(
+    ...[...places].sort((a, b) => b.latest - a.latest).map((p) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "text-left rounded-xl border border-borderNeon bg-darkBg/40 p-4 hover:border-neonPurple/60 hover:bg-neonPurple/10 transition-colors";
+      el.innerHTML = `
+        <p class="text-sm text-white font-semibold flex items-center gap-2 min-w-0"><i class="fa-solid fa-location-dot text-neonPurple text-xs flex-shrink-0"></i><span class="truncate">${p.name}</span></p>
+        ${p.address ? `<p class="text-[11px] font-code text-textGray mt-0.5 truncate">${p.address}</p>` : ""}
+        <p class="text-[10px] font-code text-textGray mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+          <span><i class="fa-solid fa-images mr-1"></i>${p.memories}</span>
+          <span><i class="fa-solid fa-book mr-1"></i>${p.journal}</span>
+          <span><i class="fa-solid fa-timeline mr-1"></i>${p.journey}</span>
+        </p>`;
+      el.addEventListener("click", () => openDetailPanel(p));
+      return el;
+    })
+  );
+}
+
 async function setScope(scope) {
   activeScope = scope;
   scopeTabs.forEach((btn) => {
@@ -249,8 +297,12 @@ async function setScope(scope) {
   });
 
   atlasCount.textContent = i18nT("common.loading");
-  const clusters = scope === "mine" ? await loadMineClusters() : await loadConnectionsClusters();
-  renderClusters(clusters, scope === "mine" ? "#a78bfa" : "#6ea8fe");
+  const data = scope === "mine" ? await loadMineClusters() : await loadConnectionsClusters();
+  renderClusters(data.mapClusters, scope === "mine" ? "#a78bfa" : "#6ea8fe");
+  renderPlaces(data.placeClusters);
+  const total = data.mapClusters.length + data.placeClusters.length;
+  atlasEmpty.classList.toggle("hidden", total > 0);
+  atlasCount.textContent = total ? `${total} location${total === 1 ? "" : "s"}` : "";
 }
 
 scopeTabs.forEach((btn) => btn.addEventListener("click", () => setScope(btn.dataset.scope)));
@@ -275,8 +327,11 @@ onAuthStateChanged(auth, async (user) => {
 // and the open detail panel's legend labels both depend on the current language, and neither
 // re-renders on its own from a plain data-i18n walk since they're injected via innerHTML.
 document.addEventListener("eden:langchange", () => {
-  const clusters = activeScope === "mine" ? mineClusters : connectionsClusters;
+  const data = activeScope === "mine" ? mineClusters : connectionsClusters;
   const reopen = activeDetailCluster;
-  if (clusters) renderClusters(clusters, activeScope === "mine" ? "#a78bfa" : "#6ea8fe");
+  if (data) {
+    renderClusters(data.mapClusters, activeScope === "mine" ? "#a78bfa" : "#6ea8fe");
+    renderPlaces(data.placeClusters);
+  }
   if (reopen) openDetailPanel(reopen);
 });

@@ -164,10 +164,15 @@
           <input id="post-tags" type="text" placeholder="comma, separated, tags" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
         </div>
         <div class="space-y-2">
-          <label class="block text-xs font-code text-textGray mb-1.5" for="post-location-name" data-i18n="common.location">Location</label>
-          <div class="flex items-center gap-2">
-            <input id="post-location-name" type="text" placeholder="e.g. Kuching, Sarawak" class="flex-1 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
-            <button type="button" id="post-use-location-btn" class="use-location-btn px-3 py-2 bg-cardBg/70 border border-borderNeon rounded-lg text-[11px] font-code text-textGray hover:border-neonPurple hover:text-white transition-colors whitespace-nowrap" data-i18n="common.use_current_location">Use current location</button>
+          <label class="block text-xs font-code text-textGray mb-1.5" for="post-location-name" data-i18n="common.location_name">Location name</label>
+          <input id="post-location-name" type="text" placeholder="e.g. Sunway Pyramid" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
+          <label class="block text-xs font-code text-textGray mb-1.5 pt-1" for="post-location-address" data-i18n="common.location_address">Address / Area</label>
+          <input id="post-location-address" type="text" placeholder="e.g. Bandar Sunway, Selangor" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
+          <p class="text-[10px] font-code text-textGray/70" data-i18n="common.location_hint">This place will appear in your Atlas. Exact coordinates are optional.</p>
+          <div class="flex items-center gap-2 pt-1">
+            <button type="button" id="post-use-location-btn" class="use-location-btn px-3 py-2 bg-cardBg/70 border border-borderNeon rounded-lg text-[11px] font-code text-textGray hover:border-neonPurple hover:text-white transition-colors whitespace-nowrap" data-i18n="common.use_exact_location">Use exact location</button>
+            <span id="post-location-status" class="hidden text-[10px] font-code text-neonPurple"></span>
+            <button type="button" id="post-clear-location-btn" class="hidden text-textGray hover:text-white text-base leading-none px-1">&times;</button>
           </div>
           <input id="post-latitude" type="hidden">
           <input id="post-longitude" type="hidden">
@@ -221,10 +226,15 @@
           <input id="post-edit-tags" type="text" placeholder="comma, separated, tags" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
         </div>
         <div class="space-y-2">
-          <label class="block text-xs font-code text-textGray mb-1.5" for="post-edit-location-name" data-i18n="common.location">Location</label>
-          <div class="flex items-center gap-2">
-            <input id="post-edit-location-name" type="text" class="flex-1 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
-            <button type="button" id="post-edit-use-location-btn" class="use-location-btn px-3 py-2 bg-cardBg/70 border border-borderNeon rounded-lg text-[11px] font-code text-textGray hover:border-neonPurple hover:text-white transition-colors whitespace-nowrap" data-i18n="common.use_current_location">Use current location</button>
+          <label class="block text-xs font-code text-textGray mb-1.5" for="post-edit-location-name" data-i18n="common.location_name">Location name</label>
+          <input id="post-edit-location-name" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
+          <label class="block text-xs font-code text-textGray mb-1.5 pt-1" for="post-edit-location-address" data-i18n="common.location_address">Address / Area</label>
+          <input id="post-edit-location-address" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-xs text-white placeholder:text-textGray/60">
+          <p class="text-[10px] font-code text-textGray/70" data-i18n="common.location_hint">This place will appear in your Atlas. Exact coordinates are optional.</p>
+          <div class="flex items-center gap-2 pt-1">
+            <button type="button" id="post-edit-use-location-btn" class="use-location-btn px-3 py-2 bg-cardBg/70 border border-borderNeon rounded-lg text-[11px] font-code text-textGray hover:border-neonPurple hover:text-white transition-colors whitespace-nowrap" data-i18n="common.use_exact_location">Use exact location</button>
+            <span id="post-edit-location-status" class="hidden text-[10px] font-code text-neonPurple"></span>
+            <button type="button" id="post-edit-clear-location-btn" class="hidden text-textGray hover:text-white text-base leading-none px-1">&times;</button>
           </div>
           <input id="post-edit-latitude" type="hidden">
           <input id="post-edit-longitude" type="hidden">

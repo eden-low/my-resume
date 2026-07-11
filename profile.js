@@ -33,6 +33,28 @@ function albumOf(post) {
   return LEGACY_CATEGORY_ALIAS[post.category] || post.category;
 }
 
+// Journal moods, mirroring journal.js's MOOD_META (same per-page duplication convention as
+// the album taxonomy above) — used by the read-only journal detail modal.
+const MOOD_META = {
+  happy: { emoji: "😊", i18nKey: "journal.mood_happy" },
+  calm: { emoji: "😌", i18nKey: "journal.mood_calm" },
+  excited: { emoji: "🎉", i18nKey: "journal.mood_excited" },
+  sad: { emoji: "😔", i18nKey: "journal.mood_sad" },
+  frustrated: { emoji: "😤", i18nKey: "journal.mood_frustrated" },
+  tired: { emoji: "😴", i18nKey: "journal.mood_tired" },
+};
+
+// Full-body user content goes through the detail modal via innerHTML, so escape it — unlike
+// the truncated snippets elsewhere on this page, a whole journal entry is long enough to
+// plausibly contain markup-looking text.
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function fmtDate(ts) {
+  return ts?.toDate?.() ? ts.toDate().toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
+}
+
 // v3.1: profile.html?u=username (preferred, resolved to a uid via usernames/{usernameLower}
 // below) alongside the original ?uid=... form, kept for backward compatibility with every
 // existing link (Search People results before this pass, bookmarks, etc.).
@@ -68,9 +90,16 @@ const photoModalBackdrop = document.getElementById("photo-modal-backdrop");
 const photoModalClose = document.getElementById("photo-modal-close");
 const photoModalImg = document.getElementById("photo-modal-img");
 const photoModalCaption = document.getElementById("photo-modal-caption");
+const photoModalTopline = document.getElementById("photo-modal-topline");
+const photoModalMeta = document.getElementById("photo-modal-meta");
 const photoModalLikeBtn = document.getElementById("photo-modal-like-btn");
 const photoModalLikeCount = document.getElementById("photo-modal-like-count");
 const photoModalComments = document.getElementById("photo-modal-comments");
+
+const itemModal = document.getElementById("item-modal");
+const itemModalBackdrop = document.getElementById("item-modal-backdrop");
+const itemModalClose = document.getElementById("item-modal-close");
+const itemModalBody = document.getElementById("item-modal-body");
 
 function formatJoined(ts) {
   if (!ts?.toDate) return null;
@@ -119,6 +148,21 @@ async function fetchVisibleFor(collectionName, uid, includeConnections) {
   pub.forEach((d) => merged.set(d.id, d));
   connections.forEach((d) => merged.set(d.id, d));
   return [...merged.values()];
+}
+
+// v3.4: on your own profile, fetch everything you own in one uid-scoped query (any visibility,
+// including legacy docs with no visibility field) — the same "mine" half of the mine+public
+// pattern gallery.js/journal.js/timeline.js use. Rules-wise this is the provably-scoped
+// `uid == request.auth.uid` read that isMineOrPublic() always allowed; it just was never
+// used here before, so an owner couldn't preview/open their own private items from Profile.
+async function fetchMineAll(collectionName, uid) {
+  try {
+    const snap = await getDocs(query(collection(db, collectionName), where("uid", "==", uid)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error(`[profile] own ${collectionName} fetch failed:`, err.code || err);
+    return [];
+  }
 }
 
 // One getDoc against the target's own friendships subcollection — readable by either side per
@@ -209,6 +253,8 @@ function renderPhotoGrid() {
   gridEl.replaceChildren(
     ...visible.map((post) => {
       const el = document.createElement("button");
+      el.type = "button";
+      el.title = i18nT("profile.open_memory");
       el.className = "aspect-square overflow-hidden bg-darkBg/40 relative";
       el.innerHTML = `
         <img src="${post.url}" alt="${post.caption || i18nT("profile.photo_alt")}" class="w-full h-full object-cover hover:opacity-80 transition-opacity">
@@ -226,10 +272,13 @@ function renderTimelineList(events) {
   const sorted = [...events].sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
   timelineListEl.replaceChildren(
     ...sorted.map((e) => {
-      const el = document.createElement("div");
-      el.className = "flex items-center justify-between gap-3 py-1.5 border-b border-borderNeon/30 last:border-0";
-      const date = e.date?.toDate?.() ? e.date.toDate().toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
-      el.innerHTML = `<span class="text-sm text-white truncate">${e.title || "Untitled"}</span><span class="text-[11px] font-code text-textGray flex-shrink-0">${date}</span>`;
+      const el = document.createElement("button");
+      el.type = "button";
+      el.title = i18nT("profile.open_journey");
+      el.className = "w-full text-left flex items-center justify-between gap-3 py-1.5 px-2 -mx-2 rounded-lg border-b border-borderNeon/30 last:border-0 hover:bg-neonPurple/10 transition-colors";
+      el.innerHTML = `<span class="text-sm text-white truncate">${e.title || "Untitled"}</span>
+        <span class="flex items-center gap-2 flex-shrink-0"><span class="text-[11px] font-code text-textGray">${fmtDate(e.date)}</span><i class="fa-solid fa-chevron-right text-[9px] text-textGray/50"></i></span>`;
+      el.addEventListener("click", () => openItemModal("journey", e));
       return el;
     })
   );
@@ -240,10 +289,14 @@ function renderJournalList(journals) {
   const sorted = [...journals].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   journalListEl.replaceChildren(
     ...sorted.map((j) => {
-      const el = document.createElement("div");
-      el.className = "py-1.5 border-b border-borderNeon/30 last:border-0";
+      const el = document.createElement("button");
+      el.type = "button";
+      el.title = i18nT("profile.open_journal");
+      el.className = "w-full text-left flex items-center justify-between gap-3 py-1.5 px-2 -mx-2 rounded-lg border-b border-borderNeon/30 last:border-0 hover:bg-neonPurple/10 transition-colors";
       const snippet = (j.content || "").replace(/[#*_`>-]/g, "").slice(0, 90);
-      el.innerHTML = `<p class="text-sm text-white">${j.title || "Untitled"}</p><p class="text-xs text-textGray mt-0.5 truncate">${snippet}</p>`;
+      el.innerHTML = `<span class="min-w-0"><span class="block text-sm text-white truncate">${j.title || "Untitled"}</span><span class="block text-xs text-textGray mt-0.5 truncate">${snippet}</span></span>
+        <i class="fa-solid fa-chevron-right text-[9px] text-textGray/50 flex-shrink-0"></i>`;
+      el.addEventListener("click", () => openItemModal("journal", j));
       return el;
     })
   );
@@ -314,8 +367,9 @@ function renderCareer(experiences, projects) {
 function renderAtlasPlaces(photos, journals, events) {
   const counts = new Map();
   [...photos, ...journals, ...events].forEach((item) => {
-    if (!item.locationName) return;
-    counts.set(item.locationName, (counts.get(item.locationName) || 0) + 1);
+    const place = item.locationName || item.locationAddress;
+    if (!place) return;
+    counts.set(place, (counts.get(place) || 0) + 1);
   });
 
   const places = [...counts.entries()].sort((a, b) => b[1] - a[1]);
@@ -324,8 +378,12 @@ function renderAtlasPlaces(photos, journals, events) {
 
   atlasPlacesListEl.replaceChildren(
     ...places.map(([name, count]) => {
-      const el = document.createElement("span");
-      el.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-borderNeon bg-darkBg/40 text-xs text-white";
+      // Links to the Atlas module (the one page that owns the map) rather than a per-place
+      // detail — only the place *name* is ever shown here, never coordinates.
+      const el = document.createElement("a");
+      el.href = "atlas.html";
+      el.title = i18nT("profile.view_on_atlas");
+      el.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-borderNeon bg-darkBg/40 text-xs text-white hover:border-neonPurple/60 hover:bg-neonPurple/10 transition-colors";
       el.innerHTML = `<i class="fa-solid fa-location-dot text-neonPurple text-[10px]"></i> ${name} <span class="text-textGray font-code">&times;${count}</span>`;
       return el;
     })
@@ -389,9 +447,9 @@ function renderAchievements({ photos, journals, habits }) {
 
 function renderRecentActivity({ photos, journals, events }) {
   const items = [
-    ...photos.map((p) => ({ icon: "fa-image", text: `${i18nT("profile.activity_uploaded")} ${p.caption || i18nT("profile.a_photo")}`, at: p.uploadedAt })),
-    ...journals.map((j) => ({ icon: "fa-book", text: `${i18nT("profile.activity_wrote")} "${j.title || "Untitled"}"`, at: j.createdAt })),
-    ...events.map((e) => ({ icon: "fa-timeline", text: `${i18nT("profile.activity_logged")} "${e.title || "Untitled"}"`, at: e.date })),
+    ...photos.map((p) => ({ icon: "fa-image", text: `${i18nT("profile.activity_uploaded")} ${p.caption || i18nT("profile.a_photo")}`, at: p.uploadedAt, title: i18nT("profile.open_memory"), open: () => openPhotoModal(p) })),
+    ...journals.map((j) => ({ icon: "fa-book", text: `${i18nT("profile.activity_wrote")} "${j.title || "Untitled"}"`, at: j.createdAt, title: i18nT("profile.open_journal"), open: () => openItemModal("journal", j) })),
+    ...events.map((e) => ({ icon: "fa-timeline", text: `${i18nT("profile.activity_logged")} "${e.title || "Untitled"}"`, at: e.date, title: i18nT("profile.open_journey"), open: () => openItemModal("journey", e) })),
   ]
     .filter((i) => i.at?.toMillis)
     .sort((a, b) => b.at.toMillis() - a.at.toMillis())
@@ -400,14 +458,93 @@ function renderRecentActivity({ photos, journals, events }) {
   recentActivitySection.classList.toggle("hidden", items.length === 0);
   recentActivityList.replaceChildren(
     ...items.map((i) => {
-      const el = document.createElement("div");
-      el.className = "flex items-center gap-3";
+      const el = document.createElement("button");
+      el.type = "button";
+      el.title = i.title;
+      el.className = "w-full text-left flex items-center gap-3 px-2 py-1 -mx-2 rounded-lg hover:bg-neonPurple/10 transition-colors";
       el.innerHTML = `
         <span class="w-7 h-7 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-xs flex-shrink-0"><i class="fa-solid ${i.icon}"></i></span>
-        <span class="text-sm text-white truncate">${i.text}</span>`;
+        <span class="text-sm text-white truncate flex-1">${i.text}</span>
+        <i class="fa-solid fa-chevron-right text-[9px] text-textGray/50 flex-shrink-0"></i>`;
+      el.addEventListener("click", i.open);
       return el;
     })
   );
+}
+
+// ---- Visibility badge + read-only detail modal (v3.4 Shared Profile Detail Navigation) ----
+//
+// Every item reachable here was already fetched through a visibility-safe query (public,
+// connections-tier for accepted friends, or the owner's own uid-scoped fetch), so the modal
+// only ever labels what's on screen — it never widens access. Missing visibility reads as
+// private, which is only reachable on your own profile.
+
+function visibilityBadgeHtml(item) {
+  const v = item.visibility;
+  let label, icon;
+  if (v === "public") {
+    label = i18nT("profile.public_item");
+    icon = "fa-globe";
+  } else if (v === "connections") {
+    // On your own profile "Shared with you" would read backwards — use the picker's own label.
+    label = cachedProfileData?.isSelf ? i18nT("common.connections") : i18nT("profile.shared_with_you");
+    icon = "fa-user-group";
+  } else {
+    label = i18nT("profile.private_item");
+    icon = "fa-lock";
+  }
+  return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-borderNeon bg-darkBg/40 text-[10px] font-code text-textGray flex-shrink-0"><i class="fa-solid ${icon} text-[9px]"></i>${label}</span>`;
+}
+
+// v3.4.1: place text only — never raw coordinates. If an item carries only lat/lng (docs
+// from before address-based locations), the owner sees a "Coordinates saved" note on their
+// own profile; friends/public viewers see nothing location-related for that item at all.
+function locationLabelHtml(item) {
+  const text = item.locationName
+    ? item.locationName + (item.locationAddress ? ` · ${item.locationAddress}` : "")
+    : item.locationAddress;
+  if (text) return `<span><i class="fa-solid fa-location-dot mr-1"></i>${esc(text)}</span>`;
+  if (item.latitude != null && item.longitude != null && cachedProfileData?.isSelf)
+    return `<span><i class="fa-solid fa-location-dot mr-1"></i>${esc(i18nT("common.coordinates_saved"))}</span>`;
+  return "";
+}
+
+function ownerLineHtml() {
+  const person = cachedProfilePerson;
+  if (!person) return "";
+  const handle = formatHandle(person.username);
+  return `<span class="truncate"><i class="fa-solid fa-user mr-1"></i>${esc(publicDisplayName(person))}${handle ? ` <span class="text-textGray/60">${esc(handle)}</span>` : ""}</span>`;
+}
+
+function closeItemModal() {
+  itemModal.classList.add("hidden");
+}
+itemModalClose.addEventListener("click", closeItemModal);
+itemModalBackdrop.addEventListener("click", closeItemModal);
+
+// kind: "journal" (journals doc) or "journey" (life_events doc). Deliberately no edit/delete/
+// like/comment controls — this is a calm, read-only window into a shared item, not a feed.
+// locationName only; lat/lng are never rendered for anyone here.
+function openItemModal(kind, item) {
+  const mood = kind === "journal" ? MOOD_META[item.mood] || null : null;
+  const date = fmtDate(kind === "journey" ? item.date : item.createdAt);
+  const body = kind === "journal" ? item.content : item.description;
+  const tags = item.tags || [];
+  itemModalBody.innerHTML = `
+    <div class="flex items-center justify-between gap-3 text-[11px] font-code text-textGray">
+      ${ownerLineHtml()}
+      ${visibilityBadgeHtml(item)}
+    </div>
+    <h2 class="text-lg font-cyber font-bold text-white leading-snug">${mood ? `${mood.emoji} ` : ""}${esc(item.title || "Untitled")}</h2>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-code text-textGray">
+      ${date ? `<span><i class="fa-solid fa-calendar mr-1"></i>${date}</span>` : ""}
+      ${mood ? `<span>${i18nT(mood.i18nKey)}</span>` : ""}
+      ${locationLabelHtml(item)}
+    </div>
+    ${kind === "journal" && item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="" class="w-full rounded-xl max-h-64 object-cover">` : ""}
+    ${body ? `<p class="text-sm text-white leading-relaxed whitespace-pre-wrap">${esc(body)}</p>` : ""}
+    ${tags.length ? `<div class="flex flex-wrap gap-1.5 pt-1">${tags.map((tag) => `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray">#${esc(tag)}</span>`).join("")}</div>` : ""}`;
+  itemModal.classList.remove("hidden");
 }
 
 // ---- Photo modal: like/comment, read-only otherwise (mirrors gallery.js's per-post panel) ----
@@ -426,6 +563,13 @@ async function openPhotoModal(post) {
   photoModal.classList.remove("hidden");
   photoModalImg.src = post.url;
   photoModalCaption.textContent = post.caption || "";
+  photoModalTopline.innerHTML = `${ownerLineHtml()}${visibilityBadgeHtml(post)}`;
+  const albumMeta = categoryMeta()[albumOf(post)];
+  photoModalMeta.innerHTML = [
+    fmtDate(post.uploadedAt),
+    albumMeta ? esc(albumMeta.label) : "",
+    locationLabelHtml(post),
+  ].filter(Boolean).join('<span class="mx-1.5 text-textGray/40">&middot;</span>');
   photoModalLikeBtn.innerHTML = `<i class="fa-regular fa-heart"></i> <span id="photo-modal-like-count">&hellip;</span>`;
   photoModalComments.innerHTML = `<p class="text-xs font-code text-textGray">${i18nT("common.loading_comments")}</p>`;
 
@@ -600,10 +744,14 @@ async function loadProfile() {
   // accepted friend of this specific profile — Career/Achievements/Recent Activity stay derived
   // from whatever photos/journals/events end up in scope, no separate gating needed for them.
   const isFriend = await isAcceptedFriendOfTarget(targetUid);
+  // v3.4: on your own profile every own item (private/connections/public, plus legacy docs
+  // with no visibility field) is previewable and openable, badged with its visibility so
+  // you can tell what others see. Everyone else keeps the visibility-safe merge above.
+  const fetchContent = (name) => (isSelf ? fetchMineAll(name, targetUid) : fetchVisibleFor(name, targetUid, isFriend));
   const [photos, journals, events, habits, careerExperiences, careerProjects] = await Promise.all([
-    fetchVisibleFor("photos", targetUid, isFriend),
-    fetchVisibleFor("journals", targetUid, isFriend),
-    fetchVisibleFor("life_events", targetUid, isFriend),
+    fetchContent("photos"),
+    fetchContent("journals"),
+    fetchContent("life_events"),
     fetchVisibleFor("habits", targetUid, false),
     fetchByVisibility("career_experiences", targetUid, "public"),
     fetchByVisibility("career_projects", targetUid, "public"),

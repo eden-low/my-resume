@@ -57,7 +57,22 @@ function getBrowserLocation() {
   });
 }
 
-function wireUseLocationBtn(btn, nameInput, latInput, lonInput) {
+// v3.4.1: exact coordinates are an explicit, optional add-on — the button only fills the
+// hidden lat/lng inputs (never the visible name field, which used to get raw coordinates
+// baked into locationName, leaking them to anyone the item was visible to). A small status
+// chip + clear button reflect/undo the stored coordinates; syncing also runs on form reset.
+function wireExactLocationControls(prefix) {
+  const btn = document.getElementById(`${prefix}-use-location-btn`);
+  const status = document.getElementById(`${prefix}-location-status`);
+  const clearBtn = document.getElementById(`${prefix}-clear-location-btn`);
+  const latInput = document.getElementById(`${prefix}-latitude`);
+  const lonInput = document.getElementById(`${prefix}-longitude`);
+  const sync = () => {
+    const has = latInput.value !== "" && lonInput.value !== "";
+    status.textContent = has ? i18nT("common.coordinates_saved") : "";
+    status.classList.toggle("hidden", !has);
+    clearBtn.classList.toggle("hidden", !has);
+  };
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     const original = btn.textContent;
@@ -68,8 +83,35 @@ function wireUseLocationBtn(btn, nameInput, latInput, lonInput) {
     if (!loc) return;
     latInput.value = loc.lat;
     lonInput.value = loc.lon;
-    if (!nameInput.value.trim()) nameInput.value = `${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}`;
+    sync();
   });
+  clearBtn.addEventListener("click", () => {
+    latInput.value = "";
+    lonInput.value = "";
+    sync();
+  });
+  // reset event fires before the default reset action, so re-sync a tick later
+  btn.closest("form")?.addEventListener("reset", () => setTimeout(sync, 0));
+  return sync;
+}
+
+// Standardized optional location fields (v3.4.1): a place is text-first; coordinates only
+// exist if explicitly captured. locationPrecision: "exact" (has coords) / "place" (text
+// only) / "none". Existing docs without these fields are read as-is, never migrated.
+function readLocationFields(prefix) {
+  const locationName = document.getElementById(`${prefix}-location-name`).value.trim() || null;
+  const locationAddress = document.getElementById(`${prefix}-location-address`).value.trim() || null;
+  const latRaw = document.getElementById(`${prefix}-latitude`).value;
+  const lonRaw = document.getElementById(`${prefix}-longitude`).value;
+  const latitude = latRaw ? Number(latRaw) : null;
+  const longitude = lonRaw ? Number(lonRaw) : null;
+  return {
+    locationName,
+    locationAddress,
+    latitude,
+    longitude,
+    locationPrecision: latitude != null && longitude != null ? "exact" : locationName || locationAddress ? "place" : "none",
+  };
 }
 
 let cachedCollections = null;
@@ -431,18 +473,8 @@ function parseTags(raw) {
   return raw.split(",").map((t) => t.trim()).filter(Boolean);
 }
 
-wireUseLocationBtn(
-  document.getElementById("post-use-location-btn"),
-  document.getElementById("post-location-name"),
-  document.getElementById("post-latitude"),
-  document.getElementById("post-longitude")
-);
-wireUseLocationBtn(
-  document.getElementById("post-edit-use-location-btn"),
-  document.getElementById("post-edit-location-name"),
-  document.getElementById("post-edit-latitude"),
-  document.getElementById("post-edit-longitude")
-);
+wireExactLocationControls("post");
+const syncPostEditLocation = wireExactLocationControls("post-edit");
 
 newPostBtn.addEventListener("click", () => populateCollectionSelect(document.getElementById("post-collection")));
 
@@ -457,9 +489,6 @@ postForm.addEventListener("submit", async (event) => {
   const visibility = postForm.querySelector('input[name="post-visibility"]:checked').value;
   const collectionId = document.getElementById("post-collection").value || null;
   const tags = parseTags(document.getElementById("post-tags").value);
-  const locationName = document.getElementById("post-location-name").value.trim() || null;
-  const latRaw = document.getElementById("post-latitude").value;
-  const lonRaw = document.getElementById("post-longitude").value;
   if (!file) return;
 
   postStatus.textContent = i18nT("common.uploading");
@@ -480,9 +509,7 @@ postForm.addEventListener("submit", async (event) => {
       uid: user.uid,
       collectionId,
       tags,
-      locationName,
-      latitude: latRaw ? Number(latRaw) : null,
-      longitude: lonRaw ? Number(lonRaw) : null,
+      ...readLocationFields("post"),
     });
 
     postStatus.textContent = i18nT("common.saved");
@@ -503,8 +530,10 @@ async function openEditModal(post) {
   document.querySelector(`#post-edit-form input[name="post-edit-visibility"][value="${post.visibility || "public"}"]`).checked = true;
   document.getElementById("post-edit-tags").value = (post.tags || []).join(", ");
   document.getElementById("post-edit-location-name").value = post.locationName || "";
+  document.getElementById("post-edit-location-address").value = post.locationAddress || "";
   document.getElementById("post-edit-latitude").value = post.latitude ?? "";
   document.getElementById("post-edit-longitude").value = post.longitude ?? "";
+  syncPostEditLocation();
   await populateCollectionSelect(document.getElementById("post-edit-collection"), post.collectionId);
   postEditStatus.textContent = "";
   postEditModal.classList.remove("hidden");
@@ -525,17 +554,13 @@ postEditForm.addEventListener("submit", async (event) => {
   const post = cachedPosts.find((p) => p.id === id);
   if (!post || !isMyPost(post, user)) return;
 
-  const latRaw = document.getElementById("post-edit-latitude").value;
-  const lonRaw = document.getElementById("post-edit-longitude").value;
   const payload = {
     caption: document.getElementById("post-edit-caption").value.trim(),
     category: document.getElementById("post-edit-category").value,
     visibility: document.querySelector('#post-edit-form input[name="post-edit-visibility"]:checked').value,
     collectionId: document.getElementById("post-edit-collection").value || null,
     tags: parseTags(document.getElementById("post-edit-tags").value),
-    locationName: document.getElementById("post-edit-location-name").value.trim() || null,
-    latitude: latRaw ? Number(latRaw) : null,
-    longitude: lonRaw ? Number(lonRaw) : null,
+    ...readLocationFields("post-edit"),
     updatedAt: serverTimestamp(),
   };
   try {

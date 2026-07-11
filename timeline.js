@@ -64,7 +64,22 @@ function getBrowserLocation() {
   });
 }
 
-function wireUseLocationBtn(btn, nameInput, latInput, lonInput) {
+// v3.4.1: exact coordinates are an explicit, optional add-on — the button only fills the
+// hidden lat/lng inputs (never the visible name field, which used to get raw coordinates
+// baked into locationName, leaking them to anyone the event was visible to). Mirrors
+// gallery.js's copy per the per-page duplication convention.
+function wireExactLocationControls(prefix) {
+  const btn = document.getElementById(`${prefix}-use-location-btn`);
+  const status = document.getElementById(`${prefix}-location-status`);
+  const clearBtn = document.getElementById(`${prefix}-clear-location-btn`);
+  const latInput = document.getElementById(`${prefix}-latitude`);
+  const lonInput = document.getElementById(`${prefix}-longitude`);
+  const sync = () => {
+    const has = latInput.value !== "" && lonInput.value !== "";
+    status.textContent = has ? i18nT("common.coordinates_saved") : "";
+    status.classList.toggle("hidden", !has);
+    clearBtn.classList.toggle("hidden", !has);
+  };
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     const original = btn.textContent;
@@ -75,8 +90,32 @@ function wireUseLocationBtn(btn, nameInput, latInput, lonInput) {
     if (!loc) return;
     latInput.value = loc.lat;
     lonInput.value = loc.lon;
-    if (!nameInput.value.trim()) nameInput.value = `${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}`;
+    sync();
   });
+  clearBtn.addEventListener("click", () => {
+    latInput.value = "";
+    lonInput.value = "";
+    sync();
+  });
+  btn.closest("form")?.addEventListener("reset", () => setTimeout(sync, 0));
+  return sync;
+}
+
+// Standardized optional location fields (v3.4.1) — see gallery.js's readLocationFields.
+function readLocationFields(prefix) {
+  const locationName = document.getElementById(`${prefix}-location-name`).value.trim() || null;
+  const locationAddress = document.getElementById(`${prefix}-location-address`).value.trim() || null;
+  const latRaw = document.getElementById(`${prefix}-latitude`).value;
+  const lonRaw = document.getElementById(`${prefix}-longitude`).value;
+  const latitude = latRaw ? Number(latRaw) : null;
+  const longitude = lonRaw ? Number(lonRaw) : null;
+  return {
+    locationName,
+    locationAddress,
+    latitude,
+    longitude,
+    locationPrecision: latitude != null && longitude != null ? "exact" : locationName || locationAddress ? "place" : "none",
+  };
 }
 
 let cachedCollections = null;
@@ -342,18 +381,8 @@ newEventBtn.addEventListener("click", openModal);
 eventModalClose.addEventListener("click", closeModal);
 eventModalBackdrop.addEventListener("click", closeModal);
 
-wireUseLocationBtn(
-  document.getElementById("event-use-location-btn"),
-  document.getElementById("event-location-name"),
-  document.getElementById("event-latitude"),
-  document.getElementById("event-longitude")
-);
-wireUseLocationBtn(
-  document.getElementById("event-edit-use-location-btn"),
-  document.getElementById("event-edit-location-name"),
-  document.getElementById("event-edit-latitude"),
-  document.getElementById("event-edit-longitude")
-);
+wireExactLocationControls("event");
+const syncEventEditLocation = wireExactLocationControls("event-edit");
 
 function dateToInputValue(ts) {
   const d = ts?.toDate?.();
@@ -373,9 +402,6 @@ eventForm.addEventListener("submit", async (event) => {
   const visibility = eventForm.querySelector('input[name="event-visibility"]:checked').value;
   const collectionId = document.getElementById("event-collection").value || null;
   const tags = document.getElementById("event-tags").value.split(",").map((t) => t.trim()).filter(Boolean);
-  const locationName = document.getElementById("event-location-name").value.trim() || null;
-  const latRaw = document.getElementById("event-latitude").value;
-  const lonRaw = document.getElementById("event-longitude").value;
   if (!title || !dateValue) return;
 
   eventStatus.textContent = i18nT("common.saving");
@@ -392,9 +418,7 @@ eventForm.addEventListener("submit", async (event) => {
       uid: user.uid,
       collectionId,
       tags,
-      locationName,
-      latitude: latRaw ? Number(latRaw) : null,
-      longitude: lonRaw ? Number(lonRaw) : null,
+      ...readLocationFields("event"),
     });
 
     eventStatus.textContent = i18nT("common.saved");
@@ -417,8 +441,10 @@ async function openEditModal(event) {
   document.querySelector(`#event-edit-form input[name="event-edit-visibility"][value="${event.visibility || "public"}"]`).checked = true;
   document.getElementById("event-edit-tags").value = (event.tags || []).join(", ");
   document.getElementById("event-edit-location-name").value = event.locationName || "";
+  document.getElementById("event-edit-location-address").value = event.locationAddress || "";
   document.getElementById("event-edit-latitude").value = event.latitude ?? "";
   document.getElementById("event-edit-longitude").value = event.longitude ?? "";
+  syncEventEditLocation();
   await populateCollectionSelect(document.getElementById("event-edit-collection"), event.collectionId);
   eventEditStatus.textContent = "";
   eventEditModal.classList.remove("hidden");
@@ -441,8 +467,6 @@ eventEditForm.addEventListener("submit", async (evt) => {
 
   const dateValue = document.getElementById("event-edit-date").value;
   const [year, month, day] = dateValue.split("-").map(Number);
-  const latRaw = document.getElementById("event-edit-latitude").value;
-  const lonRaw = document.getElementById("event-edit-longitude").value;
   const payload = {
     title: document.getElementById("event-edit-title").value.trim(),
     description: document.getElementById("event-edit-description").value.trim(),
@@ -451,9 +475,7 @@ eventEditForm.addEventListener("submit", async (evt) => {
     visibility: document.querySelector('#event-edit-form input[name="event-edit-visibility"]:checked').value,
     collectionId: document.getElementById("event-edit-collection").value || null,
     tags: document.getElementById("event-edit-tags").value.split(",").map((t) => t.trim()).filter(Boolean),
-    locationName: document.getElementById("event-edit-location-name").value.trim() || null,
-    latitude: latRaw ? Number(latRaw) : null,
-    longitude: lonRaw ? Number(lonRaw) : null,
+    ...readLocationFields("event-edit"),
     updatedAt: serverTimestamp(),
   };
   try {

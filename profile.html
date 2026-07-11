@@ -149,7 +149,9 @@
       <button id="photo-modal-close" class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-darkBg/70 text-white hover:text-neonPurple flex items-center justify-center text-xl leading-none">&times;</button>
       <img id="photo-modal-img" src="" alt="" class="w-full max-h-[50vh] object-cover flex-shrink-0">
       <div class="p-4 space-y-3 overflow-y-auto">
+        <div id="photo-modal-topline" class="flex items-center justify-between gap-3 text-[11px] font-code text-textGray"></div>
         <p id="photo-modal-caption" class="text-sm text-white"></p>
+        <p id="photo-modal-meta" class="text-[11px] font-code text-textGray"></p>
         <div class="flex items-center gap-4 pt-3 border-t border-borderNeon/40">
           <button id="photo-modal-like-btn" class="flex items-center gap-1.5 text-xs font-code text-textGray hover:text-rose-400 transition-colors">
             <i class="fa-regular fa-heart"></i> <span id="photo-modal-like-count">0</span>
@@ -157,6 +159,16 @@
         </div>
         <div id="photo-modal-comments"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Read-only detail modal for journal entries / journey events opened from the previews
+       above — a calm window into a shared item, deliberately no like/comment/edit controls. -->
+  <div id="item-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="item-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-lg bg-cardBg neon-border-purple rounded-2xl overflow-hidden max-h-[85vh] flex flex-col">
+      <button id="item-modal-close" class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-darkBg/70 text-white hover:text-neonPurple flex items-center justify-center text-xl leading-none">&times;</button>
+      <div id="item-modal-body" class="p-6 overflow-y-auto space-y-3"></div>
     </div>
   </div>
 

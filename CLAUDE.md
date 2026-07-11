@@ -648,7 +648,7 @@ new order; section *ids* were still not renamed (`events`/`inventory` keep their
 New `career.*` i18n keys in both locales: `summary_header`, `skills_header`, `skills_languages`,
 `skills_programming`, `skills_platforms`, `skills_tools`, `skills_soft`.
 
-**"Resume polish" (most recent)** — print quality + Owner-only resume exposure. No rules
+**"Resume polish"** — print quality + Owner-only resume exposure. No rules
 changes, no nav changes, no new pages.
 1. **A4 print styles** — `styles.css`'s `@media print` block (which used to just hide chrome and
    force a white body) is now a full resume print stylesheet: `@page { size: A4; margin: 12mm }`;
@@ -677,6 +677,83 @@ changes, no nav changes, no new pages.
    static Profile/Education/Leadership prose. Deliberately skipped for `isSelf` so a
    `users/{uid}` getDoc race can never lock the Owner out of their own resume; bare
    `resume.html` visits (no param) are untouched.
+
+**"EdenAtlas v3.4" — "Shared Profile Detail Navigation"** makes `profile.html`'s
+preview content openable, read-only, and privacy-safe. No new pages, no new URL routes, no
+`firestore.rules`/`storage.rules` changes (the audit confirmed the existing rules already allow
+every legitimate read: connections/public via `isMineOrPublic()`, own docs via the uid clause),
+no nav/mobile-shell changes, no new likes/comments anywhere.
+1. **Task-1 audit result**: outside `collection-detail.html?id=`, no per-item detail route exists
+   anywhere (module pages only take `?new=1`), and Profile's photo modal was the sole detail
+   viewer. Rather than invent URL-routed detail pages, all detail views live as **modals on
+   `profile.html` itself**, rendered from the already-visibility-filtered arrays `profile.js`
+   holds in memory — structurally incapable of widening access, and structurally read-only
+   (no edit/delete/upload controls exist in them at all).
+2. **New shared read-only detail modal** (`#item-modal`) for journal entries and journey
+   (life_events) items: owner display name/@handle, a visibility badge, title (+ mood emoji/label
+   for journals, via a duplicated `MOOD_META` per the per-page-duplication convention), date,
+   `locationName` only (lat/lng deliberately never rendered), journal `imageUrl`, full body
+   (escaped via a new `esc()` — full-length user content, unlike the truncated snippets
+   elsewhere), and tags. The pre-existing photo modal gained the same owner line + visibility
+   badge plus a date · album · location meta row; its like/comment behavior (v3.1) is unchanged.
+3. **Clickable previews**: photo grid (already clickable) plus the Journey list, Public Journal
+   list, and Recent Activity feed items are now buttons with hover states, chevrons, and
+   `profile.open_memory/open_journal/open_journey` tooltips; Public Atlas place pills became
+   plain links to `atlas.html` (Atlas stays the one page that owns the map — no per-place detail,
+   names only, never coordinates).
+4. **Own-profile parity**: when `isSelf`, `profile.js` fetches photos/journals/life_events via a
+   single `where("uid","==",me)` query (`fetchMineAll()` — the standard "mine" half, catching
+   private/connections and legacy no-visibility docs) instead of the public+connections merge, so
+   you can preview/open everything you own, badged with its visibility (`profile.private_item`/
+   `common.connections`/`profile.public_item`; missing visibility badges as private). Habits and
+   the Career subset stay public-only as before; non-self viewers' fetch paths are untouched.
+5. **i18n**: new `profile.*` keys in both locales — `open_memory`, `open_journal`, `open_journey`,
+   `shared_with_you` (the connections badge when viewing someone else's item; "与你共享"),
+   `public_item`, `private_item`.
+6. **Known limitations**: comment lists in the photo modal still display commenter emails
+   (pre-existing `c.email` rendering shared with `gallery.js`, predates this pass); the detail
+   modal's contents don't live-retranslate if the language switches while it's open (list
+   re-renders close over the cached data, so the next open is correct).
+
+**"EdenAtlas v3.4.1" (most recent) — "Address-based Location & Atlas Sync"** makes location
+text-first: a place is a *name/address you type*, and coordinates are an explicit, optional
+add-on. No backend, no geocoding API, no `firestore.rules`/`storage.rules` changes (this
+ruleset never restricts field sets via `hasOnly()`), no mobile-shell changes, no migration.
+1. **Standardized optional location fields** on `photos`/`journals`/`life_events` writes:
+   `locationName`, `locationAddress` (new), `latitude`/`longitude` (existing names kept — the
+   brief's conceptual "lat/lng" was deliberately NOT adopted as a field rename, which would
+   have orphaned every existing doc and Atlas's queries), and `locationPrecision`
+   (`"exact"` when coords exist / `"place"` when only text / `"none"`), derived at save time by
+   a `readLocationFields(prefix)` helper duplicated into `gallery.js`/`journal.js`/`timeline.js`
+   per the per-page convention. Old docs are read as-is; missing fields mean legacy.
+2. **Form UX** (create + edit ×3 pages, 6 forms): stacked "Location name" + "Address / Area"
+   inputs, a "This place will appear in your Atlas. Exact coordinates are optional." hint, and
+   the old "Use current location" button reworked into **"Use exact location"**
+   (`wireExactLocationControls(prefix)`, replacing `wireUseLocationBtn`): it now only fills the
+   hidden lat/lng inputs and shows a "Coordinates saved" status chip with a clear (&times;)
+   button — it **no longer writes raw coordinates into the visible locationName field** (the old
+   autofill baked coords into text visible to anyone the item was shared with, a real leak).
+   Status re-syncs on form `reset` events and on edit-modal prefill.
+3. **Atlas Saved Places** — `clusterItems()` now returns `{ mapClusters, placeClusters }`:
+   items with coords pin on the Leaflet map exactly as before; items with only a
+   locationName/locationAddress group by name into a new `#saved-places-section` card grid
+   (name, address, per-type counts), and clicking a place card opens the same
+   `openDetailPanel()` the map pins use (it never needed coordinates). Empty-state/count moved
+   from `renderClusters()` into `setScope()` and covers both lists. Both scope tabs (My Atlas /
+   Connections) get places for free since both flow through `clusterItems()`.
+4. **Profile privacy** (`profile.js`): the v3.4 detail modals' location line became
+   `locationLabelHtml(item)` — shows `locationName · locationAddress` text only, **never raw
+   coordinates for anyone**; if an item has only lat/lng (pre-address docs), the owner sees a
+   "Coordinates saved" note on their own profile and friends/public viewers see nothing.
+   `renderAtlasPlaces()` also counts address-only items now.
+5. **i18n**: new `common.*` keys (`location_name`, `location_address`, `location_hint`,
+   `use_exact_location`, `location_saved` — currently unused, reserved per the brief —
+   `coordinates_saved`) and `atlas.saved_places`/`atlas.saved_places_hint`, both locales.
+   `common.use_current_location` stays in the locale files but is no longer referenced.
+6. **Known limitations**: `index.html`'s Quick Add photo/journal modals still have no location
+   inputs (their docs simply carry no location fields, read as legacy); `locationNote` from the
+   brief's data model was not added (no UI asked for it yet); Atlas's Saved Places groups by
+   exact name text (no fuzzy matching of "KL" vs "Kuala Lumpur").
 
 ## Architecture
 
