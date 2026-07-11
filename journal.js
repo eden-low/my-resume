@@ -1,5 +1,6 @@
 import { auth, googleProvider, db, storage, canParticipate } from "./firebase-init.js";
 import { t as i18nT, getLang, init as initI18n } from "./js/i18n.js";
+import { wirePlaceSearch } from "./js/location-search.js";
 import { resolveDisplayName } from "./js/identity.js";
 import {
   onAuthStateChanged,
@@ -80,11 +81,17 @@ function wireExactLocationControls(prefix) {
   const clearBtn = document.getElementById(`${prefix}-clear-location-btn`);
   const latInput = document.getElementById(`${prefix}-latitude`);
   const lonInput = document.getElementById(`${prefix}-longitude`);
+  const hintInput = document.getElementById(`${prefix}-location-precision-hint`);
   const sync = () => {
     const has = latInput.value !== "" && lonInput.value !== "";
-    status.textContent = has ? i18nT("common.coordinates_saved") : "";
+    if (!has) hintInput.value = "";
+    status.textContent = has
+      ? i18nT(hintInput.value === "place_resolved" ? "common.map_pin_enabled" : "common.coordinates_saved")
+      : "";
+    status.title = has ? i18nT("common.place_pin_hint") : "";
     status.classList.toggle("hidden", !has);
     clearBtn.classList.toggle("hidden", !has);
+    clearBtn.title = i18nT("common.clear_selected_place");
   };
   btn.addEventListener("click", async () => {
     btn.disabled = true;
@@ -96,11 +103,13 @@ function wireExactLocationControls(prefix) {
     if (!loc) return;
     latInput.value = loc.lat;
     lonInput.value = loc.lon;
+    hintInput.value = "exact";
     sync();
   });
   clearBtn.addEventListener("click", () => {
     latInput.value = "";
     lonInput.value = "";
+    hintInput.value = "";
     sync();
   });
   btn.closest("form")?.addEventListener("reset", () => setTimeout(sync, 0));
@@ -115,12 +124,18 @@ function readLocationFields(prefix) {
   const lonRaw = document.getElementById(`${prefix}-longitude`).value;
   const latitude = latRaw ? Number(latRaw) : null;
   const longitude = lonRaw ? Number(lonRaw) : null;
+  // v3.4.2: "place_resolved" = coordinates came from a user-selected place-search result,
+  // "exact" = captured from the device. Both pin on the Atlas map identically.
+  const hint = document.getElementById(`${prefix}-location-precision-hint`).value;
   return {
     locationName,
     locationAddress,
     latitude,
     longitude,
-    locationPrecision: latitude != null && longitude != null ? "exact" : locationName || locationAddress ? "place" : "none",
+    locationPrecision:
+      latitude != null && longitude != null
+        ? (hint === "place_resolved" ? "place_resolved" : "exact")
+        : locationName || locationAddress ? "place" : "none",
   };
 }
 
@@ -444,8 +459,10 @@ journalEmptyCta.addEventListener("click", () => { populateCollectionSelect(docum
 journalModalClose.addEventListener("click", closeModal);
 journalModalBackdrop.addEventListener("click", closeModal);
 
-wireExactLocationControls("journal");
+const syncJournalLocation = wireExactLocationControls("journal");
 const syncJournalEditLocation = wireExactLocationControls("journal-edit");
+wirePlaceSearch("journal", syncJournalLocation);
+wirePlaceSearch("journal-edit", syncJournalEditLocation);
 
 journalForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -508,6 +525,8 @@ async function openEditModal(entry) {
   document.getElementById("journal-edit-location-address").value = entry.locationAddress || "";
   document.getElementById("journal-edit-latitude").value = entry.latitude ?? "";
   document.getElementById("journal-edit-longitude").value = entry.longitude ?? "";
+  document.getElementById("journal-edit-location-precision-hint").value =
+    entry.latitude != null && entry.longitude != null && entry.locationPrecision === "place_resolved" ? "place_resolved" : "";
   syncJournalEditLocation();
   await populateCollectionSelect(document.getElementById("journal-edit-collection"), entry.collectionId);
   journalEditStatus.textContent = "";

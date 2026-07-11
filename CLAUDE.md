@@ -715,7 +715,7 @@ no nav/mobile-shell changes, no new likes/comments anywhere.
    modal's contents don't live-retranslate if the language switches while it's open (list
    re-renders close over the cached data, so the next open is correct).
 
-**"EdenAtlas v3.4.1" (most recent) — "Address-based Location & Atlas Sync"** makes location
+**"EdenAtlas v3.4.1" — "Address-based Location & Atlas Sync"** makes location
 text-first: a place is a *name/address you type*, and coordinates are an explicit, optional
 add-on. No backend, no geocoding API, no `firestore.rules`/`storage.rules` changes (this
 ruleset never restricts field sets via `hasOnly()`), no mobile-shell changes, no migration.
@@ -754,6 +754,47 @@ ruleset never restricts field sets via `hasOnly()`), no mobile-shell changes, no
    inputs (their docs simply carry no location fields, read as legacy); `locationNote` from the
    brief's data model was not added (no UI asked for it yet); Atlas's Saved Places groups by
    exact name text (no fuzzy matching of "KL" vs "Kuala Lumpur").
+
+**"EdenAtlas v3.4.2" (most recent) — "Place Search & Auto Map Pin"** adds optional geocoding
+to the Memories/Journal/Journey location forms: type a place, press **Search place**, pick a
+result, and the item saves name + address + coordinates so Atlas pins it automatically. No
+backend, no API key, no rules changes, no field renames, no Atlas/profile code changes.
+1. **[js/location-search.js](js/location-search.js)** — a new shared pure-helper module (same
+   tier as `js/identity.js`, not a self-injecting shell module): `searchPlaces(query)` behind a
+   swappable provider object (currently **OpenStreetMap Nominatim** — free, keyless, CORS-open;
+   search is button-triggered only, capped at 5 results, `accept-language` follows `getLang()`,
+   and the results list renders an OpenStreetMap attribution line, per Nominatim's usage
+   policy), plus `wirePlaceSearch(prefix, onCoordsChange)` which wires one form's search
+   button/status/results against the v3.4.1 input ids. Queries under 3 chars, zero results, and
+   fetch failures each get their own status message. Added to `service-worker.js`'s `PRECACHE`
+   (`CACHE` bumped to `eden-shell-v12`) since precached pages import it. The Nominatim request
+   itself is never intercepted — the SW passes all cross-origin requests through.
+2. **Coordinates only on explicit selection.** Typing alone never geocodes: picking a result
+   fills name/address/hidden lat/lng and a new hidden `{prefix}-location-precision-hint` input
+   (`"place_resolved"`); the GPS "Use exact location" button sets it to `"exact"`.
+   `readLocationFields()` now emits `locationPrecision: "place_resolved"` for search-picked
+   coords ("exact" for GPS/legacy, "place"/"none" as before — Atlas treats both coord tiers
+   identically, it only looks at lat/lng). The status chip reads **"Map pin enabled"** for a
+   picked place vs "Coordinates saved" for GPS, with a `place_pin_hint` tooltip; the existing
+   × clear button also clears the hint (title: `clear_selected_place`).
+3. **Safer rename behavior (Task 5)**: manually editing the location-name input *after*
+   selecting a search result clears the saved coordinates and returns the item to place-only
+   mode (status: "Saved as place only") — the typed text may no longer describe that pin.
+   Programmatic `.value` writes (result selection, edit-modal prefill) don't fire `input`, so
+   they're unaffected. Edit modals prefill the hint from the doc's stored `locationPrecision`,
+   so a re-saved item keeps `place_resolved` unless touched.
+4. **i18n**: new `common.*` keys in both locales — `search_place`, `place_search`,
+   `select_this_place`, `no_places_found`, `map_pin_enabled`, `clear_selected_place`,
+   `search_min_chars`, `could_not_search_places`, `saved_as_place_only`, `place_pin_hint`.
+5. **Privacy unchanged**: friends/public viewers still only ever see locationName/
+   locationAddress text (v3.4.1's `locationLabelHtml()` never renders coordinates for anyone);
+   `place_resolved` items are labeled by place text like everything else.
+6. **Known limitations**: Nominatim has no SLA and rate-limits aggressively (button-based
+   search keeps volume low, but a burst of searches can 429 — surfaced as "Could not search
+   places"); results quality for small local businesses ("My favorite mamak") is limited —
+   those stay place-only by design; no reverse geocoding (the GPS button still saves bare
+   coordinates without deriving a name); `index.html` Quick Add modals still have no location
+   UI.
 
 ## Architecture
 
