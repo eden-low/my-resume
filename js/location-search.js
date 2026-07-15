@@ -9,6 +9,7 @@
 // service worker never intercepts this (cross-origin requests are passed through).
 
 import { t, getLang } from "./i18n.js";
+import { validateCoords } from "./location-fields.js";
 
 export const MIN_QUERY_LENGTH = 3;
 const ATTRIBUTION = "OpenStreetMap";
@@ -25,15 +26,18 @@ const provider = {
     const rows = await res.json();
     return rows
       .map((r) => {
-        const latitude = Number(r.lat);
-        const longitude = Number(r.lon);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+        // Nominatim results are already lat/lon in-range by construction, but every
+        // coordinate that reaches a caller goes through the same boundary validator the
+        // save pipeline uses — one geocoder response with a malformed lat/lon can never
+        // slip an unvalidated pair past this module.
+        const coords = validateCoords(r.lat, r.lon);
+        if (!coords) return null;
         const address = r.display_name || "";
         return {
           name: r.name || address.split(",")[0].trim() || query,
           address,
-          latitude,
-          longitude,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
           source: provider.source,
         };
       })
@@ -59,6 +63,18 @@ function esc(s) {
 // ever written when the user explicitly picks a result — typing alone never geocodes.
 // Manually editing the name after picking a result drops the saved pin (safer default:
 // back to place-only mode). `onCoordsChange` is the page's own status-chip sync function.
+//
+// Returns { confirmPlace(name) } — call this right after programmatically prefilling an
+// existing "place_resolved" location (e.g. opening an edit modal for a Memory that already
+// has a search-confirmed pin), so this instance's rename-guard knows the current text IS the
+// confirmed place. Without it, `selectedName` stays null for the lifetime of the page unless a
+// *fresh* search-select happens inside this exact form — so opening an edit modal and having
+// any "input" event fire on the name field (retyping identical text, a mobile autocorrect/
+// autocapitalize pass, a browser autofill preview) would look like an unconfirmed manual
+// rename and silently null out valid, already-saved coordinates before the next save, even
+// though the user never touched the location. This was a real, reproducible bug: editing an
+// already-located Memory/Journal/Journey entry's unrelated fields (caption, tags, visibility)
+// could drop its Atlas marker.
 export function wirePlaceSearch(prefix, onCoordsChange) {
   const nameInput = document.getElementById(`${prefix}-location-name`);
   const addressInput = document.getElementById(`${prefix}-location-address`);
@@ -69,10 +85,11 @@ export function wirePlaceSearch(prefix, onCoordsChange) {
   const statusEl = document.getElementById(`${prefix}-place-search-status`);
   const resultsEl = document.getElementById(`${prefix}-place-results`);
 
-  // Name of the most recently selected result — lets the input listener below tell a real
-  // manual rename apart from a spurious input event (mobile autocorrect/autocapitalize and
-  // some extensions fire "input" without actually changing the text, which used to silently
-  // drop the just-selected coordinates before save).
+  // Name of the currently-confirmed result — either just picked from search, or declared via
+  // confirmPlace() when an existing place_resolved location was prefilled. Lets the input
+  // listener below tell a real manual rename apart from a spurious input event (mobile
+  // autocorrect/autocapitalize and some extensions fire "input" without actually changing the
+  // text, which used to silently drop the just-selected coordinates before save).
   let selectedName = null;
 
   function setStatus(text) {
@@ -150,4 +167,12 @@ export function wirePlaceSearch(prefix, onCoordsChange) {
     setStatus(t("common.saved_as_place_only"));
     onCoordsChange();
   });
+
+  return {
+    // See the function-level doc above. Pass null/"" to explicitly mark "no confirmed place"
+    // (e.g. opening an edit modal for an entry with no place_resolved location).
+    confirmPlace(name) {
+      selectedName = name ? name.trim() : null;
+    },
+  };
 }

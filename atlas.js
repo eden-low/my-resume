@@ -1,5 +1,6 @@
 import { auth, db, getUserMode } from "./firebase-init.js";
 import { getLang, t as i18nT } from "./js/i18n.js";
+import { validateCoords } from "./js/location-fields.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -106,16 +107,13 @@ async function mergeMinePublic(name) {
 // grouped by name into the new Saved Places section — coordinates were never required for a
 // place to belong in the Atlas). Old docs missing every location field are skipped as before.
 // Coordinates may arrive as numbers or numeric strings; 0 is a valid coordinate, so this
-// parses instead of truthy-checking, and rejects NaN/blank. One unparseable doc used to be
-// able to abort marker rendering mid-loop (L.marker throws on an invalid LatLng, killing
-// every pin after it — "the map only shows one pin"), or crash the Connections tab's
-// toFixed() rounding; now it degrades to Saved Places (if it has place text) or is skipped.
-function parseCoord(v) {
-  if (v == null || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
+// validates (via the same js/location-fields.js boundary validator every save path uses —
+// finite AND in-range, never a bare truthy/parse check) instead of truthy-checking, and
+// rejects NaN/blank/out-of-range. One unparseable or out-of-range doc used to be able to abort
+// marker rendering mid-loop (L.marker on a bad LatLng can throw or place a pin off the visible
+// world, taking every later cluster with it — "the map only shows one pin"), or crash the
+// Connections tab's toFixed() rounding; now it degrades to Saved Places (if it has place text)
+// or is skipped, and every other doc still renders.
 function clusterItems(photos, journals, events, precision) {
   const clusters = new Map();
   const places = new Map();
@@ -132,13 +130,12 @@ function clusterItems(photos, journals, events, precision) {
   }
   function addItem(item, type) {
     const placeText = item.locationName || item.locationAddress;
-    const parsedLat = parseCoord(item.latitude);
-    const parsedLon = parseCoord(item.longitude);
+    const coords = validateCoords(item.latitude, item.longitude);
     const rawHadCoords = item.latitude != null && item.latitude !== "" && item.longitude != null && item.longitude !== "";
-    if (parsedLat != null && parsedLon != null) {
+    if (coords) {
       stats.withCoords++;
-      const lat = round(parsedLat);
-      const lon = round(parsedLon);
+      const lat = round(coords.latitude);
+      const lon = round(coords.longitude);
       const key = (placeText || `${lat},${lon}`).trim().toLowerCase() || `${lat},${lon}`;
       if (!clusters.has(key)) {
         clusters.set(key, {

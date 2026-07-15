@@ -1,14 +1,15 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
-// v18 (résumé Projects de-duplication): removes the portfolio-style Featured Projects strip from
-// resume.html so the résumé shows a single #projects-list grid — the edited resume.html/career.js/
-// styles.css must land atomically (a stale cached resume.html with the new career.js, or vice
-// versa, is exactly what would re-introduce the two-section duplication), so the cache is bumped to
-// evict every prior HTML/JS/CSS copy on activate. js/resume-data.js stays in PRECACHE. Earlier this
-// pass: v16 (login centring + public résumé), v17 (shared résumé-data module). Online behaviour is
-// unchanged (network-first); bypass hosts are unchanged.
-const CACHE = "eden-shell-v18";
+// v19 (canonical location pipeline fix): gallery.js/journal.js/timeline.js/atlas.js/
+// js/location-search.js were edited and a new js/location-fields.js module was added (see
+// CLAUDE.md's location-pipeline fix notes) — the cache is bumped so an offline-fallback visit
+// can never serve a pre-fix copy of one of these files next to a post-fix copy of another
+// (exactly the "incompatible cached versions" failure mode this fix pass audited for). Online
+// behaviour is unchanged (network-first — the fetch handler always tries the network first and
+// only falls back to cache when that fails, so this bump only matters for the offline path).
+// Earlier: v18 (résumé Projects de-duplication).
+const CACHE = "eden-shell-v19";
 
 const PRECACHE = [
   "index.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
@@ -20,7 +21,7 @@ const PRECACHE = [
   "habits.js", "notifications.js", "export.js", "calendar.js", "insights.js",
   "profile.js", "career.js", "atlas.js", "portfolio.js", "project.js",
   "js/i18n.js", "js/mobile-nav.js", "js/sidebar.js", "js/splash.js", "js/location-search.js",
-  "js/resume-data.js",
+  "js/location-fields.js", "js/resume-data.js",
   "locales/en.json", "locales/zh-CN.json",
   "manifest.json", "images/icon-192.png", "images/icon-512.png", "images/logo-mark.png",
 ];

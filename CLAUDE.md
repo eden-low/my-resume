@@ -942,6 +942,45 @@ strip markup + its render branch (résumé keeps the single `#projects-list` gri
 still drives portfolio.js's Selected Work). `service-worker.js` `CACHE` → `eden-shell-v18` so the
 edited resume.html/career.js/styles.css evict atomically.
 
+**Location pipeline fix (most recent)** — investigated a reported "Memories → Search Location →
+Save → Atlas marker missing" bug. Traced every path (Nominatim search-select, GPS "Use exact
+location", raw text, edit without/with a location change) through `gallery.js`/`journal.js`/
+`timeline.js`'s create+edit handlers and `atlas.js`'s fetch/cluster/render pipeline; no EXIF
+extraction feature exists anywhere in this codebase (the bug report's "working path" premise
+doesn't match reality — confirmed by grepping for exif/GPS-extraction UI text, none found). The
+search-select and GPS paths already converged on the same write shape (both already fixed by the
+earlier, already-committed "v3.4.2 follow-up" passes — coordinate parsing, cache invalidation),
+but two real gaps remained: (1) `js/location-search.js`'s `wirePlaceSearch()` tracked a
+`selectedName` closure variable used to tell a real manual rename apart from a spurious "input"
+event — it was only ever set by a fresh in-form search-select, never by an edit modal's
+programmatic prefill of an *existing* `place_resolved` location, so any no-op input event during
+an edit session (mobile autocorrect, retyping identical text) could silently null out valid,
+already-saved coordinates before the next save, dropping a previously-mapped item's Atlas marker
+after an unrelated metadata edit; (2) neither the write side (`readLocationFields`) nor the read
+side (`atlas.js`'s coordinate parsing) enforced latitude/longitude range (-90..90/-180..180), so
+an out-of-range value could reach Firestore or reach Leaflet unfiltered. Fixed by extracting the
+three near-identical `getBrowserLocation`/`wireExactLocationControls`/`readLocationFields` copies
+in `gallery.js`/`journal.js`/`timeline.js` into one canonical module,
+[js/location-fields.js](js/location-fields.js) (`parseCoordinate`, `validateCoords` — finite AND
+in-range, never a fabricated `{0,0}` fallback — `normalizeLocation`, `readLocationFields`,
+`wireExactLocationControls`), which both the three pages and `js/location-search.js` (Nominatim
+results) and `atlas.js` (cluster/marker read side) now import instead of maintaining separate
+copies — search/manual, GPS, and any future location source all funnel through the same
+`normalizeLocation()` before a Firestore write, and the read side validates the same way before a
+doc is allowed to produce a marker. `wirePlaceSearch()` now returns `{ confirmPlace(name) }`;
+each page's `openEditModal()` calls it right after prefilling an existing location, closing gap
+(1). Schema unchanged (`locationName`/`locationAddress`/`latitude`/`longitude`/
+`locationPrecision`, same as v3.4.1/v3.4.2) — no migration, existing legacy/malformed docs
+degrade safely to Saved Places or are skipped, never crash the marker loop. UX: the "Use exact
+location" status chip now shows the confirmed place name (`common.location_confirmed`, "Confirmed:
+{name}") when one exists; a successful save with valid coordinates shows a "View on Atlas" link
+(`common.view_on_atlas`) before the modal auto-closes, on all three pages. New i18n keys
+(`common.location_confirmed`, `common.location_invalid`, `common.view_on_atlas`) in both locales.
+`service-worker.js` `CACHE` → `eden-shell-v19` with `js/location-fields.js` added to `PRECACHE`
+(the fetch handler is network-first, so this bump only matters for the offline-fallback path, not
+normal online use). No Firestore/Storage rules changes (this bug was never a rules/permissions
+issue), no production writes, no deploy.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

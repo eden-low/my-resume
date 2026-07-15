@@ -1,6 +1,7 @@
 import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
 import { t as i18nT, getLang } from "./js/i18n.js";
 import { wirePlaceSearch } from "./js/location-search.js";
+import { readLocationFields, wireExactLocationControls } from "./js/location-fields.js";
 import { resolveDisplayName } from "./js/identity.js";
 import {
   onAuthStateChanged,
@@ -51,87 +52,6 @@ let activeFilter = "all";
 let searchQuery = "";
 const expandedIds = new Set();
 
-function getBrowserLocation() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 8000, maximumAge: 0 }
-    );
-  });
-}
-
-// v3.4.1: exact coordinates are an explicit, optional add-on — the button only fills the
-// hidden lat/lng inputs (never the visible name field, which used to get raw coordinates
-// baked into locationName, leaking them to anyone the event was visible to). Mirrors
-// gallery.js's copy per the per-page duplication convention.
-function wireExactLocationControls(prefix) {
-  const btn = document.getElementById(`${prefix}-use-location-btn`);
-  const status = document.getElementById(`${prefix}-location-status`);
-  const clearBtn = document.getElementById(`${prefix}-clear-location-btn`);
-  const latInput = document.getElementById(`${prefix}-latitude`);
-  const lonInput = document.getElementById(`${prefix}-longitude`);
-  const hintInput = document.getElementById(`${prefix}-location-precision-hint`);
-  const sync = () => {
-    const has = latInput.value !== "" && lonInput.value !== "";
-    if (!has) hintInput.value = "";
-    status.textContent = has
-      ? i18nT(hintInput.value === "place_resolved" ? "common.map_pin_enabled" : "common.coordinates_saved")
-      : "";
-    status.title = has ? i18nT("common.place_pin_hint") : "";
-    status.classList.toggle("hidden", !has);
-    clearBtn.classList.toggle("hidden", !has);
-    clearBtn.title = i18nT("common.clear_selected_place");
-  };
-  btn.addEventListener("click", async () => {
-    btn.disabled = true;
-    const original = btn.textContent;
-    btn.textContent = i18nT("common.locating");
-    const loc = await getBrowserLocation();
-    btn.disabled = false;
-    btn.textContent = original;
-    if (!loc) return;
-    latInput.value = loc.lat;
-    lonInput.value = loc.lon;
-    hintInput.value = "exact";
-    sync();
-  });
-  clearBtn.addEventListener("click", () => {
-    latInput.value = "";
-    lonInput.value = "";
-    hintInput.value = "";
-    sync();
-  });
-  btn.closest("form")?.addEventListener("reset", () => setTimeout(sync, 0));
-  return sync;
-}
-
-// Standardized optional location fields (v3.4.1) — see gallery.js's readLocationFields.
-function readLocationFields(prefix) {
-  const locationName = document.getElementById(`${prefix}-location-name`).value.trim() || null;
-  const locationAddress = document.getElementById(`${prefix}-location-address`).value.trim() || null;
-  const latRaw = document.getElementById(`${prefix}-latitude`).value;
-  const lonRaw = document.getElementById(`${prefix}-longitude`).value;
-  const latitude = latRaw ? Number(latRaw) : null;
-  const longitude = lonRaw ? Number(lonRaw) : null;
-  // v3.4.2: "place_resolved" = coordinates came from a user-selected place-search result,
-  // "exact" = captured from the device. Both pin on the Atlas map identically.
-  const hint = document.getElementById(`${prefix}-location-precision-hint`).value;
-  return {
-    locationName,
-    locationAddress,
-    latitude,
-    longitude,
-    locationPrecision:
-      latitude != null && longitude != null
-        ? (hint === "place_resolved" ? "place_resolved" : "exact")
-        : locationName || locationAddress ? "place" : "none",
-  };
-}
 
 let cachedCollections = null;
 async function loadMyCollectionOptions() {
@@ -396,10 +316,10 @@ newEventBtn.addEventListener("click", openModal);
 eventModalClose.addEventListener("click", closeModal);
 eventModalBackdrop.addEventListener("click", closeModal);
 
-const syncEventLocation = wireExactLocationControls("event");
-const syncEventEditLocation = wireExactLocationControls("event-edit");
+const syncEventLocation = wireExactLocationControls("event", i18nT);
+const syncEventEditLocation = wireExactLocationControls("event-edit", i18nT);
 wirePlaceSearch("event", syncEventLocation);
-wirePlaceSearch("event-edit", syncEventEditLocation);
+const eventEditPlaceSearch = wirePlaceSearch("event-edit", syncEventEditLocation);
 
 function dateToInputValue(ts) {
   const d = ts?.toDate?.();
@@ -426,6 +346,7 @@ eventForm.addEventListener("submit", async (event) => {
     const [year, month, day] = dateValue.split("-").map(Number);
     const date = Timestamp.fromDate(new Date(year, month - 1, day));
 
+    const locationFields = readLocationFields("event");
     await addDoc(collection(db, "life_events"), {
       title,
       description,
@@ -435,12 +356,24 @@ eventForm.addEventListener("submit", async (event) => {
       uid: user.uid,
       collectionId,
       tags,
-      ...readLocationFields("event"),
+      ...locationFields,
     });
 
-    eventStatus.textContent = i18nT("common.saved");
     await fetchVisibleEvents();
-    closeModal();
+    // Phase 4 UX: give a "View on Atlas" way out when this event actually carries valid
+    // coordinates, instead of instantly wiping the success message via closeModal().
+    if (locationFields.latitude != null && locationFields.longitude != null) {
+      eventStatus.replaceChildren(document.createTextNode(`${i18nT("common.saved")} · `));
+      const link = document.createElement("a");
+      link.href = "atlas.html";
+      link.className = "text-neonPurple hover:underline";
+      link.textContent = i18nT("common.view_on_atlas");
+      eventStatus.appendChild(link);
+      setTimeout(closeModal, 2500);
+    } else {
+      eventStatus.textContent = i18nT("common.saved");
+      closeModal();
+    }
   } catch (err) {
     console.error("Save failed", err);
     eventStatus.textContent = i18nT("common.couldnt_save");
@@ -461,8 +394,12 @@ async function openEditModal(event) {
   document.getElementById("event-edit-location-address").value = event.locationAddress || "";
   document.getElementById("event-edit-latitude").value = event.latitude ?? "";
   document.getElementById("event-edit-longitude").value = event.longitude ?? "";
-  document.getElementById("event-edit-location-precision-hint").value =
-    event.latitude != null && event.longitude != null && event.locationPrecision === "place_resolved" ? "place_resolved" : "";
+  const isPlaceResolved = event.latitude != null && event.longitude != null && event.locationPrecision === "place_resolved";
+  document.getElementById("event-edit-location-precision-hint").value = isPlaceResolved ? "place_resolved" : "";
+  // See gallery.js's openEditModal for why this call matters: without it, a no-op "input"
+  // event during this edit session could be mistaken for a manual rename and silently drop
+  // these valid, already-confirmed coordinates before save.
+  eventEditPlaceSearch.confirmPlace(isPlaceResolved ? event.locationName : null);
   syncEventEditLocation();
   await populateCollectionSelect(document.getElementById("event-edit-collection"), event.collectionId);
   eventEditStatus.textContent = "";
