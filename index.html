@@ -340,6 +340,7 @@
         import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
         import { t } from "./js/i18n.js";
         import { resolveDisplayName } from "./js/identity.js";
+        import { excludeDeleted } from "./js/memory-filters.js";
 
         // ---- v3.2: private-space redirect notice (see auth-guard.js's data-owner-only guard) ----
         (function showPrivateSpaceNoticeIfNeeded() {
@@ -412,7 +413,9 @@
             if (!user) return [];
             try {
                 const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
-                return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+                // Trashed Memories never count toward Today/Recent Memories/This Month — a
+                // no-op for journals/life_events/habits/expenses, none of which carry deletedAt.
+                return excludeDeleted(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
             } catch (err) {
                 console.error(`[home] ${name} fetch failed:`, err.code || err);
                 return [];

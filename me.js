@@ -1,6 +1,7 @@
 import { auth, db, isOwner, OWNER_EMAIL, canParticipate } from "./firebase-init.js";
 import { getLang, setLang, init as initI18n, t } from "./js/i18n.js";
 import { resolveDisplayName, computeDisplayName, invalidateIdentityCache } from "./js/identity.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -69,7 +70,9 @@ async function fetchMyCollection(name) {
   if (!user) return [];
   try {
     const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Trashed Memories never count toward Overview's analytics/achievements — a no-op for
+    // journals/expenses/habits, none of which carry deletedAt.
+    return excludeDeleted(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   } catch (err) {
     console.error(`[me] ${name} query failed:`, err.code || err);
     return [];

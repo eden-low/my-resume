@@ -1,4 +1,5 @@
 import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -65,7 +66,10 @@ async function mergeMinePublic(name) {
       console.error(`[collections] ${name} mine query failed:`, err.code || err);
     }
   }
-  return [...map.values()];
+  // Trashed Memories never count toward a Collection's item counts — a no-op for every other
+  // type this is called with (journals/life_events/career_projects), which never carry
+  // deletedAt.
+  return excludeDeleted([...map.values()]);
 }
 
 async function fetchMyExpenses() {

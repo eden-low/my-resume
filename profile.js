@@ -1,6 +1,7 @@
 import { auth, db, getUserMode } from "./firebase-init.js";
 import { t as i18nT } from "./js/i18n.js";
 import { publicDisplayName, formatHandle } from "./js/identity.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -128,7 +129,9 @@ function renderHeader(person) {
 async function fetchByVisibility(collectionName, uid, visibility) {
   try {
     const snap = await getDocs(query(collection(db, collectionName), where("uid", "==", uid), where("visibility", "==", visibility)));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Trashed Memories never appear on anyone's profile (own or someone else's) — a no-op for
+    // journals/life_events, which never carry deletedAt.
+    return excludeDeleted(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   } catch (err) {
     console.error(`[profile] ${visibility} ${collectionName} for ${uid} failed:`, err.code || err);
     return [];
@@ -158,7 +161,9 @@ async function fetchVisibleFor(collectionName, uid, includeConnections) {
 async function fetchMineAll(collectionName, uid) {
   try {
     const snap = await getDocs(query(collection(db, collectionName), where("uid", "==", uid)));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Even previewing your own profile never shows your own trashed Memories — Trash is a
+    // dedicated Memories-page view, not something Profile should surface a second copy of.
+    return excludeDeleted(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   } catch (err) {
     console.error(`[profile] own ${collectionName} fetch failed:`, err.code || err);
     return [];

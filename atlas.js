@@ -1,6 +1,7 @@
 import { auth, db, getUserMode } from "./firebase-init.js";
 import { getLang, t as i18nT } from "./js/i18n.js";
 import { validateCoords } from "./js/location-fields.js";
+import { isDeleted } from "./js/memory-filters.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -122,13 +123,17 @@ function clusterItems(photos, journals, events, precision) {
     return precision != null ? Number(n.toFixed(precision)) : n;
   }
   function bump(c, item, type) {
-    if (type === "memories") { c.memories++; if (item.url) c.photos.push(item.url); }
+    if (type === "memories") { c.memories++; if (item.url) c.photos.push(item.url); if (item.id) c.memoryIds.add(item.id); }
     if (type === "journal") c.journal++;
     if (type === "journey") c.journey++;
     if (item.collectionId) c.collectionIds.add(item.collectionId);
     c.latest = Math.max(c.latest, itemMillis(item));
   }
   function addItem(item, type) {
+    // Trashed Memories never enter clustering at all — no marker, no Saved Places card, not
+    // even counted in stats.noLocation. Journals/life_events never carry deletedAt, so this
+    // check is a no-op for those types (isDeleted() is false for anything without the field).
+    if (isDeleted(item)) return;
     const placeText = item.locationName || item.locationAddress;
     const coords = validateCoords(item.latitude, item.longitude);
     const rawHadCoords = item.latitude != null && item.latitude !== "" && item.longitude != null && item.longitude !== "";
@@ -144,6 +149,7 @@ function clusterItems(photos, journals, events, precision) {
           lat, lon,
           memories: 0, journal: 0, journey: 0,
           collectionIds: new Set(),
+          memoryIds: new Set(),
           photos: [],
           latest: 0,
         });
@@ -163,6 +169,7 @@ function clusterItems(photos, journals, events, precision) {
           address: item.locationName ? item.locationAddress || null : null,
           memories: 0, journal: 0, journey: 0,
           collectionIds: new Set(),
+          memoryIds: new Set(),
           photos: [],
           latest: 0,
         });
@@ -368,10 +375,41 @@ function initMap() {
   }).addTo(map);
 }
 
+function findClusterForMemory(clusters, memoryId) {
+  return clusters.find((c) => c.memoryIds && c.memoryIds.has(memoryId));
+}
+
+// Phase 6 deep link: gallery.js's post-save success state links here as
+// atlas.html?memory=<encoded-doc-id> to focus the marker for the Memory that was just
+// saved/edited. The query param is never trusted as authorization by itself — it's only ever
+// resolved against mineClusters, which loadMineClusters() built from fetchMyOnly("photos")'s
+// `where("uid","==",myUid)` query, i.e. Firestore/firestore.rules already proved these are the
+// signed-in user's own docs before this function ever runs. An id that's missing, belongs to
+// someone else, or was trashed (excludeDeleted-equivalent filtering already happened inside
+// clusterItems via isDeleted()) simply isn't found here and is silently ignored — no error, no
+// data exposure. The query param itself is always stripped via history.replaceState (no new
+// history entry) whether or not the id resolved, so a refresh/back never re-triggers it.
+async function maybeFocusMemoryFromQuery() {
+  const params = new URLSearchParams(location.search);
+  const memoryId = params.get("memory");
+  if (!memoryId) return;
+  params.delete("memory");
+  const qs = params.toString();
+  history.replaceState(null, "", location.pathname + (qs ? `?${qs}` : "") + location.hash);
+  if (activeScope !== "mine" || !mineClusters) return; // deep link only ever targets the owner's own Memories
+  const cluster = findClusterForMemory(mineClusters.mapClusters, memoryId);
+  if (!cluster) return;
+  const idx = mineClusters.mapClusters.indexOf(cluster);
+  openDetailPanel(cluster);
+  map.flyTo([cluster.lat, cluster.lon], Math.max(map.getZoom(), 14));
+  markers[idx]?.openTooltip();
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!map) initMap();
   cachedCollections = await mergeMinePublic("collections");
   await setScope("mine");
+  await maybeFocusMemoryFromQuery();
 });
 
 // v3.4.2 fix: the cluster caches used to live as long as the page did, so an Atlas kept open

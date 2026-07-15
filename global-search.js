@@ -8,6 +8,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/f
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { init as initI18n, applyTranslations, t } from "./js/i18n.js";
 import { publicDisplayName } from "./js/identity.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 
 // "Reports" isn't its own searchable collection (reports.html/insights.js has no documents of
 // its own — it's a derived analytics view over `expenses`), so that bucket is mapped to the
@@ -106,7 +107,9 @@ async function fetchMineOrPublic(name) {
       console.error(`[global-search] ${name} own query failed:`, err.code || err);
     }
   }
-  return [...map.values()];
+  // Trashed Memories (photos with deletedAt set) never surface in search results — harmless
+  // no-op for journals/life_events/habits, which never carry that field.
+  return excludeDeleted([...map.values()]);
 }
 
 // Expenses are always private — this only ever fetches the signed-in user's own, never anyone

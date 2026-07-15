@@ -2,6 +2,7 @@ import { auth, db } from "./firebase-init.js";
 import { getLang } from "./js/i18n.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 
 const monthLabel = document.getElementById("cal-month-label");
 const calGrid = document.getElementById("cal-grid");
@@ -43,7 +44,9 @@ async function fetchMine(collectionName) {
   if (!user) return [];
   try {
     const snap = await getDocs(query(collection(db, collectionName), where("uid", "==", user.uid)));
-    return snap.docs.map((d) => d.data());
+    // Trashed Memories never show up on the day grid — a no-op for expenses/journals, neither
+    // of which carry deletedAt.
+    return excludeDeleted(snap.docs.map((d) => d.data()));
   } catch (err) {
     console.error(`[calendar] ${collectionName} fetch failed:`, err.code || err);
     return [];

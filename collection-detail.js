@@ -11,6 +11,7 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { getLang, t as i18nT } from "./js/i18n.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 
 const id = new URLSearchParams(location.search).get("id");
 const isUncategorized = id === "uncategorized";
@@ -56,7 +57,9 @@ async function mergeMinePublic(name) {
       console.error(`[collection-detail] ${name} mine query failed:`, err.code || err);
     }
   }
-  return [...map.values()];
+  // Trashed Memories never appear inside a Collection's detail view either — a no-op for the
+  // other types this is called with, which never carry deletedAt.
+  return excludeDeleted([...map.values()]);
 }
 
 async function fetchMyOnly(name) {
@@ -64,7 +67,7 @@ async function fetchMyOnly(name) {
   if (!user) return [];
   try {
     const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return excludeDeleted(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   } catch (err) {
     console.error(`[collection-detail] ${name} mine query failed:`, err.code || err);
     return [];

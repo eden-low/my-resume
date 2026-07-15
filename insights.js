@@ -2,6 +2,7 @@ import { auth, db } from "./firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { t, getLang } from "./js/i18n.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 
 function downloadFile(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
@@ -36,7 +37,9 @@ async function fetchMine(collectionName) {
   if (!user) return [];
   try {
     const snap = await getDocs(query(collection(db, collectionName), where("uid", "==", user.uid)));
-    return snap.docs.map((d) => d.data());
+    // Trashed Memories never count toward Reports' stat cards/Monthly Story/Year in Review —
+    // a no-op for every other collection this is called with, none of which carry deletedAt.
+    return excludeDeleted(snap.docs.map((d) => d.data()));
   } catch (err) {
     console.error(`[insights] ${collectionName} fetch failed:`, err.code || err);
     return [];

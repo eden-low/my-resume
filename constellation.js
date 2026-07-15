@@ -17,6 +17,7 @@ import {
   signOut,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { excludeDeleted } from "./js/memory-filters.js";
 import { t } from "./js/i18n.js";
 import { resolveDisplayName } from "./js/identity.js";
 
@@ -50,7 +51,9 @@ async function fetchMine(name) {
   if (!user) return [];
   try {
     const snap = await getDocs(query(collection(db, name), where("uid", "==", user.uid)));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Trashed Memories never appear as nodes on the constellation — a no-op for
+    // collections/journals/life_events/career_projects, none of which carry deletedAt.
+    return excludeDeleted(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   } catch (err) {
     console.error(`[constellation] ${name} fetch failed:`, err.code || err);
     return [];

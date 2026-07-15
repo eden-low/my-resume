@@ -1,8 +1,9 @@
 import { auth, googleProvider, db, storage, canParticipate } from "./firebase-init.js";
 import { t as i18nT, getLang } from "./js/i18n.js";
 import { wirePlaceSearch } from "./js/location-search.js";
-import { readLocationFields, wireExactLocationControls } from "./js/location-fields.js";
+import { readLocationFields, wireExactLocationControls, wireRemoveLocation, normalizeLocation } from "./js/location-fields.js";
 import { resolveDisplayName } from "./js/identity.js";
+import { excludeDeleted, isDeleted } from "./js/memory-filters.js";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -25,6 +26,7 @@ import {
   ref,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
 // Albums, replacing the old Personal/Event/Work/Project categories.
@@ -96,7 +98,43 @@ const bulkMoveCollection = document.getElementById("bulk-move-collection");
 const bulkMoveBtn = document.getElementById("bulk-move-btn");
 const bulkMoveCancel = document.getElementById("bulk-move-cancel");
 
+// ---- Trash ----
+const trashViewBtn = document.getElementById("trash-view-btn");
+const trashViewCount = document.getElementById("trash-view-count");
+const feedToolbar = document.getElementById("feed-toolbar");
+const trashView = document.getElementById("trash-view");
+const trashBackBtn = document.getElementById("trash-back-btn");
+const trashLoading = document.getElementById("trash-loading");
+const trashError = document.getElementById("trash-error");
+const trashRetryBtn = document.getElementById("trash-retry-btn");
+const trashEmpty = document.getElementById("trash-empty");
+const trashGrid = document.getElementById("trash-grid");
+const trashConfirmModal = document.getElementById("trash-confirm-modal");
+const trashConfirmBackdrop = document.getElementById("trash-confirm-backdrop");
+const trashConfirmThumb = document.getElementById("trash-confirm-thumb");
+const trashConfirmCaption = document.getElementById("trash-confirm-caption");
+const trashConfirmError = document.getElementById("trash-confirm-error");
+const trashConfirmCancel = document.getElementById("trash-confirm-cancel");
+const trashConfirmSubmit = document.getElementById("trash-confirm-submit");
+const deleteConfirmModal = document.getElementById("delete-confirm-modal");
+const deleteConfirmBackdrop = document.getElementById("delete-confirm-backdrop");
+const deleteConfirmThumb = document.getElementById("delete-confirm-thumb");
+const deleteConfirmCaption = document.getElementById("delete-confirm-caption");
+const deleteConfirmError = document.getElementById("delete-confirm-error");
+const deleteConfirmCancel = document.getElementById("delete-confirm-cancel");
+const deleteConfirmSubmit = document.getElementById("delete-confirm-submit");
+const postEditTrashBtn = document.getElementById("post-edit-trash-btn");
+const memoryToast = document.getElementById("memory-toast");
+const memoryToastText = document.getElementById("memory-toast-text");
+const memoryToastAction = document.getElementById("memory-toast-action");
+const memoryToastClose = document.getElementById("memory-toast-close");
+
 let cachedPosts = [];
+let cachedTrashedPosts = [];
+let trashMode = false;
+let pendingTrashPost = null;
+let pendingDeletePost = null;
+const inFlightMemoryOps = new Set();
 let activeFilter = "all";
 const viewedThisSession = new Set();
 const expandedComments = new Set();
@@ -163,6 +201,9 @@ function postCard(post) {
           <button class="edit-post-btn flex items-center gap-1.5 text-xs font-code text-textGray hover:text-neonPurple transition-colors" title="${i18nT("common.edit_metadata")}">
             <i class="fa-solid fa-pen"></i>
           </button>
+          <button class="trash-post-btn flex items-center gap-1.5 text-xs font-code text-textGray hover:text-rose-400 transition-colors" title="${i18nT("memories.move_to_trash")}">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
           <button class="analytics-toggle-btn ml-auto flex items-center gap-1.5 text-xs font-code text-textGray hover:text-neonBlue transition-colors">
             <i class="fa-solid fa-eye"></i> Analytics
           </button>` : ""}
@@ -177,6 +218,8 @@ function postCard(post) {
   if (featuredBtn) featuredBtn.addEventListener("click", () => toggleFeatured(post));
   const editBtn = card.querySelector(".edit-post-btn");
   if (editBtn) editBtn.addEventListener("click", () => openEditModal(post));
+  const trashBtn = card.querySelector(".trash-post-btn");
+  if (trashBtn) trashBtn.addEventListener("click", () => openTrashConfirm(post));
   const analyticsBtn = card.querySelector(".analytics-toggle-btn");
   if (analyticsBtn) analyticsBtn.addEventListener("click", () => toggleAnalytics(post));
   const checkbox = card.querySelector(".select-checkbox");
@@ -320,12 +363,31 @@ async function fetchVisiblePosts() {
   const list = [...posts.values()];
   list.sort((a, b) => (b.uploadedAt?.toMillis?.() || 0) - (a.uploadedAt?.toMillis?.() || 0));
 
-  await Promise.all(list.map((post) => attachSocialCounts(post)));
+  // Trashed Memories (deletedAt set) are excluded from every normal surface, including this
+  // feed — the single shared js/memory-filters.js predicate every other consumer in the app
+  // also calls, so this is never re-implemented per-page.
+  cachedPosts = excludeDeleted(list);
+  await Promise.all(cachedPosts.map((post) => attachSocialCounts(post)));
 
-  cachedPosts = list;
   renderFeed();
-  recordViews(list);
-  checkLikeNotifications(list);
+  recordViews(cachedPosts);
+  checkLikeNotifications(cachedPosts);
+}
+
+// Owner-only Trash listing: reuses the exact same uid-scoped "mine" query already permitted
+// by firestore.rules (no composite index needed — deletedAt is filtered client-side, matching
+// this app's established index-avoidance convention), then keeps only the trashed ones.
+async function fetchTrashedPosts() {
+  const user = auth.currentUser;
+  if (!user) return [];
+  const map = new Map();
+  const mineSnap = await getDocs(query(collection(db, "photos"), where("uid", "==", user.uid)));
+  mineSnap.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
+  const legacySnap = await getDocs(query(collection(db, "photos"), where("uploadedBy", "==", user.uid)));
+  legacySnap.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
+  const list = [...map.values()].filter(isDeleted);
+  list.sort((a, b) => (b.deletedAt?.toMillis?.() || 0) - (a.deletedAt?.toMillis?.() || 0));
+  return list;
 }
 
 function renderSignedOut() {
@@ -341,6 +403,8 @@ function renderSignedOut() {
   connectionsTab.classList.add("hidden");
   newPostBtn.classList.add("hidden");
   feedEmptyCta.classList.add("hidden");
+  trashViewBtn.classList.add("hidden");
+  if (trashMode) exitTrashView();
   if (activeFilter === "private" || activeFilter === "connections") setActiveTab("all");
 }
 
@@ -357,6 +421,8 @@ async function renderSignedIn(user) {
   newPostBtn.classList.toggle("hidden", !mayParticipate);
   feedEmptyCta.classList.toggle("hidden", !mayParticipate);
   selectModeBtn.classList.toggle("hidden", !mayParticipate);
+  trashViewBtn.classList.toggle("hidden", !mayParticipate);
+  if (!mayParticipate && trashMode) exitTrashView();
   privateTab.classList.toggle("hidden", !mayParticipate);
   connectionsTab.classList.toggle("hidden", !mayParticipate);
   accessNote.classList.toggle("hidden", mayParticipate);
@@ -391,6 +457,7 @@ function closeModal() {
   postModal.classList.add("hidden");
   postForm.reset();
   postStatus.textContent = "";
+  postForm.querySelector('button[type="submit"]').disabled = false;
 }
 
 newPostBtn.addEventListener("click", openModal);
@@ -406,6 +473,8 @@ const syncPostLocation = wireExactLocationControls("post", i18nT);
 const syncPostEditLocation = wireExactLocationControls("post-edit", i18nT);
 wirePlaceSearch("post", syncPostLocation);
 const postEditPlaceSearch = wirePlaceSearch("post-edit", syncPostEditLocation);
+wireRemoveLocation("post", i18nT, syncPostLocation);
+wireRemoveLocation("post-edit", i18nT, syncPostEditLocation);
 
 newPostBtn.addEventListener("click", () => populateCollectionSelect(document.getElementById("post-collection")));
 
@@ -422,6 +491,7 @@ postForm.addEventListener("submit", async (event) => {
   const tags = parseTags(document.getElementById("post-tags").value);
   if (!file) return;
 
+  postForm.querySelector('button[type="submit"]').disabled = true;
   postStatus.textContent = i18nT("common.uploading");
   try {
     const storagePath = `gallery/${user.uid}/${visibility}/${category}/${Date.now()}-${file.name}`;
@@ -430,7 +500,7 @@ postForm.addEventListener("submit", async (event) => {
     const url = await getDownloadURL(fileRef);
 
     const locationFields = readLocationFields("post");
-    await addDoc(collection(db, "photos"), {
+    const docRef = await addDoc(collection(db, "photos"), {
       url,
       storagePath,
       category,
@@ -445,17 +515,18 @@ postForm.addEventListener("submit", async (event) => {
     });
 
     await fetchVisiblePosts();
-    // Phase 4 UX: when the save actually carries valid coordinates, give a "View on Atlas"
-    // way out instead of instantly wiping the success message — closeModal() below would
-    // otherwise clear postStatus before anyone could read or click it.
+    // Phase 6 UX: when the save actually carries valid coordinates, show a stable "View on
+    // Atlas" action and leave the modal open — no auto-close timer to race against. The user
+    // dismisses it themselves (the link itself, or the modal's existing x/backdrop close,
+    // already wired below) whenever they're done. The submit button stays disabled meanwhile
+    // so an accidental second click can't re-upload the same file as a duplicate post.
     if (locationFields.latitude != null && locationFields.longitude != null) {
       postStatus.replaceChildren(document.createTextNode(`${i18nT("common.saved")} · `));
       const link = document.createElement("a");
-      link.href = "atlas.html";
+      link.href = `atlas.html?memory=${encodeURIComponent(docRef.id)}`;
       link.className = "text-neonPurple hover:underline";
       link.textContent = i18nT("common.view_on_atlas");
       postStatus.appendChild(link);
-      setTimeout(closeModal, 2500);
     } else {
       postStatus.textContent = i18nT("common.saved");
       closeModal();
@@ -463,6 +534,7 @@ postForm.addEventListener("submit", async (event) => {
   } catch (err) {
     console.error("Upload failed", err);
     postStatus.textContent = i18nT("common.upload_failed");
+    postForm.querySelector('button[type="submit"]').disabled = false;
   }
 });
 
@@ -474,28 +546,51 @@ async function openEditModal(post) {
   document.getElementById("post-edit-category").value = albumOf(post);
   document.querySelector(`#post-edit-form input[name="post-edit-visibility"][value="${post.visibility || "public"}"]`).checked = true;
   document.getElementById("post-edit-tags").value = (post.tags || []).join(", ");
-  document.getElementById("post-edit-location-name").value = post.locationName || "";
-  document.getElementById("post-edit-location-address").value = post.locationAddress || "";
+  // Initialize the shared location state from the stored document via normalizeLocation() —
+  // never opened this modal's location fields "raw." Text/precision come from the normalized
+  // result; the hidden lat/lng inputs still carry the RAW stored values (not the normalized
+  // ones) so classifyLocation() (inside wireExactLocationControls' sync(), called right below)
+  // can detect and surface a corrupted/out-of-range legacy value as "Invalid location" — the
+  // save path (readLocationFields -> normalizeLocation) already guarantees such a value can
+  // never be re-persisted, regardless of what's briefly visible here.
+  const normalized = normalizeLocation({
+    locationName: post.locationName,
+    locationAddress: post.locationAddress,
+    latitude: post.latitude,
+    longitude: post.longitude,
+    precisionHint: post.locationPrecision,
+  });
+  document.getElementById("post-edit-location-name").value = normalized.locationName || post.locationName || "";
+  document.getElementById("post-edit-location-address").value = normalized.locationAddress || post.locationAddress || "";
   document.getElementById("post-edit-latitude").value = post.latitude ?? "";
   document.getElementById("post-edit-longitude").value = post.longitude ?? "";
-  const isPlaceResolved = post.latitude != null && post.longitude != null && post.locationPrecision === "place_resolved";
+  const isPlaceResolved = normalized.latitude != null && normalized.longitude != null && normalized.locationPrecision === "place_resolved";
   document.getElementById("post-edit-location-precision-hint").value = isPlaceResolved ? "place_resolved" : "";
   // Tell the edit form's search instance the prefilled name IS the confirmed place, so a
   // no-op "input" event (autocorrect, re-typing identical text) during this edit session
   // doesn't get mistaken for a manual rename and silently drop these valid coordinates.
-  postEditPlaceSearch.confirmPlace(isPlaceResolved ? post.locationName : null);
+  postEditPlaceSearch.confirmPlace(isPlaceResolved ? normalized.locationName : null);
   syncPostEditLocation();
   await populateCollectionSelect(document.getElementById("post-edit-collection"), post.collectionId);
   postEditStatus.textContent = "";
   postEditModal.classList.remove("hidden");
 }
 function closeEditModal() {
+  // Cancel Edit: hides + resets the form only. No Firestore write happens unless Save was
+  // clicked, so the cached post and its Atlas marker are left exactly as they were.
   postEditModal.classList.add("hidden");
   postEditForm.reset();
   postEditStatus.textContent = "";
 }
 postEditModalClose.addEventListener("click", closeEditModal);
 postEditModalBackdrop.addEventListener("click", closeEditModal);
+postEditTrashBtn.addEventListener("click", () => {
+  const id = document.getElementById("post-edit-id").value;
+  const post = cachedPosts.find((p) => p.id === id);
+  if (!post) return;
+  closeEditModal();
+  openTrashConfirm(post);
+});
 
 postEditForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -526,6 +621,319 @@ postEditForm.addEventListener("submit", async (event) => {
     postEditStatus.textContent = i18nT("common.couldnt_save");
   }
 });
+
+// ---- Accessible confirm-modal helper (focus trap + Escape + focus restoration) ----
+// No shared modal component exists yet in this codebase (every prior confirm() in the app —
+// career.js, collections.js, time-capsule.js, etc. — used a bare window.confirm()); this is
+// the first accessible modal, built from the same visual shell (.neon-border-purple card over
+// a blurred backdrop) every other modal in the app already uses.
+function trapFocus(modalEl, onEscape) {
+  function handleKeydown(e) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onEscape();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const items = [...modalEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.disabled && el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  modalEl.addEventListener("keydown", handleKeydown);
+  return () => modalEl.removeEventListener("keydown", handleKeydown);
+}
+
+function makeConfirmModal({ modalEl, backdropEl, cancelBtn, submitBtn, onCancel, onSubmit }) {
+  let untrap = null;
+  let returnFocusEl = null;
+  function close() {
+    modalEl.classList.add("hidden");
+    if (untrap) { untrap(); untrap = null; }
+    if (returnFocusEl && document.body.contains(returnFocusEl)) returnFocusEl.focus();
+    returnFocusEl = null;
+  }
+  function open() {
+    returnFocusEl = document.activeElement;
+    modalEl.classList.remove("hidden");
+    untrap = trapFocus(modalEl, () => { onCancel(); close(); });
+    cancelBtn.focus();
+  }
+  cancelBtn.addEventListener("click", () => { onCancel(); close(); });
+  backdropEl.addEventListener("click", () => { onCancel(); close(); });
+  submitBtn.addEventListener("click", onSubmit);
+  return { open, close };
+}
+
+// ---- Toast (success + optional Undo action) ----
+let toastTimer = null;
+function showToast(message, { actionLabel, onAction } = {}) {
+  clearTimeout(toastTimer);
+  memoryToastText.textContent = message;
+  if (actionLabel && onAction) {
+    memoryToastAction.textContent = actionLabel;
+    memoryToastAction.classList.remove("hidden");
+    memoryToastAction.onclick = () => { hideToast(); onAction(); };
+  } else {
+    memoryToastAction.classList.add("hidden");
+    memoryToastAction.onclick = null;
+  }
+  memoryToast.classList.remove("hidden");
+  // Persistent enough to actually read and act on (e.g. Undo), but not forever — matches this
+  // page's other transient status copy in spirit, just longer-lived since it can carry an action.
+  toastTimer = setTimeout(hideToast, 8000);
+}
+function hideToast() {
+  memoryToast.classList.add("hidden");
+  clearTimeout(toastTimer);
+}
+memoryToastClose.addEventListener("click", hideToast);
+
+// ---- Trash view ----
+
+function trashCard(post) {
+  const el = document.createElement("div");
+  el.className = "bg-cardBg/90 rounded-xl neon-border-purple overflow-hidden";
+  const deletedDate = post.deletedAt?.toDate
+    ? post.deletedAt.toDate().toLocaleDateString(undefined, { dateStyle: "medium" })
+    : "";
+  el.innerHTML = `
+    <img src="${post.url}" alt="" class="w-full h-28 object-cover opacity-70">
+    <div class="p-2 space-y-1.5">
+      <p class="text-[11px] text-white truncate">${post.caption || i18nT("common.untitled")}</p>
+      ${deletedDate ? `<p class="text-[10px] font-code text-textGray">${i18nT("memories.deleted_on", { date: deletedDate })}</p>` : ""}
+      <div class="flex items-center gap-1.5 pt-1">
+        <button class="trash-restore-btn flex-1 px-2 py-1.5 bg-neonPurple/15 text-neonPurple rounded-lg text-[10px] font-cyber font-bold tracking-wider hover:bg-neonPurple/25 transition-colors">${i18nT("memories.restore")}</button>
+        <button class="trash-delete-btn flex-1 px-2 py-1.5 bg-rose-500/15 text-rose-400 rounded-lg text-[10px] font-cyber font-bold tracking-wider hover:bg-rose-500/25 transition-colors">${i18nT("memories.permanently_delete_short")}</button>
+      </div>
+    </div>`;
+  el.querySelector(".trash-restore-btn").addEventListener("click", () => restorePost(post));
+  el.querySelector(".trash-delete-btn").addEventListener("click", () => openDeleteConfirm(post));
+  return el;
+}
+
+function renderTrash() {
+  trashGrid.replaceChildren(...cachedTrashedPosts.map(trashCard));
+  trashEmpty.classList.toggle("hidden", cachedTrashedPosts.length > 0);
+  trashViewCount.textContent = String(cachedTrashedPosts.length);
+  trashViewCount.classList.toggle("hidden", cachedTrashedPosts.length === 0);
+}
+
+async function loadTrash() {
+  trashLoading.classList.remove("hidden");
+  trashError.classList.add("hidden");
+  trashEmpty.classList.add("hidden");
+  trashGrid.replaceChildren();
+  try {
+    cachedTrashedPosts = await fetchTrashedPosts();
+    trashLoading.classList.add("hidden");
+    renderTrash();
+  } catch (err) {
+    console.error("[gallery] trash fetch failed:", err.code || err);
+    trashLoading.classList.add("hidden");
+    trashError.classList.remove("hidden");
+  }
+}
+
+function enterTrashView() {
+  trashMode = true;
+  feedToolbar.classList.add("hidden");
+  feedContainer.classList.add("hidden");
+  feedEmpty.classList.add("hidden");
+  trashView.classList.remove("hidden");
+  loadTrash();
+}
+function exitTrashView() {
+  trashMode = false;
+  trashView.classList.add("hidden");
+  feedToolbar.classList.remove("hidden");
+  feedContainer.classList.remove("hidden");
+  renderFeed();
+}
+trashViewBtn.addEventListener("click", enterTrashView);
+trashBackBtn.addEventListener("click", exitTrashView);
+trashRetryBtn.addEventListener("click", loadTrash);
+
+// ---- Move to Trash ----
+
+const trashConfirmModalCtl = makeConfirmModal({
+  modalEl: trashConfirmModal,
+  backdropEl: trashConfirmBackdrop,
+  cancelBtn: trashConfirmCancel,
+  submitBtn: trashConfirmSubmit,
+  onCancel: () => { pendingTrashPost = null; },
+  onSubmit: () => submitMoveToTrash(),
+});
+
+function openTrashConfirm(post) {
+  pendingTrashPost = post;
+  trashConfirmError.classList.add("hidden");
+  trashConfirmError.textContent = "";
+  trashConfirmThumb.src = post.url;
+  trashConfirmCaption.textContent = post.caption || i18nT("common.untitled");
+  trashConfirmSubmit.disabled = false;
+  trashConfirmSubmit.textContent = i18nT("memories.move_to_trash");
+  trashConfirmModalCtl.open();
+}
+
+async function submitMoveToTrash() {
+  const post = pendingTrashPost;
+  const user = auth.currentUser;
+  if (!post || !user || !isMyPost(post, user)) return;
+  if (inFlightMemoryOps.has(post.id)) return; // prevent double submission
+  inFlightMemoryOps.add(post.id);
+  trashConfirmSubmit.disabled = true;
+  trashConfirmCancel.disabled = true;
+  trashConfirmSubmit.textContent = i18nT("memories.trash_loading");
+  trashConfirmError.classList.add("hidden");
+  try {
+    await updateDoc(doc(db, "photos", post.id), {
+      deletedAt: serverTimestamp(),
+      deletedBy: user.uid,
+      updatedAt: serverTimestamp(),
+    });
+    // Success: remove immediately from the visible feed (and the Atlas cache is naturally
+    // stale-free too — atlas.js always re-queries Firestore from scratch on load/visibility,
+    // it never keeps a photos cache this page could have to invalidate).
+    cachedPosts = cachedPosts.filter((p) => p.id !== post.id);
+    renderFeed();
+    pendingTrashPost = null;
+    trashConfirmModalCtl.close();
+    showToast(i18nT("memories.trash_success"), { actionLabel: i18nT("common.undo"), onAction: () => restorePost(post) });
+  } catch (err) {
+    // Do not claim success — leave the modal open with an inline error so the user can retry.
+    console.error("[gallery] move to trash failed:", err.code || err);
+    trashConfirmError.textContent = i18nT("memories.trash_error");
+    trashConfirmError.classList.remove("hidden");
+    trashConfirmSubmit.textContent = i18nT("memories.move_to_trash");
+    trashConfirmSubmit.disabled = false;
+    trashConfirmCancel.disabled = false;
+  } finally {
+    inFlightMemoryOps.delete(post.id);
+  }
+}
+
+// ---- Restore ----
+
+async function restorePost(post) {
+  const user = auth.currentUser;
+  if (!user || !isMyPost(post, user)) return;
+  if (inFlightMemoryOps.has(post.id)) return;
+  inFlightMemoryOps.add(post.id);
+  try {
+    await updateDoc(doc(db, "photos", post.id), {
+      deletedAt: null,
+      deletedBy: null,
+      updatedAt: serverTimestamp(),
+    });
+    if (trashMode) {
+      cachedTrashedPosts = cachedTrashedPosts.filter((p) => p.id !== post.id);
+      renderTrash();
+    }
+    await fetchVisiblePosts(); // restores it into the normal feed, sorted/counted correctly
+    showToast(i18nT("memories.restore_success"));
+  } catch (err) {
+    console.error("[gallery] restore failed:", err.code || err);
+    showToast(i18nT("memories.restore_error"));
+  } finally {
+    inFlightMemoryOps.delete(post.id);
+  }
+}
+
+// ---- Permanently delete ----
+// Firestore and Storage deletion are two separate client calls, not one atomic transaction.
+// Chosen failure strategy (documented in the fix report): delete the Storage object FIRST; a
+// "storage/object-not-found" result is treated as already-clean (makes a retry after a prior
+// partial failure idempotent, not an error); any OTHER storage failure stops here and leaves
+// the Firestore document (and its storagePath) untouched so the user can retry — deleting the
+// Firestore doc first and letting Storage cleanup fail afterward would orphan the file forever,
+// since the doc that remembered its path would be gone. The Firestore doc is only deleted once
+// Storage is confirmed clear (or was never eligible: missing/foreign/shared path).
+
+const deleteConfirmModalCtl = makeConfirmModal({
+  modalEl: deleteConfirmModal,
+  backdropEl: deleteConfirmBackdrop,
+  cancelBtn: deleteConfirmCancel,
+  submitBtn: deleteConfirmSubmit,
+  onCancel: () => { pendingDeletePost = null; },
+  onSubmit: () => submitPermanentDelete(),
+});
+
+function openDeleteConfirm(post) {
+  pendingDeletePost = post;
+  deleteConfirmError.classList.add("hidden");
+  deleteConfirmError.textContent = "";
+  deleteConfirmThumb.src = post.url;
+  deleteConfirmCaption.textContent = post.caption || i18nT("common.untitled");
+  deleteConfirmSubmit.disabled = false;
+  deleteConfirmSubmit.textContent = i18nT("memories.permanently_delete");
+  deleteConfirmModalCtl.open();
+}
+
+async function submitPermanentDelete() {
+  const post = pendingDeletePost;
+  const user = auth.currentUser;
+  if (!post || !user || !isMyPost(post, user)) return;
+  if (inFlightMemoryOps.has(post.id)) return; // prevent double submission / uncontrolled retries
+  inFlightMemoryOps.add(post.id);
+  deleteConfirmSubmit.disabled = true;
+  deleteConfirmCancel.disabled = true;
+  deleteConfirmSubmit.textContent = i18nT("memories.permanent_delete_loading");
+  deleteConfirmError.classList.add("hidden");
+  try {
+    const ownerUid = post.uid || post.uploadedBy || user.uid;
+    // Only ever a path this same user owns by construction (gallery/{uid}/...) — never an
+    // external URL, never derived from the download URL, never another user's file.
+    if (post.storagePath && post.storagePath.startsWith(`gallery/${ownerUid}/`)) {
+      try {
+        // Defense-in-depth: confirm no OTHER photos doc references this exact storage path
+        // before deleting the underlying file. storagePath already bakes in the uploader's uid
+        // and an upload timestamp+filename, so a genuine collision is effectively impossible —
+        // this never assumes uniqueness, it verifies it. Scoped to `uid == caller` (in addition
+        // to storagePath) so the query stays within firestore.rules' provable "my own docs"
+        // shape (two equality filters need no composite index, same pattern used everywhere
+        // else in this app) rather than an unscoped, rules-unprovable lookup.
+        const dupSnap = await getDocs(query(
+          collection(db, "photos"),
+          where("uid", "==", user.uid),
+          where("storagePath", "==", post.storagePath)
+        ));
+        const sharedByOthers = dupSnap.docs.some((d) => d.id !== post.id);
+        if (!sharedByOthers) {
+          try {
+            await deleteObject(ref(storage, post.storagePath));
+          } catch (storageErr) {
+            if (storageErr.code !== "storage/object-not-found") throw storageErr;
+            // Already gone — a retry after an earlier partial failure. Treat as cleaned.
+          }
+        }
+      } catch (storageErr) {
+        console.error("[gallery] storage cleanup failed:", storageErr.code || storageErr);
+        deleteConfirmError.textContent = i18nT("memories.permanent_delete_storage_error");
+        deleteConfirmError.classList.remove("hidden");
+        deleteConfirmSubmit.textContent = i18nT("memories.permanently_delete");
+        return; // stop here — never delete the Firestore doc while its file might still exist
+      }
+    }
+    await deleteDoc(doc(db, "photos", post.id));
+    cachedTrashedPosts = cachedTrashedPosts.filter((p) => p.id !== post.id);
+    renderTrash();
+    pendingDeletePost = null;
+    deleteConfirmModalCtl.close();
+    showToast(i18nT("memories.permanent_delete_success"));
+  } catch (err) {
+    console.error("[gallery] permanent delete failed:", err.code || err);
+    deleteConfirmError.textContent = i18nT("memories.permanent_delete_error");
+    deleteConfirmError.classList.remove("hidden");
+    deleteConfirmSubmit.textContent = i18nT("memories.permanently_delete");
+  } finally {
+    deleteConfirmSubmit.disabled = false;
+    deleteConfirmCancel.disabled = false;
+    inFlightMemoryOps.delete(post.id);
+  }
+}
 
 // ---- Bulk move (Memories multi-select) ----
 
@@ -717,4 +1125,9 @@ async function renderAnalyticsPanel(post, card) {
 // labels, Public/Private badges, and the "Edit metadata" title all read through i18nT().
 document.addEventListener("eden:langchange", () => {
   renderFeed();
+  if (trashMode) renderTrash();
+  // Re-run so an open Post/Edit modal's location status chip and any visible "Remove
+  // location"/"Use exact location" copy re-translate immediately too, not just on next open.
+  syncPostLocation();
+  syncPostEditLocation();
 });

@@ -74,6 +74,33 @@ export function readLocationFields(prefix) {
   });
 }
 
+// Six-state classification for a location form's live status display — distinct from
+// normalizeLocation()'s save-time canonicalization, which only ever needs "valid coords or
+// not." Accepts either a Firestore doc's stored fields (used once to initialize a form, e.g.
+// opening the Edit Memory modal for a legacy record) or a form's current raw input values
+// (used continuously by wireExactLocationControls' sync() below) — both are the same shape.
+//  - "none": no location text and no coordinates at all.
+//  - "invalid": raw latitude/longitude are present but fail validation (out of range,
+//    non-finite, or corrupted legacy data) — distinct from "none" so a broken legacy record
+//    visibly asks to be fixed instead of silently looking untouched. normalizeLocation()
+//    already refuses to ever save these values, so this state can only ever be "read stale
+//    data, not yet fixed" — never a save-time risk.
+//  - "needs_confirmation": place text exists but there are no valid coordinates yet — covers
+//    both a legacy name-only record (never had a pin) and a place whose text was edited after
+//    being confirmed (the rename-guard in wirePlaceSearch already clears coordinates then).
+//    Both cases have the identical remedy (search-and-select, or use exact location), so they
+//    deliberately share one status rather than needing separate copy.
+//  - "confirmed_search": valid coordinates from a selected search result.
+//  - "confirmed_exact": valid coordinates captured from the device GPS button.
+export function classifyLocation({ locationName, locationAddress, latitude, longitude, precisionHint }) {
+  const hasText = !!((locationName ?? "").toString().trim() || (locationAddress ?? "").toString().trim());
+  const hasRawCoords = latitude != null && latitude !== "" && longitude != null && longitude !== "";
+  const coords = hasRawCoords ? validateCoords(latitude, longitude) : null;
+  if (hasRawCoords && !coords) return "invalid";
+  if (!coords) return hasText ? "needs_confirmation" : "none";
+  return precisionHint === "place_resolved" ? "confirmed_search" : "confirmed_exact";
+}
+
 // Wraps the callback-based Geolocation API in a promise that never rejects — a denial/timeout
 // just resolves null, same pattern index.html's weather widget uses.
 function getBrowserLocation() {
@@ -96,31 +123,63 @@ function getBrowserLocation() {
 // clear button reflect/undo the stored coordinates; syncing also runs on form reset.
 // `i18nT` is injected (rather than imported) so this module has no hard dependency on a
 // particular i18n import path/timing beyond what each page already sets up.
+const STATUS_COLOR_CLASSES = ["text-neonPurple", "text-amber-400", "text-rose-400"];
+
 export function wireExactLocationControls(prefix, i18nT) {
   const btn = document.getElementById(`${prefix}-use-location-btn`);
   const status = document.getElementById(`${prefix}-location-status`);
   const clearBtn = document.getElementById(`${prefix}-clear-location-btn`);
+  const removeBtn = document.getElementById(`${prefix}-remove-location-btn`);
   const nameInput = document.getElementById(`${prefix}-location-name`);
+  const addressInput = document.getElementById(`${prefix}-location-address`);
   const latInput = document.getElementById(`${prefix}-latitude`);
   const lonInput = document.getElementById(`${prefix}-longitude`);
   const hintInput = document.getElementById(`${prefix}-location-precision-hint`);
-  // Phase 4 UX: the status chip distinguishes "confirmed" (valid coords, named — shows the
-  // place name so it's unambiguous *which* place got pinned) from the older bare
-  // "coordinates saved"/"map pin enabled" copy (valid coords, no name typed — rare, since the
-  // search flow always fills the name, but the GPS button alone doesn't require one).
+  // The status chip renders one of classifyLocation()'s five states: "needs_confirmation" and
+  // "invalid" get their own warning/error copy+color; "confirmed_*" shows the place name when
+  // one exists ("Confirmed: {name}") or a generic coords-saved line otherwise (the GPS button
+  // alone doesn't require a name); "none" hides the chip entirely.
   const sync = () => {
-    const coords = validateCoords(latInput.value, lonInput.value);
-    if (!coords) hintInput.value = "";
+    const state = classifyLocation({
+      locationName: nameInput.value,
+      locationAddress: addressInput.value,
+      latitude: latInput.value,
+      longitude: lonInput.value,
+      precisionHint: hintInput.value,
+    });
+    // A confirmed hint only ever means something once coordinates are actually valid — for
+    // "invalid"/"needs_confirmation"/"none" it's stale and must not survive into a save.
+    if (state !== "confirmed_search" && state !== "confirmed_exact") hintInput.value = "";
     const name = nameInput.value.trim();
-    status.textContent = coords
-      ? (name
-          ? i18nT("common.location_confirmed", { name })
-          : i18nT(hintInput.value === "place_resolved" ? "common.map_pin_enabled" : "common.coordinates_saved"))
-      : "";
-    status.title = coords ? i18nT("common.place_pin_hint") : "";
-    status.classList.toggle("hidden", !coords);
-    clearBtn.classList.toggle("hidden", !coords);
+    let text = "";
+    let colorClass = "text-neonPurple";
+    if (state === "invalid") {
+      text = i18nT("common.location_invalid");
+      colorClass = "text-rose-400";
+    } else if (state === "needs_confirmation") {
+      text = i18nT("common.location_needs_confirmation");
+      colorClass = "text-amber-400";
+    } else if (state === "confirmed_search" || state === "confirmed_exact") {
+      text = name
+        ? i18nT("common.location_confirmed", { name })
+        : i18nT(state === "confirmed_search" ? "common.map_pin_enabled" : "common.coordinates_saved");
+    }
+    status.textContent = text;
+    status.title = state === "confirmed_search" || state === "confirmed_exact" ? i18nT("common.place_pin_hint") : "";
+    status.classList.remove(...STATUS_COLOR_CLASSES);
+    status.classList.add(colorClass);
+    status.classList.toggle("hidden", state === "none");
+    // The "x" only ever clears coordinates (keeping typed text intact, e.g. to re-search under
+    // a corrected name) — show it whenever there's a raw lat/lng to clear, valid or not, so an
+    // "invalid" legacy pin can be cleared this way too, not just via "Remove location".
+    const hasRawCoords = latInput.value !== "" && lonInput.value !== "";
+    clearBtn.classList.toggle("hidden", !hasRawCoords);
     clearBtn.title = i18nT("common.clear_selected_place");
+    // "Remove location" (wireRemoveLocation, if this page opted into it) clears name+address+
+    // coords together — only worth offering once there's anything at all to remove. Folded in
+    // here rather than a separate listener so it stays correct after every trigger this sync()
+    // already runs from (GPS click, "x" click, search-select, edit-modal prefill, form reset).
+    if (removeBtn) removeBtn.classList.toggle("hidden", state === "none");
   };
   btn.addEventListener("click", async () => {
     btn.disabled = true;
@@ -144,4 +203,56 @@ export function wireExactLocationControls(prefix, i18nT) {
   // reset event fires before the default reset action, so re-sync a tick later
   btn.closest("form")?.addEventListener("reset", () => setTimeout(sync, 0));
   return sync;
+}
+
+// Adds a "Remove location" control — distinct from wireExactLocationControls' per-field "x"
+// (which only ever clears coordinates, keeping typed name/address text intact so the user can
+// re-search under a corrected name): this clears name + address + coordinates + hint together,
+// the only action that fully removes a Memory/Journal/Journey's location. Its visibility is
+// owned by wireExactLocationControls' sync() (hidden once there's nothing left to remove);
+// this function only owns the click behavior. Requires a second click on the same button
+// within a short window as its confirmation (never a bare window.confirm()) — a fresh click
+// after the window elapses, or typing in the location fields, cancels the pending confirmation
+// rather than leaving a stale "are you sure?" label around. No-ops when the
+// ${prefix}-remove-location-btn element doesn't exist on a given page, so pages that don't
+// opt into this control are unaffected. `sync` is wireExactLocationControls' returned
+// function — called after clearing so the status chip and this button's own visibility update
+// immediately.
+export function wireRemoveLocation(prefix, i18nT, sync) {
+  const btn = document.getElementById(`${prefix}-remove-location-btn`);
+  if (!btn) return;
+  const nameInput = document.getElementById(`${prefix}-location-name`);
+  const addressInput = document.getElementById(`${prefix}-location-address`);
+  const latInput = document.getElementById(`${prefix}-latitude`);
+  const lonInput = document.getElementById(`${prefix}-longitude`);
+  const hintInput = document.getElementById(`${prefix}-location-precision-hint`);
+  let armed = false;
+  let timer = null;
+  let originalLabel = btn.textContent;
+
+  function reset() {
+    if (!armed) return;
+    armed = false;
+    clearTimeout(timer);
+    btn.textContent = originalLabel;
+    btn.classList.remove("text-rose-400", "border-rose-400/60");
+  }
+  btn.addEventListener("click", () => {
+    if (!armed) {
+      originalLabel = btn.textContent; // captured fresh so it reflects the current language
+      armed = true;
+      btn.textContent = i18nT("common.confirm_remove_location");
+      btn.classList.add("text-rose-400", "border-rose-400/60");
+      timer = setTimeout(reset, 4000);
+      return;
+    }
+    reset();
+    nameInput.value = "";
+    addressInput.value = "";
+    latInput.value = "";
+    lonInput.value = "";
+    hintInput.value = "";
+    sync();
+  });
+  [nameInput, addressInput].forEach((el) => el.addEventListener("input", reset));
 }

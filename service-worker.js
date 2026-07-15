@@ -1,15 +1,15 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
-// v19 (canonical location pipeline fix): gallery.js/journal.js/timeline.js/atlas.js/
-// js/location-search.js were edited and a new js/location-fields.js module was added (see
-// CLAUDE.md's location-pipeline fix notes) — the cache is bumped so an offline-fallback visit
-// can never serve a pre-fix copy of one of these files next to a post-fix copy of another
-// (exactly the "incompatible cached versions" failure mode this fix pass audited for). Online
+// v20 (Memory Trash + location-edit fix): gallery.js/gallery.html/atlas.js/js/location-fields.js
+// were edited and a new js/memory-filters.js module was added (see CLAUDE.md's Trash/location
+// history notes) — the cache is bumped so an offline-fallback visit can never serve a
+// pre-Trash gallery.html next to a post-Trash gallery.js (or vice versa), the same
+// "incompatible cached versions" failure mode prior version bumps guarded against. Online
 // behaviour is unchanged (network-first — the fetch handler always tries the network first and
 // only falls back to cache when that fails, so this bump only matters for the offline path).
-// Earlier: v18 (résumé Projects de-duplication).
-const CACHE = "eden-shell-v19";
+// Earlier: v19 (canonical location pipeline fix).
+const CACHE = "eden-shell-v20";
 
 const PRECACHE = [
   "index.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
@@ -21,7 +21,7 @@ const PRECACHE = [
   "habits.js", "notifications.js", "export.js", "calendar.js", "insights.js",
   "profile.js", "career.js", "atlas.js", "portfolio.js", "project.js",
   "js/i18n.js", "js/mobile-nav.js", "js/sidebar.js", "js/splash.js", "js/location-search.js",
-  "js/location-fields.js", "js/resume-data.js",
+  "js/location-fields.js", "js/memory-filters.js", "js/resume-data.js",
   "locales/en.json", "locales/zh-CN.json",
   "manifest.json", "images/icon-192.png", "images/icon-512.png", "images/logo-mark.png",
 ];

@@ -981,6 +981,126 @@ location" status chip now shows the confirmed place name (`common.location_confi
 normal online use). No Firestore/Storage rules changes (this bug was never a rules/permissions
 issue), no production writes, no deploy.
 
+**Memory Trash + location-edit fix (most recent)** — the Memories module gained a reversible
+Trash workflow (`gallery.html`/`gallery.js` only; Journal/Journey were left untouched — Trash was
+scoped to Memories per the brief) and the Edit Memory modal gained full add/change/remove-location
+support built on top of the v19 canonical pipeline. No new Firestore collection, no rules changes
+(audited and confirmed `firestore.rules`' existing `photos` `update`/`delete` rule —
+`resource.data.uid == request.auth.uid || resource.data.uploadedBy == request.auth.uid` — already
+correctly gates Trash/Restore/Permanent-Delete per-document; `storage.rules`' `gallery/{uid}/...`
+`write` rule already covers `deleteObject` the same way).
+1. **Trash schema** — `photos` docs gain optional `deletedAt` (`serverTimestamp()` or
+   `null`/missing) and `deletedBy` (uid). Missing/null `deletedAt` always means active, including
+   every pre-existing doc — no migration. Move to Trash / Restore are both plain `updateDoc`
+   calls (never `deleteDoc`), keeping the doc, its Storage file, caption/tags/visibility/location
+   fully intact either way.
+2. **New shared module [js/memory-filters.js](js/memory-filters.js)** — `isDeleted(item)` /
+   `isActiveMemory(item)` / `excludeDeleted(items)`, the single predicate every photos-reading
+   fetch helper across the app now calls before returning results: `gallery.js`
+   (`fetchVisiblePosts`/new `fetchTrashedPosts`), `atlas.js` (`clusterItems`'s `addItem`, so a
+   trashed Memory produces no marker and no Saved Places card even from a stale cached query
+   result), `global-search.js`, `profile.js`, `collections.js`, `collection-detail.js`,
+   `insights.js`, `calendar.js`, `me.js`, `constellation.js`, `index.html`'s inline module — all
+   of these call a generic `fetchMine`/`mergeMinePublic`/`fetchByVisibility`-style helper already
+   shared across many collection types, so the filter applies once per file rather than being
+   duplicated per call site. `export.js`'s Backup/Export flow was deliberately left unfiltered —
+   a personal data backup should include everything the user owns, trashed or not; it's not one
+   of the "active Memories" surfaces the brief listed.
+3. **Trash view** — an owner-of-the-document-gated (`canParticipate()`, matching every other
+   Memories write gate — "owner-only" here means the record's own `uid`/`uploadedBy`, the
+   per-document ownership model this whole app already uses, not the singular app Owner role) new
+   `#trash-view` section toggled by a header pill (`#trash-view-btn`) that swaps out the normal
+   feed/toolbar in place rather than becoming a new page. Lists the signed-in user's own trashed
+   photos via a plain `where("uid","==",myUid)` query (the same "mine" query the normal feed
+   already runs — no composite index), filtered to `deletedAt`-truthy client-side. Loading/error/
+   empty states; each card offers Restore and Permanently Delete.
+4. **Accessible confirm modals** — `gallery.js`'s new `trapFocus()`/`makeConfirmModal()` are the
+   first accessible (focus-trapped, Escape-closes, focus-restoring) modals in this codebase; every
+   prior destructive action elsewhere (`career.js`, `collections.js`, `time-capsule.js`,
+   `dashboard.js`, `me.js`, `settings.js`) used a bare `window.confirm()` and was left as-is (out
+   of scope for this pass). Two modals reuse the factory: Move-to-Trash (shows the target photo's
+   thumbnail+caption, Cancel/"Move to Trash") and Permanently Delete (reached only from Trash,
+   stronger "cannot be undone" copy — the brief's required "second explicit confirmation", Trash
+   itself being the first). Both disable their buttons and show a loading label while in flight,
+   guarded by a shared `inFlightMemoryOps` id set so a double-click can't double-submit; a failed
+   `updateDoc`/`deleteDoc` shows an inline error and leaves the modal open rather than claiming
+   success. A new bottom-pinned toast (`#memory-toast`, first of its kind in this app) shows
+   "Moved to Trash" with an **Undo** action wired straight to `restorePost()`.
+5. **Permanent delete order (Firestore + Storage are two separate client calls, not one
+   transaction)** — Storage is deleted **first**; `storage/object-not-found` on that call is
+   treated as already-clean (makes a retry after a prior partial failure idempotent, not a second
+   error); any other Storage failure stops there and leaves the Firestore doc (and its
+   `storagePath`) untouched so the user can retry — deleting the Firestore doc first and letting
+   Storage cleanup fail afterward would orphan the file forever, since the one doc that remembered
+   its path would be gone. The Firestore doc is only ever deleted once Storage is confirmed clear
+   (or was never eligible — see below). Before deleting, `storagePath` must start with
+   `gallery/{ownerUid}/` (never derived from the download URL, never an external URL, never
+   another user's path by construction) and a defense-in-depth query —
+   `where("uid","==",callerUid), where("storagePath","==",post.storagePath)` (two equalities, no
+   composite index, provable under `isPhotoMineOrPublic()`) — confirms no *other* doc references
+   the same path before the object is deleted, so a hypothetical shared/duplicate path is never
+   destroyed out from under another record. This app generates no thumbnails/variants (a single
+   `uploadBytes` per photo), so there's nothing else to clean up. No trusted-backend Cloud
+   Function exists to make this atomic; that gap is real and is called out as a follow-up
+   recommendation, not pretended away.
+6. **Edit Memory location editing** — `js/location-fields.js` gained `classifyLocation()`, a pure
+   5-state classifier (`none`/`invalid`/`needs_confirmation`/`confirmed_search`/`confirmed_exact`)
+   now driving `wireExactLocationControls()`'s status chip (color + copy per state) on all three
+   pages (Memories/Journal/Journey, since the function is already shared) — a legacy Memory with
+   only a name/address shows **"Location needs confirmation"** (amber) instead of nothing; a
+   corrupted/out-of-range legacy value shows **"Invalid location"** (rose, reusing v19's
+   `common.location_invalid` key) without ever being at risk of re-persisting, since
+   `normalizeLocation()` already discards invalid coordinates at the save boundary regardless of
+   what the form displays. `openEditModal()` now explicitly initializes from
+   `normalizeLocation(post.locationName/Address/latitude/longitude/locationPrecision)` for the
+   visible text fields (never opens a modal by hand-deriving the shape); the hidden lat/lng inputs
+   still carry the *raw* stored values (not the sanitized ones) specifically so `classifyLocation`
+   can detect and surface the "invalid" state — the save path stays safe either way. A new
+   **"Remove location"** control (`js/location-fields.js`'s `wireRemoveLocation()`, wired on both
+   the create and edit forms on Memories only, per the brief's explicit scope) clears
+   name+address+coordinates+hint together — distinct from the existing "×" (which only clears
+   coordinates, keeping typed text so the user can re-search under a corrected name) — and
+   requires a second click on the same button within a 4s window as its confirmation (typing in
+   the location fields, or letting the window lapse, cancels it) rather than a bare
+   `window.confirm()`. Cancel Edit (`closeEditModal()`) was already side-effect-free — confirmed
+   unchanged: it only hides+resets the form, no Firestore write happens unless Save is clicked, so
+   the cached post and its Atlas marker are untouched. Saving reuses the exact same
+   `updateDoc(doc(db,"photos",id), {...readLocationFields("post-edit")})` call as every other edit
+   field, so a location change/add/removal always updates the one existing document — never a new
+   one — and `fetchVisiblePosts()` afterward refreshes `cachedPosts` from Firestore, invalidating
+   any stale in-memory copy.
+7. **Atlas sync** — no realtime listener was added (this app has never used `onSnapshot`
+   anywhere, by established convention); Atlas already fully tears down and rebuilds every marker
+   from a fresh `getDocs` query on every load and on `visibilitychange` (a v3.4.2 fix), which
+   already guarantees "no stale/duplicate marker" and "edit moves the marker, remove deletes it,
+   trash hides it, restore brings it back" for free — verified by tracing, not changed. What *was*
+   added: `clusterItems()`'s `addItem()` now skips any trashed item outright (`isDeleted()`
+   check), and every cluster object gained a `memoryIds: Set` (photo doc ids folded in via
+   `bump()`) so a specific Memory's marker can be located without inventing a
+   one-marker-per-document model (clusters still group multiple items at one place into a single
+   pin, unchanged).
+8. **Exact-marker deep link** — Memories' post-save success state no longer auto-closes on a
+   timer (the v19 2.5s race is gone entirely): with valid coordinates, the modal stays open with a
+   persistent "Saved · View on Atlas" line and a disabled submit button (guards against an
+   accidental duplicate re-upload) until the user clicks the link or the modal's existing ×/
+   backdrop close; without coordinates, it still closes immediately as before. The link now reads
+   `atlas.html?memory=<encoded-doc-id>`. `atlas.js`'s new `maybeFocusMemoryFromQuery()` always
+   strips the param via `history.replaceState` (no new history entry, works whether or not the id
+   resolves) and only ever resolves it against `mineClusters` — built from the uid-scoped
+   `fetchMyOnly("photos")` query, so Firestore/firestore.rules have already proven the id belongs
+   to the signed-in viewer before this function runs; the query parameter itself is never trusted
+   as authorization. A missing/foreign/trashed id is silently ignored (not found in `mineClusters`,
+   since trashed items never entered clustering); a match flies the map to it, opens its detail
+   panel, and opens that marker's tooltip.
+9. **Cache** — `service-worker.js` `CACHE` → `eden-shell-v20`, `js/memory-filters.js` added to
+   `PRECACHE` (network-first strategy unchanged; this only affects the offline-fallback path).
+10. **Known limitation, documented rather than hidden**: permanent Storage deletion from the
+    browser is not atomic with the Firestore delete (see point 5) — a trusted Cloud Function
+    (triggered on the Firestore doc's actual deletion, reading `storagePath` server-side) would be
+    the fully reliable fix, and is recommended but was **not** built or deployed as part of this
+    pass, since no backend function infrastructure exists in this project today. Nothing was
+    committed, pushed, or written to production by this pass.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model
