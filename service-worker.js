@@ -1,13 +1,14 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
-// v17 (Résumé consistency cleanup): adds the new shared js/resume-data.js (single source of truth
-// for résumé/portfolio fallback content, imported by career.js + portfolio.js) to PRECACHE, and
-// bumps the version so returning PWA users re-precache the edited career.js/portfolio.js/resume.html/
-// locales and pick up the new shared module instead of serving stale offline copies. Earlier this
-// pass (v16) fixed the off-centre login + login-locked résumé. Online behaviour is unchanged
-// (network-first); bypass hosts are unchanged.
-const CACHE = "eden-shell-v17";
+// v18 (résumé Projects de-duplication): removes the portfolio-style Featured Projects strip from
+// resume.html so the résumé shows a single #projects-list grid — the edited resume.html/career.js/
+// styles.css must land atomically (a stale cached resume.html with the new career.js, or vice
+// versa, is exactly what would re-introduce the two-section duplication), so the cache is bumped to
+// evict every prior HTML/JS/CSS copy on activate. js/resume-data.js stays in PRECACHE. Earlier this
+// pass: v16 (login centring + public résumé), v17 (shared résumé-data module). Online behaviour is
+// unchanged (network-first); bypass hosts are unchanged.
+const CACHE = "eden-shell-v18";
 
 const PRECACHE = [
   "index.html", "resume.html", "gallery.html", "journal.html", "expenses.html",

@@ -675,7 +675,6 @@ body.login-bg {
   #events .bg-darkBg\/60,
   #events .divide-y > div,
   #experience-list > div,
-  #featured-projects-list > div,
   #projects-list > div,
   #certificates-list > div,
   #awards-list > div,
@@ -685,20 +684,17 @@ body.login-bg {
   }
 
   /* Single-column, text-first lists on A4; drop cover images and the avatar placeholder */
-  #featured-projects-list,
   #projects-list,
   #certificates-list,
   #awards-list {
     display: block !important;
   }
-  #featured-projects-list > div,
   #projects-list > div,
   #certificates-list > div,
   #awards-list > div {
     margin-bottom: 6pt;
   }
   #projects-list img,
-  #featured-projects-list img,
   #profile .w-32 {
     display: none !important;
   }

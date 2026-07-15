@@ -719,16 +719,15 @@ document.getElementById("experience-form").addEventListener("submit", async (eve
 
 const PROJECT_CATEGORIES = ["personal", "internship", "fyp", "coursework", "work"];
 
+// The résumé has ONE Projects section — the #projects-list grid. It deliberately has no separate
+// "Featured Projects" strip (that was a portfolio-style gallery that duplicated every card once the
+// shared fallback marked all projects featured); the résumé shows each public project exactly once.
+// replaceChildren keeps this idempotent across load / auth resolution / CMS+fallback / langchange.
 function renderProjects() {
   const owner = canEdit;
   document.getElementById("add-project-btn").classList.toggle("hidden", !owner);
 
   const visible = activeProjectCategory === "all" ? cachedProjects : cachedProjects.filter((p) => p.category === activeProjectCategory);
-  const featured = visible.filter((p) => p.featured);
-
-  const featuredSection = document.getElementById("featured-projects-section");
-  featuredSection.classList.toggle("hidden", featured.length === 0);
-  document.getElementById("featured-projects-list").replaceChildren(...featured.map((p) => projectCard(p, owner)));
 
   const emptyEl = document.getElementById("projects-empty");
   emptyEl.classList.toggle("hidden", visible.length > 0);

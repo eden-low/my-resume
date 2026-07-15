@@ -934,7 +934,13 @@ unchanged: anonymous Career reads only ever run `where("visibility","==","public
 `includeAllMine`/connections paths require auth), so `isCareerReadable`'s no-auth branch reduces to
 `data.visibility == 'public'` — private/connections/legacy-missing-visibility docs are excluded by
 both the query and the rule, and the page-level `careerVisibility` default only decides whether the
-shell renders, never what items are fetched.
+shell renders, never what items are fetched. **v18 follow-up**: the résumé's Projects section had a
+leftover portfolio-style "Featured Projects" strip (`#featured-projects-section`) *in addition to*
+the `#projects-list` grid — once the shared fallback marked all projects `featured`, `renderProjects()`
+rendered the same three into both containers, so they showed twice. Fixed at source by deleting the
+strip markup + its render branch (résumé keeps the single `#projects-list` grid; the `featured` flag
+still drives portfolio.js's Selected Work). `service-worker.js` `CACHE` → `eden-shell-v18` so the
+edited resume.html/career.js/styles.css evict atomically.
 
 ## Architecture
 
