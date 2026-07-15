@@ -829,6 +829,71 @@ backend, no API key, no rules changes, no field renames, no Atlas/profile code c
    `CACHE` bumped to `eden-shell-v14`. Cluster keys are place-text-based, so distinct places
    (Subang vs Kampar) can never merge into one pin — verified, no clustering change needed.
 
+**"EdenAtlas v3.5" — "Recruiter Portfolio"** adds a second, fully-public recruiter-facing entry
+alongside the private Personal OS, with no framework, no build step, no Firebase
+architecture/rules changes, and no change to the Owner/Friend/Public role logic or the login-first
+app. Two new public pages plus optional CMS fields:
+1. **[portfolio.html](portfolio.html)/[portfolio.js](portfolio.js)** — a standalone public
+   one-pager (Hero → At-a-glance snapshot → Selected Work → Experience → Leadership → Skills →
+   Education → About → Contact), **not** login-gated: it deliberately omits `auth-guard.js`,
+   `sidebar.js`, `mobile-nav.js`, `global-search.js` and `splash.js`, and carries
+   `<body class="public-page …">` (a new `styles.css` rule zeroing the sidebar/mobile body
+   padding, same shape as `resume-viewer-mode`). It reads the Career CMS **anonymously** via each
+   career doc's public read rule (`isCareerReadable`, unchanged since v3.2.2 — a
+   `visibility=='public'` career doc is readable with no `request.auth`), querying
+   `where("visibility","==","public")` on `career_projects`/`career_experiences` (the same
+   single-field, index-free query shape career.js used pre-v3.2.2 — **live-tested logged-out**:
+   the query returns `readTime` unauthenticated, while the same query *without* the visibility
+   filter returns `403 PERMISSION_DENIED`, exactly matching the rules-provability model). As of
+   the hardening pass, the deployed DB has **zero** public career docs, so the fallback is the live
+   path today. **Source-of-truth policy is a deterministic per-slug merge** (`buildWorkList()`):
+   for each of the three expected slugs (`edenatlas`/`utar-epms`/`enterprise-ai-ops`) a public CMS
+   project matched by slug is preferred, else the curated `FALLBACK_PROJECTS` entry fills that one
+   slot; additional public **featured** CMS projects are appended newest-first, deduped by slug/id.
+   A **private** CMS doc is never fetched (public-only query) so it can never override or suppress a
+   public fallback. All Firestore-derived values render via DOM `textContent`/element construction
+   (a small `h()` helper), never interpolated into `innerHTML` — only static module constants
+   (hero labels/leadership/skills/about) still use escaped `innerHTML`. Default English with an
+   EN/中文 toggle wired to the
+   existing `setLang()`/`eden:langchange` triad; all bilingual content re-renders on language
+   change (dynamic content is JS-rendered from `{en,zh}` objects, chrome via `data-i18n`). Content
+   is privacy-scrubbed per the brief: internship company/systems anonymized ("AI technology
+   company", "identity-verification review tool", "AutoML / chat-bot administration system"), no
+   IC/face/client data, no metrics fabricated, no phone number (résumé-only), and a
+   "worked with / familiar" skills group kept distinct from proficiencies.
+2. **[project.html](project.html)/[project.js](project.js)** — a reusable public case-study
+   renderer (`?slug=…`, opened from Selected Work): eight sections (Overview / Problem / My Role /
+   Investigation & Decisions / Solution / Result / What I Learned / Technology) + Previous/Next
+   across a fixed `ORDER` of the three featured slugs (`edenatlas`/`utar-epms`/`enterprise-ai-ops`).
+   A CMS project matched by `slug` is **merged field-by-field over** a curated `CASE_STUDIES`
+   fallback (CMS value wins when non-empty, fallback fills gaps), so a case study is never blank;
+   an unknown slug with no CMS match shows a "not found" state. Same public shell/i18n as
+   portfolio.
+3. **Career CMS extension** — `career_projects` gained optional, backward-compatible public
+   case-study fields (`slug`, bilingual `role`/`challenge`/`actions`/`outcome`), surfaced through a
+   collapsible "Public Case Study (optional)" `<details>` block in `resume.html`'s project form and
+   read/written by `career.js`'s `openProjectForm()`/submit. All default to `""`; legacy projects
+   render fine everywhere without them. No `firestore.rules`/`storage.rules` change (this ruleset
+   never restricts field sets). `resume.html`'s Contact "Portfolio" link now points at
+   `portfolio.html` (was `index.html`). `service-worker.js` `CACHE` bumped to `eden-shell-v15`
+   with `portfolio.html`/`project.html`/`portfolio.js`/`project.js` added to `PRECACHE` — the
+   bump also forces the edited `styles.css`/locale files to re-precache instead of serving stale
+   offline (online behaviour stays network-first, unchanged).
+4. **Explicitly unchanged / not done**: `index.html` (the private Home) is untouched — the brief
+   scoped the "point `/` at Portfolio" routing change out of this pass. No deploy/push. The
+   internship Experience company name and the featured-project slugs still need the Owner to enter
+   them in the CMS to switch from the curated fallback to live data (documented for the user).
+   Verification run: `node --check` on the new modules, `JSON.parse` on both locales, an
+   element-id cross-check between each new page and its script, an i18n-key presence check across
+   EN/ZH, a standalone unit test of `buildWorkList()` across all six CMS states + edge cases (10/10
+   pass), a **live logged-out Firestore REST test** confirming the public career query is permitted
+   (and the denied control), and an HTTP-level static-server check that every page + local asset
+   serves 200. **Not** run (no browser/second account in this environment): interactive browser QA
+   (console errors, responsive breakpoints, focus states, live EN/中文 toggle, Google sign-in flow)
+   and two-account Owner/Friend QA — a manual checklist was handed to the user instead. Footer
+   version on the two new pages is `3.5`; the other 19 pages' footers were left as-is (narrow,
+   additive pass).
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

@@ -115,6 +115,8 @@ original build to avoid a risky site-wide route rename (see the Brand & navigati
 | (via Atlas) | [collections.html](collections.html) / [collection-detail.html](collection-detail.html) | **Collections** — life chapters (e.g. "Japan Trip") that group existing Memories/Journal/Finance/Journey/Career records via a `collectionId` reference, never a copy. List page: create/edit/delete (blocked while non-empty) with per-type item counts; detail page: cover/title/description/visibility header, one section per record type plus a Reflection/Notes field, and a synthetic "Uncategorized" view for anything with no collection |
 | Me | [me.html](me.html) | Personal control center — merges the old Profile + Settings + Dashboard's personal analytics into one tabbed page: **Overview** (Goals/Time Capsule summary/Achievements/Gallery/Expense/Journal analytics), **Profile** (@username/bio/location/account dates), **Preferences** (theme/language/default city/default visibility), **Privacy** (role/visibility explainer), **Connections** (Whitelist Friend Management, owner-only), **Backup** (Export & Backup), **System Logs** (owner-only). `settings.html` now just redirects here |
 | Time Capsule | [time-capsule.html](time-capsule.html) | Write a message to your future self — title/message/open date/optional attachment, sealed until that date. Three sections: Sealed / Ready to Open / Opened. Always private (`time_capsules` collection, owner-uid-only). A secondary sidebar/drawer item (v2.9), also reachable from Home's Quick Actions and Me's Overview tab |
+| (public, share directly) | [portfolio.html](portfolio.html) | **Recruiter-facing public portfolio (v3.5)** — no login required. A calm one-page hero → snapshot → **Selected Work** (up to 3 featured projects) → **Experience** → **Leadership** → **Skills** → **Education** → **About** → **Contact**. Reads the Career CMS anonymously (public `career_projects`/`career_experiences`), falling back to curated verified content when the CMS is empty. Default English, EN/中文 toggle, its own clean shell (no private-app sidebar/nav). Send the URL straight to recruiters |
+| (public, from Portfolio) | [project.html](project.html) | **Reusable case-study renderer (v3.5)** — `project.html?slug=…`, opened from Selected Work. Eight sections (Overview / Problem / My Role / Investigation & Decisions / Solution / Result / What I Learned / Technology) with Previous/Next navigation. CMS project fields (by `slug`) merge over a curated fallback field-by-field; unknown slugs show a "not found" state |
 
 ## Running locally
 
@@ -158,7 +160,11 @@ other collection in this app, Career is **not** per-user multi-tenant — the pa
 about one person — so writes are Owner-only (`isOwner()`), not `canParticipate()`-gated; HR
 visitors and Friends only ever read `visibility:"public"` items. Profile/Highlights/Education/
 Leadership stay static prose (out of CMS scope); Projects adds a Featured strip, category
-filter, a detail modal, and a Reflection field. Uploads go to
+filter, a detail modal, and a Reflection field. **v3.5** adds optional, backward-compatible
+public case-study fields on `career_projects` (`slug`, bilingual `role`/`challenge`/`actions`/
+`outcome`) surfaced through an "Public Case Study (optional)" section in the project edit form —
+these power [portfolio.html](portfolio.html)'s Selected Work and [project.html](project.html)'s
+case-study pages; old projects missing them still render everywhere via safe fallbacks. Uploads go to
 `career/{uid}/{public,private}/...` in Storage. A one-time, manually-run
 [migrate-career.html](migrate-career.html) ports the old static Education/Work-Experience/
 Achievements prose into the new collections — delete it after running once.

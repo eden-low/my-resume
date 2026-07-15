@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Study — Low Fang Jun</title>
+  <meta name="description" content="A project case study by Low Fang Jun (Eden) — problem, role, decisions and outcome." />
+  <meta property="og:type" content="article" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#09090e">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            darkBg: '#0a0a0e',
+            cardBg: '#17151f',
+            borderNeon: '#2a2833',
+            neonPurple: '#a78bfa',
+            neonBlue: '#6ea8fe',
+            neonViolet: '#8b7cf0',
+            textGray: '#9793ab',
+          },
+          fontFamily: {
+            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="public-page bg-darkBg text-white font-sans grid-bg min-h-screen">
+
+  <header class="sticky top-0 z-40 bg-darkBg/80 backdrop-blur-md border-b border-borderNeon">
+    <div class="portfolio-shell px-5 h-16 flex items-center justify-between gap-4">
+      <a href="portfolio.html#work" class="inline-flex items-center gap-2 text-sm font-cyber font-semibold text-textGray hover:text-neonPurple transition-colors min-w-0">
+        <i class="fa-solid fa-arrow-left text-xs flex-shrink-0"></i>
+        <span class="truncate" data-i18n="project.back_to_work">Back to Selected Work</span>
+      </a>
+      <div class="flex items-center rounded-full border border-borderNeon overflow-hidden text-[11px] font-cyber font-bold flex-shrink-0">
+        <button id="lang-en" type="button" class="px-2.5 py-1 text-textGray hover:text-white transition-colors">EN</button>
+        <button id="lang-zh" type="button" class="px-2.5 py-1 text-textGray hover:text-white transition-colors border-l border-borderNeon">中文</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="portfolio-shell px-5 py-10 md:py-14">
+
+    <!-- Loading skeleton -->
+    <div id="cs-loading" class="space-y-4">
+      <div class="skeleton h-6 w-40 rounded-lg"></div>
+      <div class="skeleton h-12 w-3/4 rounded-lg"></div>
+      <div class="skeleton h-64 rounded-2xl"></div>
+    </div>
+
+    <!-- Not found -->
+    <div id="cs-notfound" class="hidden text-center py-20">
+      <i class="fa-solid fa-compass text-3xl text-textGray"></i>
+      <p class="mt-4 text-sm text-textGray" data-i18n="project.not_found">This case study could not be found.</p>
+      <a href="portfolio.html#work" class="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-cardBg/70 border border-borderNeon rounded-xl text-sm text-white hover:border-neonPurple transition-all">
+        <i class="fa-solid fa-arrow-left text-xs"></i> <span data-i18n="project.back_to_work">Back to Selected Work</span>
+      </a>
+    </div>
+
+    <!-- Case study -->
+    <article id="cs-article" class="hidden">
+      <p id="cs-eyebrow" class="reveal text-[10px] uppercase tracking-[0.2em] text-neonPurple font-code"></p>
+      <h1 id="cs-title" class="reveal font-cyber font-black text-3xl md:text-5xl text-white mt-3 leading-tight"></h1>
+      <div id="cs-tech-top" class="reveal flex flex-wrap gap-1.5 mt-5"></div>
+
+      <div id="cs-body" class="mt-10 space-y-8"></div>
+
+      <!-- Prev / Next -->
+      <nav id="cs-nav" class="mt-14 pt-6 border-t border-borderNeon grid grid-cols-1 sm:grid-cols-2 gap-4"></nav>
+    </article>
+  </main>
+
+  <footer class="portfolio-shell px-5 py-8 border-t border-borderNeon mt-4">
+    <a href="portfolio.html" class="text-[11px] font-code text-textGray/70 hover:text-neonPurple transition-colors" data-i18n="project.back_to_portfolio">Portfolio home</a>
+    <p class="text-[11px] font-code text-textGray/50 mt-2">EdenAtlas · by Jun · Version 3.5</p>
+  </footer>
+
+  <script src="scripts.js" defer></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="project.js"></script>
+</body>
+</html>

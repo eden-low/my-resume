@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Low Fang Jun — Portfolio</title>
+  <meta name="description" content="Low Fang Jun (Eden) — Business Information Systems student focused on web applications, data workflows and technical operations. Selected work, experience and résumé." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Low Fang Jun — Portfolio" />
+  <meta property="og:description" content="Business Information Systems student turning operational problems into practical, maintainable digital solutions." />
+  <meta property="og:image" content="images/icon-512.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#09090e">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            darkBg: '#0a0a0e',
+            cardBg: '#17151f',
+            borderNeon: '#2a2833',
+            neonPurple: '#a78bfa',
+            neonBlue: '#6ea8fe',
+            neonViolet: '#8b7cf0',
+            textGray: '#9793ab',
+          },
+          fontFamily: {
+            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
+            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="public-page bg-darkBg text-white font-sans grid-bg min-h-screen">
+
+  <!-- ============ Header ============ -->
+  <header class="sticky top-0 z-40 bg-darkBg/80 backdrop-blur-md border-b border-borderNeon">
+    <div class="portfolio-shell px-5 h-16 flex items-center justify-between gap-4">
+      <a href="#top" class="flex items-center gap-2 min-w-0 flex-shrink-0">
+        <img src="images/logo-mark.png" alt="" class="w-7 h-7 object-contain flex-shrink-0">
+        <span class="font-cyber font-semibold text-sm tracking-tight text-white truncate">Low&nbsp;Fang&nbsp;Jun</span>
+        <span class="hidden sm:inline text-[10px] font-code text-textGray border-l border-borderNeon pl-2" data-i18n="portfolio.brand_tagline">Portfolio</span>
+      </a>
+
+      <nav id="nav-links" class="hidden md:flex items-center gap-6 text-sm font-cyber font-semibold text-textGray">
+        <a href="#work" class="hover:text-neonPurple transition-colors" data-i18n="portfolio.nav_work">Work</a>
+        <a href="#experience" class="hover:text-neonPurple transition-colors" data-i18n="portfolio.nav_experience">Experience</a>
+        <a href="#about" class="hover:text-neonPurple transition-colors" data-i18n="portfolio.nav_about">About</a>
+        <a href="resume.html" class="hover:text-neonPurple transition-colors" data-i18n="portfolio.nav_resume">Résumé</a>
+      </nav>
+
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="flex items-center rounded-full border border-borderNeon overflow-hidden text-[11px] font-cyber font-bold">
+          <button id="lang-en" type="button" class="px-2.5 py-1 text-textGray hover:text-white transition-colors">EN</button>
+          <button id="lang-zh" type="button" class="px-2.5 py-1 text-textGray hover:text-white transition-colors border-l border-borderNeon">中文</button>
+        </div>
+        <a href="login.html" class="hidden sm:inline text-[11px] font-code text-textGray hover:text-neonPurple transition-colors" data-i18n="portfolio.enter_app">Enter EdenAtlas</a>
+        <button id="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" class="md:hidden text-white text-lg w-9 h-9 flex items-center justify-center rounded-lg border border-borderNeon">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Mobile menu -->
+    <nav id="mobile-menu" class="hidden md:hidden border-t border-borderNeon bg-darkBg/95 backdrop-blur-md px-5 py-3 flex flex-col gap-1 text-sm font-cyber font-semibold text-textGray">
+      <a href="#work" class="py-2 hover:text-neonPurple transition-colors mobile-menu-link" data-i18n="portfolio.nav_work">Work</a>
+      <a href="#experience" class="py-2 hover:text-neonPurple transition-colors mobile-menu-link" data-i18n="portfolio.nav_experience">Experience</a>
+      <a href="#about" class="py-2 hover:text-neonPurple transition-colors mobile-menu-link" data-i18n="portfolio.nav_about">About</a>
+      <a href="resume.html" class="py-2 hover:text-neonPurple transition-colors" data-i18n="portfolio.nav_resume">Résumé</a>
+      <a href="login.html" class="py-2 text-textGray/80 hover:text-neonPurple transition-colors" data-i18n="portfolio.enter_app">Enter EdenAtlas</a>
+    </nav>
+  </header>
+
+  <main id="top" class="portfolio-shell px-5">
+
+    <!-- ============ Hero ============ -->
+    <section data-parallax-hero class="pt-16 pb-12 md:pt-24 md:pb-16">
+      <p id="hero-eyebrow" class="reveal font-code text-sm text-neonPurple">Hi, I'm Eden 👋</p>
+      <h1 class="reveal portfolio-hero-name font-cyber font-black text-white mt-3">Low Fang Jun</h1>
+      <p id="hero-subhead" class="reveal text-lg md:text-xl text-white/90 mt-5 max-w-2xl leading-relaxed"></p>
+      <p id="hero-oneliner" class="reveal text-base text-textGray mt-3 max-w-2xl leading-relaxed"></p>
+
+      <div class="reveal flex flex-wrap items-center gap-3 mt-8">
+        <a href="#work" class="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-sm font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all">
+          <i class="fa-solid fa-arrow-down text-xs"></i> <span data-i18n="portfolio.hero_cta_work">View Selected Work</span>
+        </a>
+        <a href="resume.html" class="inline-flex items-center gap-2 px-5 py-3 bg-cardBg/70 border border-borderNeon rounded-xl text-sm font-cyber font-bold tracking-wider text-white hover:border-neonPurple hover:scale-105 transition-all">
+          <i class="fa-solid fa-file-arrow-down text-xs"></i> <span data-i18n="portfolio.hero_cta_resume">Download Résumé</span>
+        </a>
+      </div>
+
+      <div id="hero-labels" class="reveal flex flex-wrap gap-2 mt-8"></div>
+    </section>
+
+    <!-- ============ Snapshot ============ -->
+    <section class="reveal bg-cardBg/90 backdrop-blur-sm p-6 md:p-7 rounded-2xl neon-border-purple">
+      <h2 class="text-[10px] uppercase tracking-[0.2em] text-textGray font-code" data-i18n="portfolio.snapshot_title">At a glance</h2>
+      <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+        <div>
+          <dt class="text-xs font-code text-textGray" data-i18n="portfolio.snap_focus_label">Focus</dt>
+          <dd id="snap-focus" class="text-sm text-white mt-1 leading-snug"></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-code text-textGray" data-i18n="portfolio.snap_education_label">Education</dt>
+          <dd id="snap-education" class="text-sm text-white mt-1 leading-snug"></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-code text-textGray" data-i18n="portfolio.snap_location_label">Location</dt>
+          <dd id="snap-location" class="text-sm text-white mt-1 leading-snug"></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-code text-textGray" data-i18n="portfolio.snap_corefocus_label">Core focus</dt>
+          <dd id="snap-corefocus" class="text-sm text-white mt-1 leading-snug"></dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- ============ Selected Work ============ -->
+    <section id="work" class="scroll-mt-20 mt-16">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_work">Selected Work</h2>
+        <p class="text-textGray mt-2 max-w-2xl" data-i18n="portfolio.section_work_sub">A few projects that show how I work — the problem, my role, and the outcome.</p>
+      </div>
+      <div id="work-list" class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="skeleton h-80 rounded-2xl"></div>
+        <div class="skeleton h-80 rounded-2xl"></div>
+        <div class="skeleton h-80 rounded-2xl"></div>
+      </div>
+    </section>
+
+    <!-- ============ Experience ============ -->
+    <section id="experience" class="scroll-mt-20 mt-16">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_experience">Experience</h2>
+        <p class="text-textGray mt-2 max-w-2xl" data-i18n="portfolio.section_experience_sub">What I've built and improved in real teams.</p>
+      </div>
+      <div id="experience-list" class="mt-8 space-y-5">
+        <div class="skeleton h-40 rounded-2xl"></div>
+      </div>
+    </section>
+
+    <!-- ============ Leadership ============ -->
+    <section id="leadership" class="scroll-mt-20 mt-16">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_leadership">Leadership</h2>
+        <p class="text-textGray mt-2 max-w-2xl" data-i18n="portfolio.section_leadership_sub">Leading people and events, not just code.</p>
+      </div>
+      <div id="leadership-list" class="mt-8 space-y-4"></div>
+    </section>
+
+    <!-- ============ Skills ============ -->
+    <section id="skills" class="scroll-mt-20 mt-16">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_skills">Skills</h2>
+        <p class="text-textGray mt-2 max-w-2xl" data-i18n="portfolio.section_skills_sub">Grouped by how I actually apply them.</p>
+      </div>
+      <div id="skills-list" class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+      <p id="skills-familiar" class="reveal text-xs text-textGray font-code mt-5"></p>
+    </section>
+
+    <!-- ============ Education ============ -->
+    <section id="education" class="scroll-mt-20 mt-16">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_education">Education</h2>
+      </div>
+      <div class="reveal mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
+          <p class="font-cyber font-bold text-sm text-white">Bachelor of Information Systems (Hons), Business Information Systems</p>
+          <p class="text-xs text-neonPurple font-code mt-1">Universiti Tunku Abdul Rahman (UTAR)</p>
+          <p class="text-[11px] font-code text-textGray mt-1">2023 – 2026 · CGPA 2.86</p>
+          <p class="text-xs text-textGray mt-3 leading-relaxed">Coursework across system design, data security and web programming.</p>
+        </div>
+        <div class="bg-cardBg/90 backdrop-blur-sm p-6 rounded-2xl neon-border-purple">
+          <p class="font-cyber font-bold text-sm text-white">Diploma in Software Engineering</p>
+          <p class="text-xs text-neonPurple font-code mt-1">International College of Advanced Technology Sarawak (iCATS)</p>
+          <p class="text-[11px] font-code text-textGray mt-1">2020 – 2023 · CGPA 3.22</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ About ============ -->
+    <section id="about" class="scroll-mt-20 mt-16">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_about">About</h2>
+      </div>
+      <div id="about-body" class="reveal mt-6 bg-cardBg/90 backdrop-blur-sm p-6 md:p-8 rounded-2xl neon-border-purple space-y-4 text-sm md:text-base text-textGray leading-relaxed max-w-3xl"></div>
+    </section>
+
+    <!-- ============ Contact ============ -->
+    <section id="contact" class="scroll-mt-20 mt-16 mb-8">
+      <div class="reveal">
+        <h2 class="font-cyber font-black text-2xl md:text-3xl text-white" data-i18n="portfolio.section_contact">Get in touch</h2>
+        <p class="text-textGray mt-2" data-i18n="portfolio.contact_sub">Open to internship and graduate opportunities.</p>
+      </div>
+      <div class="reveal mt-6 flex flex-wrap gap-3">
+        <a href="mailto:jjun8647@gmail.com" class="inline-flex items-center gap-2 px-4 py-2.5 bg-cardBg/70 border border-borderNeon rounded-xl text-sm text-white hover:border-neonPurple transition-all">
+          <i class="fa-solid fa-envelope text-neonPurple"></i> jjun8647@gmail.com
+        </a>
+        <a href="https://github.com/eden-low" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2.5 bg-cardBg/70 border border-borderNeon rounded-xl text-sm text-white hover:border-neonPurple transition-all">
+          <i class="fa-brands fa-github"></i> github.com/eden-low
+        </a>
+        <a href="resume.html" class="inline-flex items-center gap-2 px-4 py-2.5 bg-cardBg/70 border border-borderNeon rounded-xl text-sm text-white hover:border-neonPurple transition-all">
+          <i class="fa-solid fa-file-lines text-neonBlue"></i> <span data-i18n="portfolio.contact_resume">Résumé</span>
+        </a>
+        <span class="inline-flex items-center gap-2 px-4 py-2.5 text-sm text-textGray">
+          <i class="fa-solid fa-location-dot text-rose-400"></i> Kuching, Sarawak, Malaysia
+        </span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="portfolio-shell px-5 py-8 border-t border-borderNeon mt-8">
+    <p class="text-[11px] font-code text-textGray/70 text-center" data-i18n="portfolio.footer_note">This is a public portfolio. The full EdenAtlas personal platform requires sign-in.</p>
+    <p class="text-[11px] font-code text-textGray/50 text-center mt-2">EdenAtlas · by Jun · Version 3.5</p>
+  </footer>
+
+  <script src="scripts.js" defer></script>
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="portfolio.js"></script>
+</body>
+</html>

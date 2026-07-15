@@ -591,6 +591,16 @@ async function openProjectForm(id) {
   document.getElementById("project-description-zh").value = project?.description_zh || "";
   document.getElementById("project-reflection-en").value = project?.reflection_en || "";
   document.getElementById("project-reflection-zh").value = project?.reflection_zh || "";
+  // Optional public case-study fields (v3.5) — all safe-default to "" for legacy projects.
+  document.getElementById("project-slug").value = project?.slug || "";
+  document.getElementById("project-role-en").value = project?.role_en || "";
+  document.getElementById("project-role-zh").value = project?.role_zh || "";
+  document.getElementById("project-challenge-en").value = project?.challenge_en || "";
+  document.getElementById("project-challenge-zh").value = project?.challenge_zh || "";
+  document.getElementById("project-actions-en").value = project?.actions_en || "";
+  document.getElementById("project-actions-zh").value = project?.actions_zh || "";
+  document.getElementById("project-outcome-en").value = project?.outcome_en || "";
+  document.getElementById("project-outcome-zh").value = project?.outcome_zh || "";
   document.getElementById("project-tech-stack").value = (project?.techStack || []).join(", ");
   document.getElementById("project-tags").value = (project?.tags || []).join(", ");
   await populateCollectionSelect(document.getElementById("project-collection"), project?.collectionId);
@@ -641,6 +651,16 @@ document.getElementById("project-form").addEventListener("submit", async (event)
       description_zh: document.getElementById("project-description-zh").value.trim(),
       reflection_en: document.getElementById("project-reflection-en").value.trim(),
       reflection_zh: document.getElementById("project-reflection-zh").value.trim(),
+      // v3.5 optional public case-study fields — stored lowercase/trimmed, empty strings are fine.
+      slug: document.getElementById("project-slug").value.trim().toLowerCase().replace(/\s+/g, "-"),
+      role_en: document.getElementById("project-role-en").value.trim(),
+      role_zh: document.getElementById("project-role-zh").value.trim(),
+      challenge_en: document.getElementById("project-challenge-en").value.trim(),
+      challenge_zh: document.getElementById("project-challenge-zh").value.trim(),
+      actions_en: document.getElementById("project-actions-en").value.trim(),
+      actions_zh: document.getElementById("project-actions-zh").value.trim(),
+      outcome_en: document.getElementById("project-outcome-en").value.trim(),
+      outcome_zh: document.getElementById("project-outcome-zh").value.trim(),
       techStack: document.getElementById("project-tech-stack").value.split(",").map((s) => s.trim()).filter(Boolean),
       tags: document.getElementById("project-tags").value.split(",").map((s) => s.trim()).filter(Boolean),
       collectionId: document.getElementById("project-collection").value || null,

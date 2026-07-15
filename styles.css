@@ -510,6 +510,31 @@ body.resume-viewer-mode {
   padding-bottom: 0 !important;
 }
 
+/* Recruiter-facing public pages (portfolio.html, project.html) — a standalone public shell with
+   no private-app sidebar/mobile-nav, so the sitewide `padding-left: var(--sidebar-w)` and mobile
+   top/bottom-bar clearance must be zeroed here (those bars are never injected on these pages).
+   Same class-gated approach as body.resume-viewer-mode above. */
+body.public-page {
+  padding-left: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Public portfolio: constrain the editorial content column and give the hero generous rhythm. */
+.portfolio-shell {
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Portfolio hero name — fluid type that stays readable from 360px to desktop without a media
+   query, using the existing font stacks. */
+.portfolio-hero-name {
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
 /* Career's "Print / Save PDF" (resume.html) prints the page itself as a professional A4 resume:
    every piece of app chrome and owner-only control is hidden, the dark glass cards flatten to
    plain white/black typography with ruled section headings, and individual entries never split

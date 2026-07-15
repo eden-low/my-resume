@@ -150,7 +150,7 @@
             <a href="mailto:jjun8647@gmail.com" class="hover:text-neonPurple transition-colors"><i class="fa-solid fa-envelope mr-1.5 text-neonPurple"></i>jjun8647@gmail.com</a>
             <span><i class="fa-solid fa-phone mr-1.5 text-neonBlue"></i>011-10574969</span>
             <a href="https://github.com/eden-low" target="_blank" rel="noopener" class="hover:text-neonPurple transition-colors"><i class="fa-brands fa-github mr-1.5 text-white"></i>github.com/eden-low</a>
-            <a href="index.html" class="hover:text-neonPurple transition-colors"><i class="fa-solid fa-globe mr-1.5 text-emerald-400"></i>EdenAtlas &mdash; Portfolio</a>
+            <a href="portfolio.html" class="hover:text-neonPurple transition-colors"><i class="fa-solid fa-globe mr-1.5 text-emerald-400"></i>Portfolio</a>
             <span><i class="fa-solid fa-location-dot mr-1.5 text-rose-400"></i>Kuching, Sarawak, Malaysia</span>
           </div>
         </div>
@@ -488,6 +488,58 @@
           <label class="block text-xs font-code text-textGray mb-1.5">Tech Stack (comma-separated)</label>
           <input id="project-tech-stack" type="text" placeholder="React, Firebase, Tailwind" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
         </div>
+
+        <!-- Public case-study fields (v3.5, all optional — power portfolio.html / project.html?slug=).
+             Backward-compatible: old projects with none of these still render fine everywhere. -->
+        <details class="bg-darkBg/40 border border-borderNeon rounded-lg p-3">
+          <summary class="text-xs font-cyber font-bold text-neonPurple cursor-pointer">Public Case Study (optional)</summary>
+          <div class="space-y-3 mt-3">
+            <div>
+              <label class="block text-xs font-code text-textGray mb-1.5">Slug (URL id, e.g. edenatlas)</label>
+              <input id="project-slug" type="text" placeholder="lowercase-with-dashes" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">My Role (English)</label>
+                <input id="project-role-en" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+              </div>
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">My Role (中文)</label>
+                <input id="project-role-zh" type="text" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">Problem (English)</label>
+                <textarea id="project-challenge-en" rows="2" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">Problem (中文)</label>
+                <textarea id="project-challenge-zh" rows="2" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">Investigation / Decisions (English)</label>
+                <textarea id="project-actions-en" rows="3" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">Investigation / Decisions (中文)</label>
+                <textarea id="project-actions-zh" rows="3" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">Result (English)</label>
+                <textarea id="project-outcome-en" rows="2" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-code text-textGray mb-1.5">Result (中文)</label>
+                <textarea id="project-outcome-zh" rows="2" class="w-full bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white"></textarea>
+              </div>
+            </div>
+          </div>
+        </details>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-code text-textGray mb-1.5" data-i18n="common.collection">Collection</label>
