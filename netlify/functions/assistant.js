@@ -176,6 +176,8 @@ function systemPrompt(scopes, dateContext) {
     "Never claim an item is in the past or future without actually comparing its date to currentLocalDate.",
     // --- Calendar semantics (task C) ---
     "list_calendar and list_journey summarize an ACTIVITY calendar, not a scheduling system: memories' dates are uploadedAt (when the Memory was uploaded) and journals' dates are createdAt (when the entry was written) — never a planned/future event time. Describe these records as \"recorded,\" \"uploaded,\" or \"created.\" NEVER describe them as \"scheduled,\" \"pre-scheduled,\" \"a placeholder,\" or \"added in advance\" — no field in this data means that, and using that language would misrepresent what was actually stored. Finance/expenses are never included in any calendar or journey summary.",
+    // --- Strict collection-scope consent: Calendar is a capability, not a data grant ---
+    "Calendar is a date-organizing CAPABILITY, not permission to read any collection by itself: list_calendar only ever reads Memories and/or Journal when those are ALSO separately listed in the enabled scopes above — enabling Calendar alone never grants access to Memories or Journal. If the Owner enables only Calendar, list_calendar will return a validation notice instead of any data; when that happens, ask the Owner to also enable Memories and/or Journal rather than claiming any record exists. If only Journal (not Memories) is enabled alongside Calendar, list_calendar's results and any summary you write from them must never mention or imply a Memory/photo — and the reverse for Memories-only. Never state or imply that Calendar by itself lets you see Memories or Journal content.",
     "When you report on a date range, state the actual range you searched (a tool's resolvedRange, if present) so the Owner can see exactly what was covered.",
     // --- Language (task H) ---
     "Respond in the same language the Owner's message is written in — if it's in Chinese, answer in Chinese; if it's in English, answer in English. Never translate or alter the Owner's own stored titles, captions, tags, or place names — quote them as stored.",
@@ -314,7 +316,20 @@ function createHandler(deps) {
     }
     const { message, history, scopes } = validated.value;
 
-    // 6. Rate/cost protection. Burst guard first (cheap, no Firestore round trip); the durable
+    // 6. Reject a structurally-useless Calendar-only scope set BEFORE any rate-limit increment
+    // or Qwen call. Calendar is a date-organizing capability, never a data grant of its own (see
+    // lib/tools.js's list_calendar) — when it is the ONLY selected scope, no tool this request
+    // could offer would ever have anything to read (list_calendar itself is never even offered
+    // in this state — see toolDefsForScopes' dependsOnAny gate — and draft_reflection has
+    // nothing from a prior tool call to draft from), so the request can never produce a useful
+    // answer. Deliberately narrow: a request that ALSO has memories/journal/journey enabled is
+    // NOT rejected here — e.g. Calendar+Journey remains fully valid (list_journey stays
+    // available; only list_calendar itself is omitted from what's offered to Qwen this turn).
+    if (scopes.length === 1 && scopes[0] === "calendar") {
+      return jsonResponse(400, { ok: false, error: "calendar_requires_memories_or_journal_scope" }, baseHeaders);
+    }
+
+    // 7. Rate/cost protection. Burst guard first (cheap, no Firestore round trip); the durable
     // daily cap is the real limiter — see lib/rate-limit.js's header comment.
     const now = deps.now ? deps.now() : new Date();
     const burst = checkBurst(uid, now.getTime());
@@ -343,7 +358,7 @@ function createHandler(deps) {
       return jsonResponse(429, { ok: false, error: "rate_limited", scope: "daily", limit: daily.limit }, baseHeaders);
     }
 
-    // 7. Run the bounded, read-only tool-calling agent loop against Qwen. `now` is the exact
+    // 8. Run the bounded, read-only tool-calling agent loop against Qwen. `now` is the exact
     // same server clock reading already used for rate limiting above (never a second, possibly-
     // different `new Date()` call) — one authoritative "now" per request, threaded everywhere.
     const timeZone = DEFAULT_TIME_ZONE;

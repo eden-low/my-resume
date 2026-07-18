@@ -724,6 +724,7 @@
     "scope_journey": "Journey",
     "scope_calendar": "Calendar",
     "scopes_hint": "Off by default. Nothing outside these scopes is ever read.",
+    "scope_calendar_hint": "Calendar: Organizes your selected Memories and Journal entries by date. It never reads them on its own — also select Memories and/or Journal.",
     "empty_title": "Ask your Atlas Assistant anything.",
     "empty_subtitle": "Pick a data scope above, then try one of these:",
     "prompt_missing_location": "Show my Memories that still need a confirmed location.",
@@ -764,6 +765,7 @@
     "evidence_source_count": "{count} sources",
     "evidence_zero_results": "0 matching records",
     "scope_change_notice": "Data access changed. A new chat was started.",
-    "select_scope_notice": "Select at least one data source to ask about your records."
+    "select_scope_notice": "Select at least one data source to ask about your records.",
+    "calendar_needs_source_notice": "Calendar summaries also need Memories and/or Journal selected."
   }
 }

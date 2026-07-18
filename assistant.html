@@ -87,6 +87,7 @@
             <span data-i18n="assistant.scope_calendar">Calendar</span>
           </label>
           <span class="text-[11px] text-textGray/70" data-i18n="assistant.scopes_hint">Off by default. Nothing outside these scopes is ever read.</span>
+          <p id="assistant-calendar-hint" class="w-full text-[11px] text-textGray/70" data-i18n="assistant.scope_calendar_hint">Calendar: Organizes your selected Memories and Journal entries by date. It never reads them on its own — also select Memories and/or Journal.</p>
         </fieldset>
         <!-- Shown briefly whenever a scope checkbox actually changes — any scope change is treated
              as a privacy-boundary change, so it always starts a clean chat (see assistant.js's
@@ -99,6 +100,13 @@
              updateSendAvailability()) so no request is ever sent just to have the model explain
              that it has no access. -->
         <p id="assistant-noscope-notice" class="hidden text-[11px] text-amber-300" role="status" data-i18n="assistant.select_scope_notice">Select at least one data source to ask about your records.</p>
+        <!-- Shown whenever Calendar is selected but neither Memories nor Journal is — Calendar is
+             a date-organizing capability, not a data grant of its own (see lib/tools.js's
+             list_calendar/toolDefsForScopes). NON-BLOCKING: Send is only disabled when Calendar
+             is the ENTIRE selected scope set (isCalendarOnlyScope()) — e.g. Calendar + Journey
+             still shows this notice but leaves Send enabled, since Journey remains a fully
+             independent, usable scope via list_journey. See updateSendAvailability(). -->
+        <p id="assistant-calendar-scope-notice" class="hidden text-[11px] text-amber-300" role="status" data-i18n="assistant.calendar_needs_source_notice">Calendar summaries also need Memories and/or Journal selected.</p>
       </div>
 
       <!-- Message list -->

@@ -724,6 +724,7 @@
     "scope_journey": "历程",
     "scope_calendar": "日历",
     "scopes_hint": "默认关闭。未勾选的范围绝不会被读取。",
+    "scope_calendar_hint": "日历：按日期整理你所选的回忆与日记条目。它本身不会读取任何内容——请同时勾选回忆和/或日记。",
     "empty_title": "向你的地图集助手提问吧。",
     "empty_subtitle": "先在上方选择数据范围，然后试试这些：",
     "prompt_missing_location": "显示还没有确认位置的回忆。",
@@ -764,6 +765,7 @@
     "evidence_source_count": "{count} 个来源",
     "evidence_zero_results": "0 条匹配记录",
     "scope_change_notice": "数据访问范围已更改，已开始新对话。",
-    "select_scope_notice": "请至少选择一个数据来源，才能询问你的记录。"
+    "select_scope_notice": "请至少选择一个数据来源，才能询问你的记录。",
+    "calendar_needs_source_notice": "日历摘要还需要勾选回忆和/或日记。"
   }
 }

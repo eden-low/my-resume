@@ -372,8 +372,21 @@ const TOOLS = {
 
   list_calendar: {
     scope: "calendar",
+    // Hardening follow-up: Calendar being *offered* used to depend only on `scope` ("calendar"
+    // enabled) — nothing stopped Qwen from being handed this tool's definition (and therefore
+    // being able to call it) with Calendar+Journey selected and neither Memories nor Journal
+    // enabled, even though it could never produce anything but a validation error. `toolDefsForScopes()`
+    // below now also requires at least one of `dependsOnAny` to be enabled before this tool is
+    // even included in what's sent to the model — Calendar+Journey now offers list_journey but
+    // never list_calendar, matching "Calendar is a capability, never a data grant of its own."
+    // The execute()-level guard further down stays as defense-in-depth for any direct caller
+    // that bypasses toolDefsForScopes (e.g. a unit test, or a future code path).
+    dependsOnAny: ["memories", "journal"],
     description:
-      "Activity calendar summary — day-by-day counts of when the Owner recorded/uploaded Memories and Journal entries (NOT a scheduling system; Finance is never included). " +
+      "Activity calendar summary — day-by-day counts of when the Owner recorded/uploaded Memories and/or Journal entries (NOT a scheduling system; Finance is never included). " +
+      "Calendar is a date-organizing CAPABILITY, not a data permission of its own: this tool only ever reads the collections behind the Owner's OTHER, separately-selected data scopes " +
+      "(Memories -> photos, Journal -> journals) for the current request — never both automatically, and never a collection whose own scope isn't also enabled this turn. " +
+      "If neither Memories nor Journal is enabled alongside Calendar, this tool performs no data read at all and returns a validation notice asking the Owner to also enable Memories and/or Journal. " +
       "Accepts either explicit startDate/endDate or a relativePeriod (e.g. \"this month\"). Range is bounded to 31 days.",
     parameters: {
       type: "object",
@@ -389,10 +402,25 @@ const TOOLS = {
     validate(args, ctx) {
       return resolveRangeFromArgs(args, ctx, { maxDays: 31, defaultDays: 7, allowDefault: false, relativeEnumName: "relativePeriod" });
     },
+    // Strict collection-scope consent (production gap fixed by this pass): Calendar is a
+    // date-organizing CAPABILITY, never a data permission by itself — it must only ever read the
+    // collection(s) backing the Owner's OTHER, independently-selected scopes (memories -> photos,
+    // journal -> journals), taking the intersection with whatever is actually enabled on THIS
+    // verified request (ctx.scopes — never anything the model supplies; see qwen.js's
+    // runAgentLoop, which sets ctx.scopes from the server-validated request body only).
+    // Deliberately checked BEFORE any Firestore call, not filtered out of the results afterward —
+    // a disallowed collection must never even be queried, per this pass's own requirement.
     async execute(args, ctx) {
+      const enabledScopes = new Set(ctx.scopes || []);
+      const includeMemories = enabledScopes.has("memories");
+      const includeJournal = enabledScopes.has("journal");
+      if (!includeMemories && !includeJournal) {
+        // No Firestore call of any kind happens above this line for this branch.
+        throw new ToolValidationError("calendar_requires_memories_or_journal_scope");
+      }
       const [photos, journals] = await Promise.all([
-        fetchOwnerActivePhotos(ctx.db, ctx.uid),
-        fetchOwnerJournals(ctx.db, ctx.uid),
+        includeMemories ? fetchOwnerActivePhotos(ctx.db, ctx.uid) : Promise.resolve([]),
+        includeJournal ? fetchOwnerJournals(ctx.db, ctx.uid) : Promise.resolve([]),
       ]);
       const byDay = new Map();
       // Bucketed by LOCAL calendar day (task B) — an item uploaded at, say, 2026-07-14T20:00Z is
@@ -428,10 +456,24 @@ const TOOLS = {
       const days = Array.from(byDay.values()).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 31);
       const totalItems = days.reduce((sum, d) => sum + d.memories + d.journal, 0);
 
+      // `includedSources` is built from what was ACTUALLY queried this call (includeMemories/
+      // includeJournal above), never a fixed assumption — this is the field
+      // createProvenanceTracker.recordSuccess() in lib/qwen.js reads to build the frontend's
+      // evidence row, so it must always be an exact, request-scoped subset of ctx.scopes (never
+      // "memories" when the Memories scope wasn't enabled this turn, even though Calendar itself
+      // was). Uses the singular group names ("memories"/"journal") shared with every other tool
+      // and with assistant.js's SOURCE_GROUP_LABEL_KEY — not the collection name ("journals").
+      const includedSources = [];
+      if (includeMemories) includedSources.push("memories");
+      if (includeJournal) includedSources.push("journal");
+      const timestampMeaning = {};
+      if (includeMemories) timestampMeaning.memories = "uploadedAt";
+      if (includeJournal) timestampMeaning.journals = "createdAt";
+
       return {
         resolvedRange: { startDate: args.startDate, endDate: args.endDate, timeZone: args.timeZone },
-        includedSources: ["memories", "journals"],
-        timestampMeaning: { memories: "uploadedAt", journals: "createdAt" },
+        includedSources,
+        timestampMeaning,
         excludedSources: ["finance"],
         // `activeDayCount` (days with at least one item) is deliberately separate from
         // `totalItems` (every item across the whole range, even beyond the 5-per-day sample cap)
@@ -506,7 +548,14 @@ const TOOLS = {
 function toolDefsForScopes(scopes) {
   const enabled = new Set(scopes || []);
   return Object.entries(TOOLS)
-    .filter(([, def]) => def.scope === null || enabled.has(def.scope))
+    .filter(([, def]) => {
+      if (def.scope !== null && !enabled.has(def.scope)) return false;
+      // A tool may declare `dependsOnAny` — other scopes at least one of which must ALSO be
+      // enabled before this tool is offered, even though its own `scope` is satisfied. Today
+      // only list_calendar uses this (Calendar alone is a capability with nothing to summarize).
+      if (def.dependsOnAny && !def.dependsOnAny.some((s) => enabled.has(s))) return false;
+      return true;
+    })
     .map(([name, def]) => ({ type: "function", function: { name, description: def.description, parameters: def.parameters } }));
 }
 

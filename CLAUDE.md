@@ -1597,6 +1597,155 @@ why it looked like "the token" was the problem.
    pass closes the common "mangled newlines" failure mode, not every conceivable credential
    problem, and that gap is called out rather than silently left implicit.
 
+**"Atlas Assistant strict collection-scope consent fix" (most recent)** — closes a real production
+leak reported against the Atlas Assistant: with only **Journal** and **Calendar** checked (Memories
+deliberately unchecked), a Monthly Reflection answer still cited two Memory records. Root cause:
+`list_calendar` (`netlify/functions/lib/tools.js`) treated Calendar as if it were itself permission
+to read **both** `photos` and `journals` — it always fetched both collections whenever the Calendar
+scope was enabled, regardless of whether the Owner had separately checked Memories or Journal.
+Calendar was designed to be a date-organizing *capability* (which collections it may summarize),
+not a *data grant* of its own — but the code never actually enforced that distinction; only the
+top-level `toolDefsForScopes()` gate (offer the tool at all) checked scopes, never the tool's own
+Firestore reads.
+1. **Server-side fix (the actual security boundary)** — `list_calendar.execute()` now reads
+   `ctx.scopes` (the exact server-validated scope list for the current request — added to `ctx` in
+   `runAgentLoop()`, `netlify/functions/lib/qwen.js`, never anything the model supplies) and only
+   ever queries `photos` when `memories` is also enabled and `journals` when `journal` is also
+   enabled — checked **before** any Firestore call, so a disallowed collection is never queried and
+   then filtered, it's structurally never fetched at all. Calendar with neither Memories nor
+   Journal enabled (including Calendar + Journey, since Journey doesn't satisfy this requirement)
+   throws `calendar_requires_memories_or_journal_scope` before any Firestore call — the model
+   receives a validation notice instead of data, and is never told to claim a search happened.
+   `includedSources`/`timestampMeaning` in the tool's own return value are now built from what was
+   *actually* queried this call, not a fixed assumption — and use the singular group name
+   `"journal"` (matching every other tool and the frontend's `SOURCE_GROUP_LABEL_KEY`), fixing a
+   pre-existing `"journals"` naming mismatch that had been silently masked by the old static
+   provenance map.
+2. **Provenance now trusts the tool's own scope, not a per-tool-name guess** —
+   `createProvenanceTracker.recordSuccess()` (`lib/qwen.js`) used a static
+   `PERSONAL_DATA_SOURCE_GROUPS[name]` map that unconditionally credited every successful
+   `list_calendar` call with **both** `"memories"` and `"journal"` as included sources — this is
+   what made the frontend's evidence row (and thus, indirectly, the model's own sense of what it
+   had just read) claim Memories access even on a Journal-only Calendar query. `list_calendar` no
+   longer has a static entry there; `recordSuccess()` now reads the tool's own request-scoped
+   `resultPayload.includedSources` when present, so provenance is always an exact subset of what
+   was actually queried this call — never a fixed assumption about what a tool name "usually"
+   implies.
+3. **Frontend defense-in-depth** — `assistant.js` gained `isCalendarOnlyInvalid(scopes)` (Calendar
+   enabled, neither Memories nor Journal), consulted by both `updateSendAvailability()` (disables
+   Send, shows a new `#assistant-calendar-scope-notice`) and the submit handler itself (an
+   independent guard, not just the disabled button) — this combination now never reaches the
+   network at all, so it can never burn a Qwen request or a slot of the daily quota. A suggested
+   prompt that enables Calendar alone (`prompt_this_month`) still starts a clean chat as before, but
+   `requestSubmit()` now no-ops against the new guard and the calendar notice explains why, per the
+   brief's "suggested prompts may enable Calendar, but must ask the user to select the content
+   sources." `assistant.html` gained a permanent Calendar hint line
+   (`assistant.scope_calendar_hint`: "Calendar: Organizes your selected Memories and Journal
+   entries by date...") next to the scope checkboxes. New i18n keys `assistant.scope_calendar_hint`
+   / `assistant.calendar_needs_source_notice` in both locales. The system prompt
+   (`netlify/functions/assistant.js`) gained an explicit instruction that Calendar alone grants no
+   collection access and that a Memories/Journal-only Calendar result must never be described as
+   covering the collection that wasn't enabled.
+4. **Tests** — `netlify/functions/__tests__/assistant.test.js` grew to 151 assertions (from 137),
+   including a `makeCountingDb()` helper that instruments real Firestore `.get()` calls per
+   collection (only `photos`/`journals`/`life_events` — `users`/`ai_usage` stay unwrapped so
+   `checkAndIncrementDailyUsage`'s `.doc()` calls are unaffected) to prove, not just assert: Calendar
+   + Journal → `photos` query count `0`; Calendar + Memories → `journals` query count `0`; Calendar +
+   both → both queried; Calendar alone (and Calendar + Journey) → zero queries of either collection
+   and a validation error; an end-to-end handler test proving Qwen *is* still called (the guard is
+   at the tool-execution layer, not a request-level short-circuit) while Firestore sees zero reads;
+   an end-to-end reproduction of the exact reported bug (Journal + Calendar → draft a monthly
+   reflection) asserting no Memory content reaches the model's own tool-result JSON, no memory-type
+   source chip is ever surfaced, and provenance never claims Memories; a subset-invariant test
+   (`includedSources` ⊆ selected scopes) across every Calendar/Memories/Journal combination; and a
+   capability-vs-consent test confirming `list_calendar` is still *offered* whenever Calendar alone
+   is enabled (only its Firestore reads are restricted). Every pre-existing test that exercised
+   `list_calendar` under the old "Calendar alone is enough" assumption was updated to pass the
+   scopes that assumption actually required (`makeCtx()`'s default now grants full access unless a
+   test explicitly narrows it) — including the "Scope-change conversation isolation" section's
+   hand-duplicated `wouldSubmit()`/`applyScopeChange()` reimplementation, which now also duplicates
+   `isCalendarOnlyInvalid()` and had its Calendar-alone-is-sendable assertions corrected.
+5. **`service-worker.js` → `eden-shell-v28`** (from v27) — `assistant.html`/`assistant.js`/
+   `locales/*.json` changed and are already in `PRECACHE`; no new files added.
+6. **Not part of this pass**: no `firestore.rules`/`storage.rules` change (this was never a rules
+   gap — the collections were always readable by the Owner's own Admin-scoped queries; the bug was
+   *which* queries `list_calendar` chose to run), no deploy, nothing committed or pushed, no new
+   nav/pages, no Friend/HR/Finance access added.
+
+**"Atlas Assistant strict collection-scope consent — hardening follow-up" (most recent)** —
+tightens two things the pass above left too loose, found in a pre-commit audit: (1) a
+Calendar-only request still reached Qwen and incremented the daily rate-limit counter before
+being rejected by `list_calendar` itself; (2) the frontend's single `isCalendarOnlyInvalid()`
+predicate wrongly disabled Send for **Calendar + Journey** too, even though Journey is a fully
+independent, usable scope with its own tool (`list_journey`) that has nothing to do with
+Memories/Journal. Still no rules/env changes, no deploy; `service-worker.js` stays `eden-shell-v28`
+per this pass's own instruction (these changes were still uncommitted when v28 was cut).
+1. **Server-side: reject Calendar-only before rate-limit increment, before Qwen, zero Firestore
+   reads.** `netlify/functions/assistant.js` gained a new step 6 (renumbering the old steps 6/7 to
+   7/8): `if (scopes.length === 1 && scopes[0] === "calendar") return jsonResponse(400, { ok:
+   false, error: "calendar_requires_memories_or_journal_scope" }, baseHeaders);`, placed
+   immediately after request-body validation and BEFORE the burst guard, the daily-usage
+   Firestore transaction, and `runAgentLoop`/Qwen — a request in this exact state now touches
+   Firestore zero times (not even `deps.getDb()` is ever called) and calls Qwen zero times.
+   Deliberately narrow: it only fires when Calendar is the *entire* scope set — Calendar+Journey,
+   Calendar+Memories, etc. are never rejected here, since they can still produce a useful answer
+   (see point 3).
+2. **Dispatch-layer tool gating, not just execute()-level rejection.** `lib/tools.js`'s
+   `list_calendar` gained `dependsOnAny: ["memories", "journal"]`; `toolDefsForScopes()` now also
+   excludes a tool whose `dependsOnAny` isn't satisfied by the enabled scopes, so `list_calendar`
+   is **never even offered to Qwen** for Calendar-alone or Calendar+Journey — not just rejected
+   after being called. `lib/qwen.js`'s `runAgentLoop` gained a second layer on top: an
+   `offeredToolNames` set (built from the exact `toolDefs` sent this request) is checked before
+   `TOOLS[name].validate()/execute()` ever runs — a tool_call naming something real but not
+   actually offered this turn (e.g. a compromised/hallucinating provider response naming
+   `list_calendar` while Calendar+Journey is selected) is rejected as `tool_not_available`,
+   structurally preventing its Firestore read regardless of what any single Qwen response claims.
+   `list_calendar`'s own execute()-level guard (previous pass) stays as a third, defense-in-depth
+   layer for any direct caller that bypasses `toolDefsForScopes` entirely (several unit tests do,
+   deliberately, to test that layer in isolation).
+3. **Frontend: two predicates, not one.** `assistant.js`'s single (buggy) `isCalendarOnlyInvalid()`
+   was split into `isCalendarOnlyScope(scopes)` (`scopes.length === 1 && scopes[0] === "calendar"`
+   — the narrow, Send-**disabling** predicate) and `calendarLacksSource(scopes)` (Calendar enabled
+   without Memories/Journal, regardless of Journey — the broader, notice-**only** predicate that
+   must never by itself block Send). `updateSendAvailability()` now disables Send only from
+   `isCalendarOnlyScope`; the `#assistant-calendar-scope-notice` still shows from
+   `calendarLacksSource` (so Calendar+Journey shows the notice — Calendar itself genuinely still
+   lacks a source — while Send stays enabled). The submit handler's guard is likewise narrowed to
+   `isCalendarOnlyScope` only. The `assistant.calendar_needs_source_notice` copy dropped "pick a
+   content source to continue" (no longer always true) for "Calendar summaries also need Memories
+   and/or Journal selected." in both locales.
+4. **Suggested Calendar prompt stays prompt-specific.** The "this month" suggested prompt's click
+   handler gained one extra line: `if (p.scope === "calendar" && calendarLacksSource(currentScopes()))
+   return;` (before `formEl.requestSubmit()`) — deliberately scoped to `p.scope === "calendar"`
+   only, so an unrelated suggested prompt (Journey's, Memories', etc.) still auto-submits normally
+   even while Calendar happens to lack a source elsewhere in the current selection. This means:
+   starting from zero scopes, clicking the Calendar prompt enables Calendar, shows the notice, and
+   does not submit (Send is also disabled here, so both guards agree); starting from Journey
+   already enabled, clicking the Calendar prompt still shows the notice and still does not
+   auto-submit *that specific canned question* — but Send itself stays enabled, so the Owner can
+   still type and send an unrelated Journey question.
+5. **Tests** — grew from 151 to 160. New coverage: Calendar-only end-to-end returns 400 with zero
+   Qwen calls (`fetchImpl` never invoked) and zero Firestore touches (`deps.getDb` itself is
+   spied and proven never called); ten consecutive Calendar-only requests all come back 400, never
+   429 (proving the reject happens before the burst guard is ever consulted, so it can't itself be
+   used to exhaust burst slots); Calendar+Journey is NOT rejected (200), `list_journey` stays
+   offered, `list_calendar` is absent from what's sent to Qwen; a full Calendar+Journey Journey
+   query actually executes end-to-end with zero `photos`/`journals` reads; a `runAgentLoop`-level
+   test proving a tool_call naming `list_calendar` while it wasn't offered this turn is rejected at
+   the dispatch layer with zero Firestore reads; a `toolDefsForScopes` matrix test across all six
+   relevant scope combinations. The "Scope-change conversation isolation" section's hand-duplicated
+   state machine (`isCalendarOnlyInvalid`, `wouldSubmit`, etc.) was rewritten to the same
+   two-predicate model as the real code, including a test that starts from Journey-already-enabled
+   and proves Send stays enabled while the prompt-specific skip still applies — the same class of
+   bug this whole pass fixes, now covered at the test-duplicate layer too, not just the real code.
+   Every pre-existing test whose `scopes` was exactly `["calendar"]` for an unrelated reason
+   (system-prompt content, tool-offering-under-poisoned-history, provenance-adversarial-input) was
+   updated to `["calendar", "journey"]` or another valid combination so it keeps exercising what it
+   was actually written to test, rather than tripping the new hard reject.
+6. **Not part of this pass**: no `firestore.rules`/`storage.rules` change, no deploy, nothing
+   committed or pushed, no env changes, `service-worker.js` cache version unchanged (`eden-shell-v28`,
+   per this pass's own instruction — these frontend changes were already uncommitted under v28).
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

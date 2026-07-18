@@ -1,6 +1,15 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v28 (strict collection-scope consent fix): assistant.html/assistant.js changed again — a new
+// "Calendar also needs Memories and/or Journal selected" notice (and matching Send-disable) now
+// fires whenever Calendar is checked without Memories or Journal, since Calendar is a
+// date-organizing capability, never a data grant of its own (the actual bug this pass fixes was
+// server-side — list_calendar used to always read BOTH Memories and Journal whenever Calendar
+// alone was enabled, regardless of which of those two the Owner had actually checked — see
+// netlify/functions/lib/tools.js/qwen.js, which aren't part of PRECACHE) — plus a new calendar
+// scope hint line clarifying what Calendar actually does. locales/en.json+zh-CN.json gained the
+// new assistant.scope_calendar_hint/calendar_needs_source_notice keys these render with.
 // v27 (scope-change conversation isolation pass): assistant.js changed again (any scope checkbox
 // change now aborts the in-flight request, clears the conversation + sessionStorage, and shows an
 // accessible "Data access changed. A new chat was started." notice; zero scopes selected disables
@@ -53,7 +62,7 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v27";
+const CACHE = "eden-shell-v28";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",

@@ -57,6 +57,7 @@ const retryBtn = document.getElementById("assistant-retry-btn");
 const scopeInputs = [...document.querySelectorAll('#assistant-scopes input[data-scope]')];
 const scopeChangeNoticeEl = document.getElementById("assistant-scope-change-notice");
 const noScopeNoticeEl = document.getElementById("assistant-noscope-notice");
+const calendarScopeNoticeEl = document.getElementById("assistant-calendar-scope-notice");
 
 const consentModal = document.getElementById("assistant-consent-modal");
 const consentBackdrop = document.getElementById("assistant-consent-backdrop");
@@ -101,6 +102,29 @@ function sameScopeSet(a, b) {
   return b.every((s) => setA.has(s));
 }
 
+// Calendar is a date-organizing CAPABILITY, not a data grant of its own (mirrors
+// netlify/functions/lib/tools.js's list_calendar/toolDefsForScopes). Two distinct predicates,
+// deliberately not conflated (a hardening follow-up fixed a real bug where a single function did
+// both jobs and wrongly disabled Send for Calendar+Journey too, even though Journey remains a
+// fully independent, usable scope via list_journey):
+//   - isCalendarOnlyScope: true ONLY when Calendar is the entire selected scope set — nothing
+//     else is enabled, so no tool this request could offer would ever have anything to read
+//     (list_calendar is never even offered in this state, and draft_reflection has nothing prior
+//     to draft from). This is the one case that must never reach the network at all — see the
+//     submit guard below and netlify/functions/assistant.js's matching server-side reject.
+//   - calendarLacksSource: true whenever Calendar is enabled but neither Memories nor Journal is
+//     — regardless of Journey. This only ever drives the non-blocking "Calendar also needs a
+//     source" notice; it must NEVER by itself disable Send, since Journey (or any other scope)
+//     may still make the request fully usable.
+// Both are pure, DOM-free predicates (duplicated into the test suite, per this repo's own
+// withOneRetryOn401/stripInlineMarkdown convention) so they're unit-testable without a browser.
+function isCalendarOnlyScope(scopes) {
+  return scopes.length === 1 && scopes[0] === "calendar";
+}
+function calendarLacksSource(scopes) {
+  return scopes.includes("calendar") && !scopes.includes("memories") && !scopes.includes("journal");
+}
+
 // Scope selection is a privacy boundary, not just a UI preference: a disabled scope must never
 // keep sending old answers containing that scope's data back to Qwen, and a newly-enabled scope
 // must never be shadowed by an earlier "I don't have access" answer still sitting in history. So
@@ -134,9 +158,16 @@ function showScopeChangeNotice() {
 // request just to have the model explain that. See the submit handler below for the matching
 // server-request guard (defense in depth beyond just disabling the button).
 function updateSendAvailability() {
-  const hasScopes = currentScopes().length > 0;
-  sendBtn.disabled = !hasScopes;
+  const scopes = currentScopes();
+  const hasScopes = scopes.length > 0;
+  const calendarOnly = isCalendarOnlyScope(scopes);
+  // The notice shows whenever Calendar lacks its own source — including Calendar+Journey, where
+  // it's purely informational (Journey stays fully usable) — but Send is only ever disabled by
+  // the strictly narrower calendarOnly case (see isCalendarOnlyScope's own comment).
+  const needsCalendarSource = calendarLacksSource(scopes);
+  sendBtn.disabled = !hasScopes || calendarOnly;
   if (noScopeNoticeEl) noScopeNoticeEl.classList.toggle("hidden", hasScopes);
+  if (calendarScopeNoticeEl) calendarScopeNoticeEl.classList.toggle("hidden", !needsCalendarSource);
 }
 
 function loadConversation() {
@@ -425,6 +456,15 @@ function renderSuggestedPrompts() {
       if (p.scope) setScopeChecked(p.scope, true);
       inputEl.value = btn.textContent;
       inputEl.focus();
+      // The Calendar-scoped suggested prompt ("What did I record this month?") must never
+      // silently auto-send once Calendar is enabled if its own dependency (Memories and/or
+      // Journal) still isn't — even when the overall scope set is otherwise usable (e.g. Journey
+      // was already enabled, so Send itself stays enabled). The calendar notice is already
+      // visible (via setScopeChecked -> applyScopeChange -> updateSendAvailability above); this
+      // just leaves the typed question in the composer instead of spending a request on it.
+      // Deliberately scoped to p.scope === "calendar" only — an unrelated suggested prompt (e.g.
+      // Journey's) must still auto-submit normally even while Calendar happens to lack a source.
+      if (p.scope === "calendar" && calendarLacksSource(currentScopes())) return;
       formEl.requestSubmit();
     });
     promptsEl.appendChild(btn);
@@ -540,6 +580,10 @@ function friendlyError(code) {
     rate_limited: "assistant.error_rate_limited",
     message_too_long: "assistant.error_message_too_long",
     assistant_upstream_error: "assistant.error_upstream",
+    // Defense-in-depth only — the submit guard/disabled Send already prevent this combination
+    // from ever being sent through the UI (see isCalendarOnlyScope()); this only surfaces if a
+    // request somehow reaches the server directly with Calendar as the sole scope.
+    calendar_requires_memories_or_journal_scope: "assistant.calendar_needs_source_notice",
   };
   const key = map[code] || "assistant.error_generic";
   return t(key) !== key ? t(key) : "Something went wrong. Please try again.";
@@ -664,8 +708,15 @@ formEl.addEventListener("submit", (e) => {
   // Defense in depth alongside sendBtn.disabled (updateSendAvailability()): this is the one
   // place that actually calls sendMessage(), so it's the authoritative gate regardless of how
   // submission was triggered (Send click, Enter key, or a suggested prompt's requestSubmit()) —
-  // never spend a request just to have the model explain that no scopes are enabled.
-  if (currentScopes().length === 0) return;
+  // never spend a request just to have the model explain that no scopes are enabled, and never
+  // spend one on a Calendar-ONLY selection that can never produce anything (see
+  // isCalendarOnlyScope()) — the calendar notice stays visible instead so the Owner sees exactly
+  // why nothing was sent. Deliberately NOT gated on calendarLacksSource() here — Calendar+Journey
+  // (or any other non-empty combination) must stay fully sendable; only the exact "Calendar and
+  // nothing else" state is ever blocked.
+  const activeScopes = currentScopes();
+  if (activeScopes.length === 0) return;
+  if (isCalendarOnlyScope(activeScopes)) return;
   const text = inputEl.value.trim();
   if (!text || currentController) return;
   inputEl.value = "";

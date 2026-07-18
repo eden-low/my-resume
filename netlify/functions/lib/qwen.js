@@ -146,7 +146,15 @@ const PERSONAL_DATA_SOURCE_GROUPS = {
   find_memories_missing_location: ["memories"],
   search_journals: ["journal"],
   list_journey: ["journey"],
-  list_calendar: ["memories", "journal"],
+  // list_calendar intentionally has NO static entry here. Unlike every other tool, which reads
+  // exactly one fixed collection whenever it runs at all, list_calendar's actual collection
+  // reads depend on which OTHER scopes (memories/journal) were independently enabled alongside
+  // Calendar for this exact request — a fixed ["memories","journal"] assumption here was the
+  // root cause of a real production leak (Calendar+Journal-only still reported "Memories" as an
+  // evidence source and could surface Memory content, even with the Memories checkbox off). Its
+  // resultPayload always carries its own `includedSources` (see lib/tools.js), computed from the
+  // exact collections it actually queried this call — recordSuccess() below reads that directly
+  // instead of guessing from the tool name.
 };
 
 function createProvenanceTracker() {
@@ -156,8 +164,15 @@ function createProvenanceTracker() {
   let resultCount = 0;
   return {
     recordSuccess(name, resultPayload) {
-      const groups = PERSONAL_DATA_SOURCE_GROUPS[name];
-      if (!groups) return;
+      // Prefer the tool's own, request-scoped `includedSources` (currently only list_calendar
+      // sets this) over the static per-tool-name map — this is what keeps provenance an exact
+      // subset of what was ACTUALLY read this call, never a fixed assumption about what a tool
+      // name usually implies. Falls back to the static map for every tool that has no scope
+      // ambiguity of its own (their `scope` in TOOLS already fully determines what they read).
+      const groups = (resultPayload && Array.isArray(resultPayload.includedSources))
+        ? resultPayload.includedSources
+        : PERSONAL_DATA_SOURCE_GROUPS[name];
+      if (!groups || !groups.length) return;
       toolsUsed.push(name);
       groups.forEach((g) => includedSources.add(g));
       // Only list_calendar/list_journey ever carry a resolvedRange — search_memories/
@@ -205,6 +220,12 @@ async function runAgentLoop({ qwenConfig, systemPrompt, history, userMessage, sc
     uid,
     now,
     timeZone,
+    // The exact server-validated scope list for THIS request (assistant.js already whitelists it
+    // against KNOWN_SCOPES before it ever reaches here) — the model never supplies this and can
+    // never widen it; list_calendar reads it to decide which collection(s) it may actually query
+    // (see lib/tools.js). Every other tool's `scope` in TOOLS already fully gates its own
+    // availability via toolDefsForScopes(), so this is only consulted by list_calendar today.
+    scopes: scopes || [],
     registerRef: registry.registerRef,
     resolveHandle: registry.resolveHandle,
   };
@@ -212,6 +233,18 @@ async function runAgentLoop({ qwenConfig, systemPrompt, history, userMessage, sc
   let finalAnswer = null;
   let lastUsage = null;
   let roundsUsed = 0;
+
+  // The exact set of tool NAMES actually offered to Qwen this request (toolDefsForScopes()
+  // already applied both the plain `scope` gate and any `dependsOnAny` dependency gate — see
+  // lib/tools.js). Hardening follow-up: `TOOLS[name]` existing was previously treated as
+  // sufficient to execute a tool — but a provider response is not proof that a tool was ever
+  // actually offered this call (a name from the `tools` array is the model's only legitimate
+  // source, but nothing here should trust that on faith). This closes that gap structurally: a
+  // tool_call naming something real but NOT in this exact request's offered set (e.g.
+  // "list_calendar" when Calendar+Journey is selected — offered=false because Memories/Journal
+  // aren't enabled) is rejected before validate()/execute() ever runs, so its Firestore read can
+  // never happen regardless of what any single response claims.
+  const offeredToolNames = new Set(toolDefs.map((t) => t.function.name));
 
   for (let round = 1; round <= MAX_TOOL_ROUNDS; round++) {
     roundsUsed = round;
@@ -236,6 +269,8 @@ async function runAgentLoop({ qwenConfig, systemPrompt, history, userMessage, sc
 
         if (!Object.prototype.hasOwnProperty.call(TOOLS, name)) {
           resultPayload = { error: "unknown_tool" };
+        } else if (!offeredToolNames.has(name)) {
+          resultPayload = { error: "tool_not_available" };
         } else if (parsedArgs === undefined) {
           resultPayload = { error: "invalid_tool_arguments_json" };
         } else {
