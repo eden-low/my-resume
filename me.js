@@ -2,6 +2,7 @@ import { auth, db, isOwner, OWNER_EMAIL, canParticipate } from "./firebase-init.
 import { getLang, setLang, init as initI18n, t } from "./js/i18n.js";
 import { resolveDisplayName, computeDisplayName, invalidateIdentityCache } from "./js/identity.js";
 import { excludeDeleted } from "./js/memory-filters.js";
+import { fetchWeather } from "./js/weather-client.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
   collection,
@@ -20,7 +21,6 @@ import {
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const WEATHER_API_KEY = "4708932833bff8ef44d180197bfc4664";
 const PALETTE = ["#a78bfa", "#6ea8fe", "#fbbf24", "#34d399", "#fb7185", "#f472b6"];
 const SETTINGS_KEY = "lfj:settings";
 
@@ -587,17 +587,22 @@ async function renderSystemStatus(user) {
   document.getElementById("sys-session").textContent = user ? await resolveDisplayName(user) : "Signed out";
 }
 
+// Production Hardening Phase 1 (task C): this used to call OpenWeatherMap directly with an API
+// key hardcoded in this file's own source — see netlify/functions/weather.js, which now proxies
+// the call server-side (the browser only ever sends its own Firebase ID token). This page never
+// used geolocation for its weather line (just the same fixed city query the Function still
+// falls back to), so no coords are passed here — behavior is unchanged, just the transport.
+// Requires a signed-in user (the Function verifies a Firebase ID token), so this is now called
+// from onAuthStateChanged below rather than unconditionally at module load.
 async function loadWeather() {
   const el = document.getElementById("sys-weather");
-  try {
-    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Kuching,MY&units=metric&appid=${WEATHER_API_KEY}`);
-    if (!res.ok) throw new Error(`Weather API ${res.status}`);
-    const data = await res.json();
-    el.textContent = `${Math.round(data.main.temp)}°C, ${data.weather?.[0]?.main || ""}`;
-  } catch (err) {
-    console.error("[me] weather failed:", err);
+  const result = await fetchWeather();
+  if (!result.ok) {
+    console.error("[me] weather failed:", result.error);
     el.textContent = "Unavailable";
+    return;
   }
+  el.textContent = `${result.tempC}°C, ${result.condition || ""}`;
 }
 
 // ---- Goals ----
@@ -818,6 +823,7 @@ onAuthStateChanged(auth, (user) => {
   loadCapsulesSummary(user);
   renderFriendStats(user);
   renderAchievements();
+  loadWeather();
 
   if (isOwner(user)) {
     document.querySelector('.me-tab[data-tab="connections"]').classList.remove("hidden");
@@ -833,5 +839,3 @@ document.addEventListener("eden:langchange", () => {
   const user = auth.currentUser;
   if (user) renderSignedIn(user);
 });
-
-loadWeather();

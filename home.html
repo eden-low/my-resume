@@ -337,11 +337,22 @@
     <script type="module">
         import { auth, db, storage, canParticipate, isOwner, getUserMode } from "./firebase-init.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-        import { collection, query, where, getDocs, getDoc, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        import { collection, query, where, limit, getDocs, getDoc, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
         import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
         import { t } from "./js/i18n.js";
         import { resolveDisplayName } from "./js/identity.js";
         import { excludeDeleted } from "./js/memory-filters.js";
+        import { reflectionDateKey, reflectionDocId, buildReflectionSavePayload } from "./js/reflection.js";
+        import { fetchWeather } from "./js/weather-client.js";
+
+        // Untrusted stored content (habit titles, photo captions, journal titles, event titles —
+        // all interpolated into innerHTML further below) must never be assigned raw, even though
+        // this page's data is scoped to the signed-in user's own docs (see fetchMine()) — a
+        // stored payload with markup-looking text should never execute just because it's "only"
+        // self-authored. Same convention as profile.js/portfolio.js's own esc().
+        function esc(s) {
+            return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
 
         // ---- v3.2: private-space redirect notice (see auth-guard.js's data-owner-only guard) ----
         (function showPrivateSpaceNoticeIfNeeded() {
@@ -469,7 +480,7 @@
                 const done = (h.completedDates || []).includes(todayKey);
                 return `<div class="flex items-center gap-2">
                     <i class="fa-solid ${done ? "fa-square-check text-emerald-400" : "fa-square text-textGray/50"}"></i>
-                    <span class="${done ? "text-white" : "text-textGray"} truncate">${h.icon || ""} ${h.title}</span>
+                    <span class="${done ? "text-white" : "text-textGray"} truncate">${esc(h.icon || "")} ${esc(h.title)}</span>
                 </div>`;
             }).join("");
         }
@@ -552,7 +563,7 @@
                     el.className = "flex items-center gap-3 p-2.5 rounded-xl hover:bg-darkBg/40 transition-colors";
                     el.innerHTML = `
                         <span class="w-8 h-8 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-xs flex-shrink-0"><i class="fa-solid ${icon}"></i></span>
-                        <span class="min-w-0 text-sm text-white truncate flex-1">${label}</span>
+                        <span class="min-w-0 text-sm text-white truncate flex-1">${esc(label)}</span>
                         <span class="text-[10px] font-code text-textGray flex-shrink-0">${h.yearsAgo === 1 ? t("common.year_ago") : t("common.years_ago", { n: h.yearsAgo })}</span>`;
                     return el;
                 })
@@ -568,8 +579,8 @@
             el.innerHTML = `
                 <span class="w-9 h-9 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-sm flex-shrink-0"><i class="fa-solid ${icon}"></i></span>
                 <span class="min-w-0">
-                    <span class="block text-[10px] uppercase tracking-wider text-textGray font-code">${label}</span>
-                    <span class="block text-sm text-white truncate">${text}</span>
+                    <span class="block text-[10px] uppercase tracking-wider text-textGray font-code">${esc(label)}</span>
+                    <span class="block text-sm text-white truncate">${esc(text)}</span>
                 </span>`;
             return el;
         }
@@ -653,7 +664,7 @@
             section.classList.remove("hidden");
             document.getElementById("continue-working-list").innerHTML = unfinished.map((h) => `
                 <a href="habits.html" class="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-darkBg/40 transition-colors">
-                    <span class="flex items-center gap-2.5 text-sm text-white truncate"><i data-lucide="circle-dashed" class="w-4 h-4 text-textGray flex-shrink-0"></i>${h.icon || ""} ${h.title}</span>
+                    <span class="flex items-center gap-2.5 text-sm text-white truncate"><i data-lucide="circle-dashed" class="w-4 h-4 text-textGray flex-shrink-0"></i>${esc(h.icon || "")} ${esc(h.title)}</span>
                     <span class="text-[10px] font-code text-textGray flex-shrink-0">${t("home.not_done_yet")}</span>
                 </a>`).join("");
         }
@@ -783,10 +794,13 @@
         ];
         let selectedMood = null;
         let currentReflection = null;
-
-        function todayReflectionId(uid) {
-            return `${uid}_${toDateKey(new Date())}`;
-        }
+        // Whether today's reflection existed BEFORE this page's most recent load — deliberately
+        // separate from currentReflection/the Edit button's view-toggle (see js/reflection.js's
+        // header comment): the Edit button nulls currentReflection just to flip the card back to
+        // form view, but that must never be mistaken for "no reflection exists yet today," or a
+        // save right after Edit would wrongly re-stamp createdAt.
+        let reflectionExistsToday = false;
+        let savingReflection = false;
 
         function renderMoodButtons() {
             document.getElementById("reflection-mood-row").innerHTML = MOODS.map((m) => `
@@ -819,18 +833,36 @@
             }
         }
 
+        // Production Hardening Phase 1 (task A): a direct getDoc() on the deterministic
+        // `${uid}_${dateKey}` document ID used to throw permission-denied on a day with no
+        // reflection yet — firestore.rules' read rule is `resource.data.uid ==
+        // request.auth.uid`, and when the document doesn't exist `resource`/`resource.data` is
+        // undefined, so evaluating `.uid` on it fails the rule (Firestore reports this as
+        // PERMISSION_DENIED, not "not found" — there is no way to distinguish the two from a
+        // bare get() against a rule shaped like this). Fixed by querying instead: `where("uid",
+        // "==", myUid), where("dateKey", "==", <today in Asia/Kuala_Lumpur>), limit(1)` is
+        // directly provable against that same rule (every possible match already satisfies
+        // `resource.data.uid == request.auth.uid` by construction of the query filter — the same
+        // "core query pattern" this app already uses everywhere else, see CLAUDE.md), so a day
+        // with nothing saved yet now resolves to a clean, empty snapshot with zero errors.
         async function loadReflection(user) {
             const section = document.getElementById("reflection-section");
             // Daily Reflection is Owner-only (v3.3), same as Finance/Time Capsule.
             section.classList.toggle("hidden", !isOwnerRole(user));
             if (!isOwnerRole(user)) return;
             try {
-                const snap = await getDoc(doc(db, "daily_reflections", todayReflectionId(user.uid)));
-                currentReflection = snap.exists() ? snap.data() : null;
+                const snap = await getDocs(query(
+                    collection(db, "daily_reflections"),
+                    where("uid", "==", user.uid),
+                    where("dateKey", "==", reflectionDateKey()),
+                    limit(1)
+                ));
+                currentReflection = snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
             } catch (err) {
                 console.error("[home] reflection load failed:", err.code || err);
                 currentReflection = null;
             }
+            reflectionExistsToday = !!currentReflection;
             renderReflectionView();
         }
 
@@ -847,25 +879,37 @@
 
         document.getElementById("reflection-save-btn").addEventListener("click", async () => {
             const user = auth.currentUser;
-            if (!user || !isOwnerRole(user) || !selectedMood) return;
+            // savingReflection blocks a rapid double-click from firing two concurrent writes —
+            // the doc ID is deterministic either way (never a duplicate document), but without
+            // this guard two near-simultaneous first-time saves could both read
+            // reflectionExistsToday as false and both include createdAt, letting whichever
+            // request's serverTimestamp() resolves last "win" the createdAt value (task B).
+            if (!user || !isOwnerRole(user) || !selectedMood || savingReflection) return;
+            savingReflection = true;
+            const saveBtn = document.getElementById("reflection-save-btn");
+            saveBtn.disabled = true;
             const statusEl = document.getElementById("reflection-status");
             statusEl.textContent = t("common.saving");
             try {
-                await setDoc(doc(db, "daily_reflections", todayReflectionId(user.uid)), {
+                const payload = buildReflectionSavePayload({
                     uid: user.uid,
-                    dateKey: toDateKey(new Date()),
                     mood: selectedMood,
                     note: document.getElementById("reflection-note").value.trim(),
-                    visibility: "private",
-                    updatedAt: serverTimestamp(),
-                    createdAt: serverTimestamp(),
-                }, { merge: true });
+                    now: new Date(),
+                    existedBefore: reflectionExistsToday,
+                    createdAtValue: serverTimestamp(),
+                    updatedAtValue: serverTimestamp(),
+                });
+                await setDoc(doc(db, "daily_reflections", reflectionDocId(user.uid)), payload, { merge: true });
                 statusEl.textContent = t("common.saved");
                 await loadReflection(user);
                 setTimeout(() => { statusEl.textContent = ""; }, 1500);
             } catch (err) {
                 console.error("[home] reflection save failed:", err.code || err);
                 statusEl.textContent = t("common.couldnt_save");
+            } finally {
+                savingReflection = false;
+                saveBtn.disabled = false;
             }
         });
 
@@ -890,8 +934,13 @@
         }
 
         // ---- Weather (compact, inline in the greeting) ----
-
-        const WEATHER_API_KEY = "4708932833bff8ef44d180197bfc4664";
+        //
+        // Production Hardening Phase 1 (task C): this used to call OpenWeatherMap directly from
+        // the browser with a hardcoded API key baked into this file's source (readable by anyone
+        // who views source, and permanently present in git history) — see
+        // netlify/functions/weather.js, which now proxies the call server-side. The browser only
+        // ever sends its own Firebase ID token + optional {lat, lon}; the provider key lives only
+        // in Netlify's OPENWEATHER_API_KEY env var and never reaches this file.
 
         function getBrowserLocation() {
             return new Promise((resolve) => {
@@ -911,27 +960,35 @@
             const tempEl = document.getElementById("weather-inline-temp");
             const condEl = document.getElementById("weather-inline-cond");
             try {
+                // getBrowserLocation() already resolves(null) on denial/timeout/no-geolocation —
+                // fetchWeather() falls back to the same fixed city query the old code used
+                // whenever coords is null, so "no location permission" behaves identically.
                 const coords = await getBrowserLocation();
-                const endpoint = coords
-                    ? `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${WEATHER_API_KEY}`
-                    : `https://api.openweathermap.org/data/2.5/weather?q=Kuching,MY&units=metric&appid=${WEATHER_API_KEY}`;
-                const res = await fetch(endpoint);
-                if (!res.ok) throw new Error(`Weather API ${res.status}`);
-                const data = await res.json();
-                tempEl.textContent = `${Math.round(data.main.temp)}°`;
-                condEl.textContent = data.weather?.[0]?.description
-                    ? data.weather[0].description.replace(/\b\w/g, (c) => c.toUpperCase())
+                const result = await fetchWeather(coords);
+                if (!result.ok) throw new Error(result.error || "weather_unavailable");
+                tempEl.textContent = `${result.tempC}°`;
+                condEl.textContent = result.description
+                    ? result.description.replace(/\b\w/g, (c) => c.toUpperCase())
                     : "—";
             } catch (err) {
-                console.error("[weather] failed:", err);
+                console.error("[weather] failed:", err && err.message || err);
                 condEl.textContent = t("common.weather_unavailable");
             }
         }
 
         // ---- Boot ----
 
+        // onAuthStateChanged only fires again while this page is alive when the sign-in STATE
+        // itself changes (sign-in/sign-out), not on routine token refresh — so in practice this
+        // fires once per session. Still, guarding the one-time setup (interval timers) behind a
+        // boot-once flag costs nothing and removes any risk of a second onAuthStateChanged
+        // emission stacking a duplicate setInterval on top of the first (which would silently
+        // double the rate of weather/clock polling for the rest of the session) — audited as
+        // part of Production Hardening Phase 1's task D.
+        let bootedForUser = false;
+
         onAuthStateChanged(auth, (user) => {
-            if (!user) return;
+            if (!user) { bootedForUser = false; return; }
             greetingName(user).then((name) => {
                 document.getElementById("greeting-text").textContent = `${greetingWord()}, ${name}`;
             });
@@ -955,9 +1012,12 @@
                 myProfileHref(user).then((href) => { document.getElementById("qa-profile-btn").href = href; });
             }
             tickClock();
-            setInterval(tickClock, 30000);
             loadWeather();
-            setInterval(loadWeather, 15 * 60 * 1000);
+            if (!bootedForUser) {
+                bootedForUser = true;
+                setInterval(tickClock, 30000);
+                setInterval(loadWeather, 15 * 60 * 1000);
+            }
             loadNotifCount(user);
             refreshHome();
             loadReflection(user);

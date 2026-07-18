@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Scopes Node's module resolution for this directory only, so js/__tests__/*.test.js can `import` the real browser ES modules directly (js/date-utils.js, js/reflection.js, etc.) instead of duplicating their logic into the test files. Has ZERO effect on the browser: pages already load these files via <script type=\"module\">, which ignores package.json entirely. Excluded from the deployed site by scripts/build-site.js (see its jsDirFilter), same as this directory's own __tests__/ subfolder — neither is product code."
+}

@@ -1,6 +1,20 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v29 (Production Hardening Phase 1): home.html/me.js changed — the hardcoded, browser-exposed
+// OpenWeatherMap API key is gone from both; weather now goes through a new authenticated Netlify
+// Function (netlify/functions/weather.js, never part of PRECACHE — Function source is never a
+// static browser asset, same as every other Function in this repo) via a new shared browser
+// module, js/weather-client.js (added to PRECACHE below). Two more new shared browser modules
+// also added: js/date-utils.js (Asia/Kuala_Lumpur-aware date-key helper) and js/reflection.js
+// (Daily Reflection's save-payload/query-key logic) — both power home.html's fix for a real
+// permission-denied bug on a day with no reflection yet (a direct getDoc()-by-ID against a rule
+// that checks resource.data.uid throws when the document doesn't exist; replaced with a
+// rules-provable where("uid",...)+where("dateKey",...) query) and a fix so editing an existing
+// reflection no longer re-stamps its createdAt. calendar.js also changed (escaping a stored
+// journal title before it's interpolated into the day grid's innerHTML — a defensive fix, not a
+// behavior change); it's already in PRECACHE below, so this bump is what makes that fix actually
+// reach an already-installed worker instead of being served stale from cache.
 // v28 (strict collection-scope consent fix): assistant.html/assistant.js changed again — a new
 // "Calendar also needs Memories and/or Journal selected" notice (and matching Send-disable) now
 // fires whenever Calendar is checked without Memories or Journal, since Calendar is a
@@ -62,7 +76,7 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v28";
+const CACHE = "eden-shell-v29";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
@@ -75,6 +89,7 @@ const PRECACHE = [
   "profile.js", "career.js", "atlas.js", "portfolio.js", "project.js", "assistant.js",
   "js/i18n.js", "js/mobile-nav.js", "js/sidebar.js", "js/splash.js", "js/location-search.js",
   "js/location-fields.js", "js/memory-filters.js", "js/resume-data.js",
+  "js/date-utils.js", "js/reflection.js", "js/weather-client.js",
   "locales/en.json", "locales/zh-CN.json",
   "manifest.json", "images/icon-192.png", "images/icon-512.png", "images/logo-mark.png",
 ];

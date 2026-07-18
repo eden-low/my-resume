@@ -82,19 +82,32 @@ function copyFile(name) {
   fs.copyFileSync(src, dest);
 }
 
-function copyDir(name) {
+// js/__tests__/ and js/package.json exist purely so Node can run js/*.js's real logic under a
+// deterministic test suite (see js/package.json's own description) — neither is product code,
+// so both are excluded from the deployed site the same way netlify/, scripts/, and every other
+// non-product path already is. fs.cpSync's `filter` receives an absolute src path for every
+// file/directory it considers; returning false skips it (and, for a directory, everything under
+// it) without needing a second pass or a post-copy cleanup step.
+function isTestScaffolding(src) {
+  const rel = path.relative(ROOT, src).split(path.sep).join("/");
+  return /(^|\/)__tests__(\/|$)/.test(rel) || /(^|\/)package(-lock)?\.json$/.test(rel);
+}
+
+function copyDir(name, filter) {
   const src = path.join(ROOT, name);
   if (!fs.existsSync(src)) {
     throw new Error(`build-site: allowlisted directory is missing on disk: ${name}`);
   }
-  fs.cpSync(src, path.join(OUT, name), { recursive: true });
+  fs.cpSync(src, path.join(OUT, name), { recursive: true, filter });
 }
 
 function build() {
   rmrf(OUT);
   fs.mkdirSync(OUT, { recursive: true });
   ALLOW_FILES.forEach(copyFile);
-  ALLOW_DIRS.forEach(copyDir);
+  // "js" is the only ALLOW_DIRS entry that has ever grown test scaffolding (js/__tests__/,
+  // js/package.json) — the filter is a no-op for images/locales, which have never had either.
+  ALLOW_DIRS.forEach((name) => copyDir(name, (src) => !isTestScaffolding(src)));
   const fileCount = ALLOW_FILES.length;
   console.log(`build-site: copied ${fileCount} files + ${ALLOW_DIRS.length} directories into ${path.relative(ROOT, OUT)}/`);
 }

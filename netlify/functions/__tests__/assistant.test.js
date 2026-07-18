@@ -2495,10 +2495,10 @@ async function run() {
     assert.strictEqual(cachePutCalls.length, 1, "a normal page request should still be cached as before");
   });
 
-  await test("service-worker.js CACHE version is eden-shell-v28 (bumped for this pass's browser-file changes) and includes assistant.html/assistant.js in PRECACHE", async () => {
+  await test("service-worker.js CACHE version is at least eden-shell-v28 (this suite predates later cache bumps — see weather.test.js for the current version) and includes assistant.html/assistant.js in PRECACHE", async () => {
     const root = path.resolve(__dirname, "..", "..", "..");
     const src = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
-    assert.ok(/const CACHE = "eden-shell-v28"/.test(src));
+    assert.ok(/const CACHE = "eden-shell-v(28|29|[3-9]\d|\d{3,})"/.test(src), "CACHE must be eden-shell-v28 or a later version");
     assert.ok(/"assistant\.html"/.test(src));
     assert.ok(/"assistant\.js"/.test(src));
     assert.ok(/"gallery\.js"/.test(src));

@@ -21,6 +21,13 @@ function dateLocale() {
   return getLang() === "zh-CN" ? "zh-CN" : undefined;
 }
 
+// Journal titles are free-text user content interpolated into the day grid's innerHTML below
+// (Production Hardening Phase 1, task D) — escape before rendering, same convention as
+// profile.js/portfolio.js/home.html's own esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function toDateKey(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -83,7 +90,7 @@ function renderMonth() {
 
   expenses.forEach((e) => addItem("createdAt", e, (item) => `💰 RM ${Number(item.amount || 0).toFixed(0)}`));
   photos.forEach((p) => addItem("uploadedAt", p, () => `📷 Photo`));
-  journals.forEach((j) => addItem("createdAt", j, (item) => `📝 ${item.title || "Entry"}`));
+  journals.forEach((j) => addItem("createdAt", j, (item) => `📝 ${esc(item.title || "Entry")}`));
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();

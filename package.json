@@ -5,7 +5,9 @@
   "description": "Server-side dependency manifest for EdenAtlas's Netlify Functions only. The frontend (every .html page and root-level .js module) stays fully buildless — no bundler, no framework, plain ES module imports straight from gstatic.com, exactly as documented in CLAUDE.md. This file exists solely so Netlify's build step can `npm install` the one dependency netlify/functions/assistant.js needs (Firebase Admin, for server-side ID token verification and Owner-role reads) before bundling Functions with esbuild — see netlify.toml. `scripts/build-site.js` (the actual publish-output build) has zero dependencies and never reads this file.",
   "scripts": {
     "build": "node scripts/build-site.js",
-    "test:functions": "node netlify/functions/__tests__/assistant.test.js"
+    "test:functions": "node netlify/functions/__tests__/assistant.test.js && node netlify/functions/__tests__/weather.test.js",
+    "test:frontend": "node js/__tests__/date-utils.test.js && node js/__tests__/reflection.test.js",
+    "test": "npm run test:functions && npm run test:frontend"
   },
   "dependencies": {
     "firebase-admin": "^14.2.0"
