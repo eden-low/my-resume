@@ -2,6 +2,10 @@
 firebase-debug.log
 node_modules/
 
+# Generated Netlify publish output (scripts/build-site.js) — reproducible from source on every
+# deploy, never hand-edited, never committed.
+/site/
+
 # Environment / secrets (Netlify Functions prep) — never commit real values.
 # Production secrets belong in Netlify Project configuration -> Environment variables,
 # not in any file in this repo. See .env.example for the documented variable names.

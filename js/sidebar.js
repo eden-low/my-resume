@@ -35,6 +35,10 @@ const SECONDARY_LINKS = [
   { href: "habits.html", icon: "list-checks", key: "nav.habits", label: "Habits" },
   { href: "time-capsule.html", icon: "hourglass", key: "nav.time_capsule", label: "Time Capsule" },
   { href: "constellation.html", icon: "sparkles", key: "nav.constellation", label: "Constellation" },
+  // Owner-only AI feature (see netlify/functions/assistant.js) — deliberately in SECONDARY_LINKS,
+  // not LIGHT_LINKS below, so a Friend/Viewer never even sees the link; auth-guard.js's
+  // data-owner-only backstop (assistant.html's <body>) also redirects a direct-URL visit.
+  { href: "assistant.html", icon: "sparkles", key: "nav.assistant", label: "Atlas Assistant" },
   { href: "contact.html", icon: "mail", key: "nav.contact", label: "Contact" },
 ];
 

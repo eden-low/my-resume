@@ -1337,6 +1337,180 @@ no Firebase Auth/rules/schema change, no deploy, nothing committed/pushed by thi
    (this pass touches deployment/security scaffolding, not the product surface a version bump
    is meant to track).
 
+**"Public-source lockdown + Qwen Atlas Assistant MVP" (most recent)** — two gated passes. Gate A
+closes a real, live-tested gap the "Netlify Functions prep" pass above left open; Gate B adds the
+first (read-only, Owner-only) AI feature since the v2.6 "AI removed entirely" pass, on an
+entirely different architecture (server-verified, tool-allowlisted, no client-trusted uid — see
+`docs/ai-architecture.md`, which this implements).
+1. **Gate A root cause.** Live testing after the previous pass's deploy found `/CLAUDE.md`,
+   `/README.md`, `/tmp_chats.ts`, `/tmp_types.ts`, `/migrate-career.html`, and
+   `/netlify/functions/health.js` still publicly reachable, despite `netlify.toml` already
+   listing 404-shadow `[[redirects]]` for most of them. Two distinct problems, not one: (a) some
+   of those `to == from, force = true, status = 404` shadow redirects simply didn't reliably
+   block the file they targeted in practice (a handful, like `/storage.rules`/`/firestore.rules`/
+   `/.env.example`, *did* work — the mechanism isn't universally broken, just not trustworthy);
+   (b) `publish = "."` was a real structural gap, not a redirect-reliability issue —
+   `netlify/functions/health.js` (Function *source*) was being served as an ordinary static file
+   at `/netlify/functions/health.js`, a completely different path from the real, Netlify-routed
+   endpoint at `/.netlify/functions/health` (note the leading dot), which redirect rules never
+   even attempted to address.
+2. **Fix: [scripts/build-site.js](scripts/build-site.js), a deterministic allowlisted
+   copy-to-publish build**, replacing the redirect blacklist entirely rather than patching it —
+   the task's own explicit fallback once a blacklist proved unreliable. A plain, dependency-free
+   Node script copies an explicit, hardcoded `ALLOW_FILES`/`ALLOW_DIRS` list (every real page,
+   every root-level script, `js/`/`locales/`/`images/`, `styles.css`, `manifest.json`,
+   `service-worker.js`) into a generated `site/` directory, preserving every relative path
+   exactly (no page's `styles.css`/`js/*`/`locales/*` reference changes) — deliberately hardcoded
+   filenames, not a `*.js` glob, so a future accidental commit (like `tmp_chats.ts`/
+   `tmp_types.ts` here) can never silently re-enter the allowlist. `netlify.toml`'s `[build]`
+   gained `command = "node scripts/build-site.js"` and `publish` changed from `"."` to `"site"`;
+   `functions = "netlify/functions"` is untouched and unaffected, since Netlify reads Function
+   source from the repo root independently of `publish` — `/.netlify/functions/health` (and the
+   new `/.netlify/functions/assistant`) keep working with zero code changes, while
+   `netlify/functions/` itself is now structurally never copied into `site/` at all. The old
+   per-file `[[redirects]]` block was deleted outright (not layered on top) — nothing there was
+   still doing useful work once the files it targeted can't exist in the publish output in the
+   first place. `.gitignore` gained `/site/` (generated, reproducible, never hand-edited).
+3. **Cleanup, not a blanket delete.** `tmp_chats.ts`/`tmp_types.ts` (accidentally-committed
+   `@google/genai` SDK source, flagged but not removed by the prior pass) were proven
+   unreferenced by any real file (grepped the whole tree; only CLAUDE.md's own historical prose
+   and the prior pass's now-deleted redirect rule mentioned them) and deleted from the working
+   tree. `migrate-career.html` was **not** deleted — its own on-page copy says "delete this file
+   once you've run it," but this environment has no live Firestore access to confirm the
+   migration actually ran, and deleting it would be irreversible if it hadn't; per the task's own
+   "don't delete without proof, block instead" instruction, it stays tracked in Git (per the
+   "keep internal docs/tools in Git, exclude from deploy" instruction) and is simply never copied
+   into `site/` by the allowlist — structurally blocked, explicitly not proof-deleted.
+4. **`package.json`/`package-lock.json`** (new) — the first `npm` dependency this repo has ever
+   had, `firebase-admin` (server-side only, for `netlify/functions/assistant.js`'s ID-token
+   verification and Owner-role Firestore reads). Scoped deliberately narrowly: the file's own
+   description states the frontend stays fully buildless — `scripts/build-site.js` has zero
+   dependencies and never reads `package.json`; this manifest exists only so Netlify's build step
+   can `npm install` the one thing a Function needs before esbuild bundles it (`[functions]
+   node_bundler = "esbuild"`, already declared). `node_modules/` was already gitignored.
+5. **Atlas Assistant architecture** — implements `docs/ai-architecture.md`'s design end to end:
+   browser sends a Firebase ID token (`Authorization: Bearer`) to
+   `/.netlify/functions/assistant`; the Function verifies it server-side (Firebase Admin,
+   `verifyIdToken(token, true)`), derives `uid` from the verified token only, and requires **two
+   independent signals to agree** before treating the caller as Owner —
+   `users/{uid}.role === "owner"` AND the token's own `email` AND the stored doc's `email` all
+   match a hardcoded `OWNER_EMAIL` constant (duplicated from `firebase-init.js`, since this
+   Function can't `require()` a browser ES module — see the file's header comment). This was
+   deliberately an AND, not an OR, of the two email checks: the test suite (see below) caught a
+   real logic bug where an OR would have let a compromised/mislabeled `users/{uid}` doc alone
+   grant access even with a mismatched verified-token email. `netlify/functions/lib/tools.js` is
+   the strict server-side tool allowlist — `search_memories`, `find_memories_missing_location`,
+   `search_journals`, `list_journey`, `list_calendar`, `draft_reflection` — every executor
+   hardcodes its own Firestore collection name and `where("uid","==",ctx.uid)` clause (Firebase
+   Admin bypasses `firestore.rules` entirely, so this re-implements in code the same per-
+   collection ownership shape the rules file already expresses declaratively); the model only
+   ever supplies validated leaf arguments (a search string, a limit, a bounded date range,
+   already-surfaced source ids) — never a collection name, document path, uid, or query operator,
+   even if it tries (tested explicitly). Every result is hand-picked: no image bytes, Storage
+   paths/download URLs, or exact latitude/longitude ever leave a tool executor; trashed Memories
+   (`deletedAt`) and other users' documents are excluded at the query/filter layer, not by
+   best-effort redaction. `netlify/functions/lib/qwen.js` runs the bounded agent loop against
+   Qwen's OpenAI-compatible Chat Completions API (max 3 tool-call rounds, max 4 tool calls
+   executed per round, 15s per-call timeout via `AbortController`, 800 output tokens, no
+   automatic retries, only the 6 allowlisted `tools` — never Qwen's built-in web-search/code-
+   interpreter/file tools). `netlify/functions/lib/rate-limit.js` implements two layers on
+   purpose: a **durable** per-Owner daily cap via a Firestore Admin transaction on
+   `ai_usage/{uid}_{yyyy-mm-dd}` (survives cold starts, consistent across concurrent invocations —
+   the actual spend guard) plus a **non-durable, explicitly documented as such** in-memory
+   burst guard (resets every cold start) that only exists to reject an obvious click-spam burst
+   cheaply before paying for a Firestore transaction. Config (env vars) is checked before
+   anything else, including method/origin/auth — a misconfigured deploy fails closed with a
+   generic 500 for every caller, never partially works. CORS never uses `*`; `Origin` is checked
+   against `ALLOWED_ORIGIN` plus a short hardcoded local-dev allowlist (Netlify Dev's 8888,
+   `npx serve .`'s 3000, `python -m http.server`'s 8000).
+6. **[assistant.html](assistant.html)/[assistant.js](assistant.js)** (new, Owner-only) — follows
+   this codebase's per-page-duplication convention (no shared chat-widget module). Consent is a
+   focus-trapped modal (bilingual, EN/中文) that must be explicitly checked-and-accepted before
+   the composer is usable — nothing is sent to Qwen merely by opening the page, and Escape/
+   backdrop-click deliberately do **not** grant consent. A scope selector (Memories/Journal/
+   Journey/Calendar) defaults every scope **off** (`localStorage["eden:assistantScopes"]`,
+   persisted separately from conversation state); disabled scopes are never even offered to the
+   model as tools (`toolDefsForScopes()`), not just hidden in the UI. Conversation state lives in
+   `sessionStorage` only (`eden:assistantConversation`) — cleared on tab close, never written to
+   Firestore. UI includes the full brief list: Private/Owner-only badge, New chat, the five exact
+   suggested prompts, a `role="log" aria-live="polite"` message list, a simulated (not real SSE)
+   "thinking" indicator that rotates through phase text purely client-side, a Stop button wired
+   to an `AbortController.abort()` on the in-flight fetch, per-message Copy (Clipboard API, silent
+   fallback), Clear conversation, an error banner with Retry (resends the last user message),
+   an "AI can make mistakes" note, and a reused (duplicated, per convention) `trapFocus()` for the
+   consent modal. Source cards link to the relevant module page (`gallery.html`/`journal.html`/
+   `timeline.html`) by type — no per-record detail route exists sitewide to deep-link to, so this
+   intentionally doesn't invent one.
+7. **Nav**: `js/sidebar.js`'s `SECONDARY_LINKS` and `js/mobile-nav.js`'s `DRAWER_LINKS` both
+   gained an Atlas Assistant entry — **only** in the owner-role lists (`LIGHT_LINKS`/
+   `LIGHT_DRAWER_LINKS`, rendered for any Friend/Viewer, were deliberately left untouched), plus
+   `home.html`'s `data-owner-only-link` "All pages" row. `auth-guard.js` needed no code change —
+   `assistant.html`'s `<body data-owner-only="true">` reuses the existing generic backstop that
+   already redirects a non-owner's direct-URL visit to `home.html?notice=private_space`. New
+   i18n: `nav.assistant`, `common.copied`, and a full `assistant.*` namespace (~35 keys) in both
+   locales — key-parity-checked by the test suite, not just visually.
+8. **`.env.example`** — the placeholder `AI_PROVIDER_API_KEY`/`AI_MODEL` from the prior pass
+   became the Qwen-specific `DASHSCOPE_API_KEY`/`QWEN_MODEL`/`QWEN_BASE_URL`. No default model is
+   hardcoded anywhere in the code — `QWEN_MODEL` is a required env var (fails closed if unset),
+   documented with `qwen-plus` only as a suggested starting value in the comment, specifically so
+   a missing config can never silently fall back to a billable production model.
+   `QWEN_BASE_URL` is also required with no fallback, since (per the task) it embeds the real
+   Model Studio Workspace ID and must never be hardcoded in a committed file.
+9. **`service-worker.js` → `eden-shell-v23`** (from v22, per the task's own instruction that v22
+   was already deployed separately from this batch). `assistant.html`/`assistant.js` added to
+   `PRECACHE`. Fixed a real, previously-latent gap while doing this: the fetch handler only ever
+   bypassed *cross-origin* requests by hostname, but `/.netlify/functions/*` is **same-origin**,
+   so a Function response (health, and now the AI assistant) was being written into the Cache
+   Storage API on every call — Cache Storage does not automatically respect an HTTP
+   `Cache-Control: no-store` header the way `fetch()`'s own HTTP cache does; only an explicit
+   fetch-handler bypass does. `NEVER_CACHE_PATH_PREFIXES` (`/.netlify/functions/`) now routes
+   those requests through a plain pass-through `fetch()` with no `cache.put()` at all — verified
+   with a `node:vm`-sandboxed test that actually loads `service-worker.js` and asserts
+   `caches.open`/`put` is never called for a Function request (and still *is* called for a normal
+   page, as a regression guard on the fix itself). The Qwen/Alibaba Model Studio endpoint is never
+   reachable from the browser at all (only `netlify/functions/assistant.js` calls it, server-
+   side) — added to `BYPASS_HOSTS` anyway as a self-documenting guarantee, not because the
+   existing cross-origin check needed it.
+10. **Tests** — [netlify/functions/\_\_tests\_\_/assistant.test.js](netlify/functions/__tests__/assistant.test.js),
+    53 assertions, zero network calls, zero real Firebase project, zero real Qwen key (a
+    deliberately fake `DASHSCOPE_API_KEY` value is asserted to never appear in any response body
+    or `console.error` line, across both success and error paths). Exercises
+    `assistant.js`'s exported (test-only) `createHandler(deps)` factory directly with fully mocked
+    `verifyIdToken`/`getUserDoc`/`getDb`/`fetchImpl`, covering: signed-out/invalid-token/expired-
+    token/Friend-role/email-mismatch all rejected, Owner accepted; wrong Origin rejected + a
+    documented local-dev origin accepted; every required env var indistinguishably fails closed
+    with 500 *before* `verifyIdToken` is ever called (asserted via a spy); request-size/message-
+    length/history-length/unknown-scope validation; the durable daily-cap transaction (including
+    that a fresh mock-db handle sharing the same store still sees a persisted count, simulating a
+    cold start) and the burst guard (and that burst rejection never touches Firestore at all);
+    each of the 6 tools individually (trashed exclusion, other-users exclusion, no
+    url/storagePath/exact-coordinates leakage, bounded date ranges, `draft_reflection`'s
+    already-surfaced-refs-only guard with zero Firestore reads); a tool call carrying an injected
+    `collection`/`uid`/`path` field proven to have zero effect; unknown-tool-name and malformed-
+    tool-argument-JSON handled without crashing; the 3-round cap proven by counting `fetchImpl`
+    invocations (never a 4th); timeout-shaped and non-2xx Qwen failures mapped to a sanitized
+    `QwenError` that never contains the raw provider body; no auto-retry (exactly one `fetchImpl`
+    call for one failure); Qwen's built-in tools never sent; a full end-to-end tool-calling
+    request; EN/ZH key-parity (including the new `assistant.*` namespace); a structural check that
+    `assistant.html` carries `data-owner-only="true"`; the Health Function regression check
+    (unchanged: GET-only, exact `{ok:true,service:"edenatlas-functions"}` body); and the
+    service-worker Function-bypass test described above. This suite caught and fixed two real
+    bugs before they shipped — the owner-email-check OR/AND logic error (§5 above) and a Qwen
+    error-response-body-shape ordering bug in `lib/qwen.js` (a non-JSON error body from a gateway/
+    proxy was being reported as `qwen_invalid_json_response` instead of the actual
+    `qwen_http_<status>`, masking the real failure) — not just asserted as passing.
+    **Not run** (would require a real Firebase project, a real DashScope key, and this
+    environment has neither, nor was one provided): a live Qwen request, a real `netlify dev`
+    invocation of the deployed Function, or interactive browser QA of `assistant.html` (consent
+    modal focus trap, mobile layout, screen-reader announcement of new messages, actual Stop-
+    button-mid-request behavior against a real slow response). These are called out as follow-ups
+    requiring the manual Netlify/Firebase/Qwen console steps listed in the completion report, not
+    silently assumed to work.
+11. **Brand & navigation**: no footer version bump sitewide (Gate A is deployment infrastructure,
+    not product surface; Gate B added exactly one new nav entry, listed in point 7 above, not a
+    versioned feature pass in the sense every prior `vX.Y` entry in this history used that term
+    for) — a version-bump decision left for the user alongside the manual deploy steps.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model
@@ -1353,7 +1527,7 @@ no Firebase Auth/rules/schema change, no deploy, nothing committed/pushed by thi
 
 ### Pages
 
-- **No shared layout/include system.** Every protected page (`home.html`, `resume.html`, `gallery.html`, `atlas.html`, `journal.html`, `expenses.html`, `timeline.html`, `habits.html`, `calendar.html`, `reports.html`, `dashboard.html`, `notifications.html`, `contact.html`, `collections.html`, `collection-detail.html`, `me.html`, `settings.html`, `profile.html`, `time-capsule.html`) is a fully standalone HTML file that repeats the same `<head>` (Tailwind CDN, Font Awesome, `styles.css`, PWA manifest/theme-color/apple-touch-icon tags, a theme-preload inline `<script>` — see Light mode below) and the same header/nav markup (15 links plus an unread-notification badge next to "Notifications"). `login.html` is the one page that intentionally does **not** follow the shared nav/auth-guard pattern; `profile.html` follows it fully (auth-guard, full nav) but — like `login.html` — is deliberately *not* one of the linked pages, since it only makes sense with a `?uid=` param and is reached exclusively from a Search People result. **As of the "Portfolio to root" routing change, `index.html` is no longer one of these protected pages** — it's the public recruiter Portfolio (promoted from `portfolio.html`, which is now just a redirect stub) and deliberately carries none of the above (no auth-guard, no sidebar/mobile-nav, no theme-preload dependency on a signed-in user). The private Personal OS Home that used to live at `index.html` is now `home.html`, otherwise unchanged.
+- **No shared layout/include system.** Every protected page (`home.html`, `resume.html`, `gallery.html`, `atlas.html`, `journal.html`, `expenses.html`, `timeline.html`, `habits.html`, `calendar.html`, `reports.html`, `dashboard.html`, `notifications.html`, `contact.html`, `collections.html`, `collection-detail.html`, `me.html`, `settings.html`, `profile.html`, `time-capsule.html`, `assistant.html`) is a fully standalone HTML file that repeats the same `<head>` (Tailwind CDN, Font Awesome, `styles.css`, PWA manifest/theme-color/apple-touch-icon tags, a theme-preload inline `<script>` — see Light mode below) and the same header/nav markup (15 links plus an unread-notification badge next to "Notifications"). `login.html` is the one page that intentionally does **not** follow the shared nav/auth-guard pattern; `profile.html` follows it fully (auth-guard, full nav) but — like `login.html` — is deliberately *not* one of the linked pages, since it only makes sense with a `?uid=` param and is reached exclusively from a Search People result. **As of the "Portfolio to root" routing change, `index.html` is no longer one of these protected pages** — it's the public recruiter Portfolio (promoted from `portfolio.html`, which is now just a redirect stub) and deliberately carries none of the above (no auth-guard, no sidebar/mobile-nav, no theme-preload dependency on a signed-in user). The private Personal OS Home that used to live at `index.html` is now `home.html`, otherwise unchanged.
 - **Site-wide login gate.** [auth-guard.js](auth-guard.js) is a shared ES module — every protected page loads it via a single `<script type="module" src="auth-guard.js"></script>` tag (right after `scripts.js`). It calls `onAuthStateChanged`; redirects to `login.html?redirect=<currentPage>` if signed out, otherwise removes the `auth-check-pending` body class to reveal the page. Forces a reload on a bfcache `pageshow` so Back-navigation re-checks auth. UX convenience only — real access control is `firestore.rules`/`storage.rules`. It also owns the one cross-page UI concern: if the signed-in user `isOwner` and the page's nav has a `#notif-badge` element, it queries `notifications` for `uid == owner && read == false` and lights up the badge.
 - **Site-wide command palette.** [global-search.js](global-search.js) (v4.0) is the second shared ES module, loaded via `<script type="module" src="global-search.js"></script>` right after `auth-guard.js` on every protected page. Like `auth-guard.js`, it's self-contained — on `onAuthStateChanged`, it appends its own trigger button to `header nav` and its own modal to `document.body` rather than requiring any per-page markup, so wiring it up sitewide was a one-line-per-file addition. Opens on click or `Ctrl/Cmd-K`; queries `users` (role-gated like `dashboard.js`'s `searchableUsers()`), `photos`/`journals`/`life_events`/`habits` (mine+public merge), and `expenses` (mine-only, so other users' expenses are unreachable by construction of the query, not just by rules) and renders matches grouped by type with per-group counts.
 - **[login.html](login.html)** is the one page every visitor can reach while signed out. On a successful `signInWithPopup`, it: (1) resolves the user's role via `resolveUserMode()` (owner check, then `getDoc(friends/{email})`) and caches it to `localStorage` as `lfj:userMode`; (2) upserts the `users/{uid}` directory doc; (3) writes a `login_logs` doc; (4) writes a `notifications` doc for *whoever just signed in* (no longer owner-only — everyone has their own notifications now). A `signingIn` flag guards against `onAuthStateChanged`'s own redirect firing mid-click and tearing down the page before these writes finish. On a session-restore (not a fresh click), `onAuthStateChanged` still refreshes the cached role before redirecting, in case whitelist status changed since the last visit. The `?redirect=` param is checked against an explicit allowlist of known private-page filenames (not just a shape regex, as of the "Portfolio to root" routing change) to prevent an open-redirect vector, falling back to `home.html` (was `index.html`, before that page became the public Portfolio) for anything missing or not in the allowlist — `index.html`/`portfolio.html`/`login.html` are deliberately excluded from the allowlist itself. On iPhone, an installed "Add to Home Screen" PWA can't reliably complete Google sign-in in its own standalone window (tried both `signInWithPopup` and `signInWithRedirect` — both strand the user on Google's page with no way back, most likely because the transient state Firebase Auth needs mid-flow doesn't survive the round trip through Google's origin inside a standalone WKWebView). The fix: `isStandalone()` (checks `matchMedia("(display-mode: standalone)")` / `navigator.standalone`) swaps the sign-in button for an "Open in Safari to Sign In" link (`target="_blank"`, which forces iOS to hand off to real Safari even from a standalone window); the user signs in there normally, then reopens the installed app, which picks up the persisted session via `browserLocalPersistence` without repeating sign-in.

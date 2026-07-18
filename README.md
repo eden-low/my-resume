@@ -130,16 +130,41 @@ npx serve .
 ## Deployment: Netlify
 
 Production is [https://edenatlas.netlify.app/](https://edenatlas.netlify.app/) — `netlify.toml`
-publishes the repo root as-is (no build step, matching the buildless architecture above) and
-declares a `netlify/functions` directory for server-side Functions. The repo-root publish is
-paired with explicit 404 redirects for files that aren't part of the deployed product
-(`firestore.rules`, `storage.rules`, internal docs, etc.) — see `netlify.toml`'s comments for
-the full list and reasoning. The only Function that exists today is an unauthenticated
-`/.netlify/functions/health` liveness check with no dependencies and no environment-variable
-reads; see [docs/ai-architecture.md](docs/ai-architecture.md) for the documented (not yet
-built) design of a future authenticated AI-assistant Function. Real secrets belong in Netlify's
-own Project configuration → Environment variables — see `.env.example` for the documented
-variable names (placeholders only, never committed values).
+publishes a generated `site/` directory (never the repo root) built by
+[scripts/build-site.js](scripts/build-site.js), a small dependency-free Node script that copies
+an explicit **allowlist** of product files/directories (every real page, root-level script,
+`js/`/`locales/`/`images/`, `styles.css`, `manifest.json`, `service-worker.js`) while preserving
+every relative path exactly — still buildless in spirit (no bundler, no transpilation, byte-
+identical copies), just not a bare repo-root publish. Internal docs (`CLAUDE.md`, `README.md`,
+`design-system.md`, `brand-book.md`, `docs/*`), Firebase/Netlify config
+(`firestore.rules`/`storage.rules`/`firebase.json`/`.firebaserc`/`.env*`), and the Netlify
+Functions *source* tree (`netlify/`) are never in that allowlist, so they can't be served no
+matter what — an earlier redirect-based blacklist approach was replaced after live testing found
+it unreliable; see `scripts/build-site.js`'s and `netlify.toml`'s comments for the full story.
+`functions = "netlify/functions"` reads Function source independently of `publish`, so
+`/.netlify/functions/health` and `/.netlify/functions/assistant` (the Owner-only Atlas
+Assistant, see below) work unaffected. Real secrets belong in Netlify's own Project
+configuration → Environment variables — see `.env.example` for the documented variable names
+(placeholders only, never committed values). `package.json` exists only for the one server-side
+dependency a Function needs (`firebase-admin`) — the frontend itself installs nothing and stays
+exactly as buildless as described above.
+
+## Atlas Assistant: `assistant.html` + `netlify/functions/assistant.js`
+
+An Owner-only, read-only AI assistant over the Owner's own Memories/Journal/Journey/Calendar,
+powered by Qwen (Alibaba Cloud Model Studio's OpenAI-compatible Chat Completions API) through a
+strict server-side tool allowlist — see [docs/ai-architecture.md](docs/ai-architecture.md) for
+the full design and [CLAUDE.md](CLAUDE.md)'s history for the implementation notes. The browser
+never talks to Qwen directly and never sees `DASHSCOPE_API_KEY`; every request is a Firebase
+ID-token-authenticated call to `/.netlify/functions/assistant`, which re-verifies the token
+server-side, confirms Owner role via two independent signals, and only then runs a bounded (max
+3 rounds) tool-calling loop against six fixed, validated tools
+(`netlify/functions/lib/tools.js`) — the model can never supply a raw collection name, document
+path, uid, or query operator. No write path exists anywhere in this feature. Nothing is sent to
+Qwen until the Owner explicitly accepts a bilingual consent notice; per-request data scopes
+(Memories/Journal/Journey/Calendar) default off. Run
+`node netlify/functions/__tests__/assistant.test.js` (or `npm run test:functions`) for the
+deterministic, fully-mocked test suite (no real Firebase project or Qwen key needed).
 
 ## Login gate: `auth-guard.js` + `login.html`
 
@@ -255,7 +280,8 @@ targets are ≥44px.
 - [OpenWeatherMap](https://openweathermap.org/) Current Weather API for the homepage weather widget
 - Shared custom styles in [styles.css](styles.css); shared behavior in [scripts.js](scripts.js) (scroll-reveal, service-worker registration)
 - A PWA layer: [manifest.json](manifest.json) + [service-worker.js](service-worker.js) (network-first with cache fallback, bypassing Firebase/CDN/weather hosts)
-- [Netlify](https://www.netlify.com/) for hosting (static publish, no build command) and [Netlify Functions](https://docs.netlify.com/functions/overview/) for server-side code — currently just `netlify/functions/health.js`, a dependency-free liveness check; see [Deployment](#deployment-netlify) above and [docs/ai-architecture.md](docs/ai-architecture.md) for what's planned next
+- [Netlify](https://www.netlify.com/) for hosting (an allowlist-built `site/` publish directory, see [Deployment](#deployment-netlify) above) and [Netlify Functions](https://docs.netlify.com/functions/overview/) for server-side code — `netlify/functions/health.js` (dependency-free liveness check) and `netlify/functions/assistant.js` (the Owner-only Atlas Assistant, using [firebase-admin](https://www.npmjs.com/package/firebase-admin) for server-side auth — the one npm dependency in this repo, scoped to Functions only)
+- [Qwen](https://www.alibabacloud.com/en/product/modelstudio) (Alibaba Cloud Model Studio, OpenAI-compatible Chat Completions API) powers the Atlas Assistant — see [Atlas Assistant](#atlas-assistant-assistanthtml--netlifyfunctionsassistantjs) above
 
 ## Design system
 
