@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "firebase-admin": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

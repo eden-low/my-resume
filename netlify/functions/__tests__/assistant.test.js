@@ -287,7 +287,7 @@ async function run() {
   // never written anywhere, discarded when the process exits) — necessary because this suite
   // now validates PEM structure with Node's own `crypto.createPrivateKey()` (see
   // lib/firebase-admin.js's assertPrivateKeyIsUsable(), added after confirming against the real
-  // firebase-admin package that admin.credential.cert() does NOT eagerly validate a key, so a
+  // firebase-admin package that its modular cert() does NOT eagerly validate a key, so a
   // placeholder string would no longer be a valid fixture for the "this should succeed" tests).
   const REAL_TEST_PRIVATE_KEY = crypto
     .generateKeyPairSync("rsa", { modulusLength: 2048 })
@@ -299,16 +299,21 @@ async function run() {
     private_key: REAL_TEST_PRIVATE_KEY,
   };
 
-  function makeFakeAdmin({ failCert = false, failInit = false } = {}) {
+  // A fake shaped exactly like firebase-admin v14's MODULAR API (getApps/getApp/initializeApp/
+  // cert as plain functions — never a legacy `admin` namespace object with `.apps`/`.app()`/
+  // `.credential.cert()`), matching initializeFirebaseAdmin()'s real parameter shape. This is
+  // deliberately not the only coverage this suite has for the real package — see the "real
+  // firebase-admin v14 package" section below, which is what actually catches an API-shape
+  // incompatibility a fake can't (a fake will happily keep matching whatever shape you wrote it
+  // to match, even after the real package's shape changes underneath it).
+  function makeFakeModularAdmin({ failCert = false, failInit = false } = {}) {
     const apps = [];
     return {
-      apps,
-      app: () => apps[0],
-      credential: {
-        cert: (sa) => {
-          if (failCert) throw new Error("fake OpenSSL error: error:0909006C:PEM routines");
-          return { __cert: true, sa };
-        },
+      getApps: () => apps,
+      getApp: () => apps[0],
+      cert: (sa) => {
+        if (failCert) throw new Error("fake OpenSSL error: error:0909006C:PEM routines");
+        return { __cert: true, sa };
       },
       initializeApp: (opts) => {
         if (failInit) throw new Error("fake initializeApp failure");
@@ -320,10 +325,10 @@ async function run() {
   }
 
   await test("parseServiceAccount: a valid service-account object parses and initializes successfully", async () => {
-    const admin = makeFakeAdmin();
-    const app = initializeFirebaseAdmin({ admin, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) });
+    const fake = makeFakeModularAdmin();
+    const app = initializeFirebaseAdmin({ ...fake, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) });
     assert.ok(app.__app);
-    assert.strictEqual(admin.apps.length, 1);
+    assert.strictEqual(fake.getApps().length, 1);
   });
 
   await test("parseServiceAccount: surrounding whitespace around the raw env var is trimmed", async () => {
@@ -375,7 +380,7 @@ async function run() {
     );
   });
 
-  await test("initializeFirebaseAdmin: a present-but-garbage private_key is rejected by real, local PEM validation BEFORE admin.credential.cert() is ever called — the actual production root cause", async () => {
+  await test("initializeFirebaseAdmin: a present-but-garbage private_key is rejected by real, local PEM validation BEFORE cert() is ever called — the actual production root cause", async () => {
     // This is the scenario the real firebase-admin package does NOT catch on its own (verified
     // against the actual installed package, not assumed — see the header comment in
     // lib/firebase-admin.js): project_id/client_email/private_key are all present and are all
@@ -383,40 +388,157 @@ async function run() {
     // real, usable PEM key (exactly what a mis-escaped or truncated key looks like). Uses a
     // "normal" fake admin (cert()/initializeApp() would happily accept anything) specifically to
     // prove the rejection comes from OUR local crypto check, not from the SDK.
-    const admin = makeFakeAdmin();
+    const fake = makeFakeModularAdmin();
     let certCalled = false;
-    admin.credential.cert = (sa) => { certCalled = true; return { __cert: true, sa }; };
+    const cert = (sa) => { certCalled = true; return { __cert: true, sa }; };
     const garbageKeySA = { ...VALID_SA, private_key: "-----BEGIN PRIVATE KEY-----\nnot-real-key-material\n-----END PRIVATE KEY-----\n" };
     assert.throws(
-      () => initializeFirebaseAdmin({ admin, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(garbageKeySA) }),
+      () => initializeFirebaseAdmin({ ...fake, cert, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(garbageKeySA) }),
       (err) => err instanceof FirebaseConfigError && err.stage === "admin_initialization" && err.code === "config/invalid-private-key"
     );
-    assert.strictEqual(certCalled, false, "must reject before ever reaching admin.credential.cert()");
+    assert.strictEqual(certCalled, false, "must reject before ever reaching cert()");
   });
 
-  await test("initializeFirebaseAdmin: a credential/private-key that fails admin.credential.cert() throws FirebaseConfigError(stage=admin_initialization), never leaking the raw SDK error", async () => {
-    const admin = makeFakeAdmin({ failCert: true });
+  await test("initializeFirebaseAdmin: a credential/private-key that fails cert() throws FirebaseConfigError(stage=admin_initialization), never leaking the raw SDK error", async () => {
+    const fake = makeFakeModularAdmin({ failCert: true });
     assert.throws(
-      () => initializeFirebaseAdmin({ admin, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) }),
+      () => initializeFirebaseAdmin({ ...fake, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) }),
       (err) => err instanceof FirebaseConfigError && err.stage === "admin_initialization" && err.code === "config/init-failed" && !err.message.includes("OpenSSL") && !err.message.includes("PEM")
     );
   });
 
-  await test("initializeFirebaseAdmin: admin.initializeApp() itself throwing is also classified as stage=admin_initialization", async () => {
-    const admin = makeFakeAdmin({ failInit: true });
+  await test("initializeFirebaseAdmin: initializeApp() itself throwing is also classified as stage=admin_initialization", async () => {
+    const fake = makeFakeModularAdmin({ failInit: true });
     assert.throws(
-      () => initializeFirebaseAdmin({ admin, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) }),
+      () => initializeFirebaseAdmin({ ...fake, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) }),
       (err) => err instanceof FirebaseConfigError && err.stage === "admin_initialization"
     );
   });
 
   await test("initializeFirebaseAdmin: reuses the existing app on a warm instance, never re-validates", async () => {
-    const admin = makeFakeAdmin();
-    const first = initializeFirebaseAdmin({ admin, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) });
+    const fake = makeFakeModularAdmin();
+    const first = initializeFirebaseAdmin({ ...fake, projectId: "lfj-profolio", serviceAccountRaw: JSON.stringify(VALID_SA) });
     // Second call passes garbage — if it were re-parsed/re-validated this would throw, but
-    // admin.apps.length is already 1, so initializeFirebaseAdmin must short-circuit to admin.app().
-    const second = initializeFirebaseAdmin({ admin, projectId: "lfj-profolio", serviceAccountRaw: "{not json at all" });
+    // getApps().length is already 1, so initializeFirebaseAdmin must short-circuit to getApp().
+    const second = initializeFirebaseAdmin({ ...fake, projectId: "lfj-profolio", serviceAccountRaw: "{not json at all" });
     assert.strictEqual(first, second);
+  });
+
+  console.log("\nReal firebase-admin v14 package (production-wiring smoke test)");
+
+  // This section is what actually caught the second production incident: every test above uses
+  // `makeFakeModularAdmin()`, a hand-written fake that will happily keep matching whatever shape
+  // we wrote it to match — including a shape the REAL installed package stopped supporting. The
+  // first-generation test suite's fake had `.apps`/`.app()`/`.credential.cert()` (mirroring the
+  // legacy namespace) and passed every assertion while the real firebase-admin ^14.2.0 package
+  // installed by package.json had already silently dropped that entire shape. These tests load
+  // and exercise the REAL package from node_modules — no fakes — so a future firebase-admin
+  // upgrade that changes the modular API shape again would fail here, not just in production.
+
+  await test("firebase-admin/app, firebase-admin/auth, firebase-admin/firestore modular entry points load from the real installed package and export the expected functions", async () => {
+    const { initializeApp, cert, getApps, getApp } = require("firebase-admin/app");
+    const { getAuth } = require("firebase-admin/auth");
+    const { getFirestore } = require("firebase-admin/firestore");
+    assert.strictEqual(typeof initializeApp, "function");
+    assert.strictEqual(typeof cert, "function");
+    assert.strictEqual(typeof getApps, "function");
+    assert.strictEqual(typeof getApp, "function");
+    assert.strictEqual(typeof getAuth, "function");
+    assert.strictEqual(typeof getFirestore, "function");
+  });
+
+  await test("regression guard: the installed firebase-admin's legacy require(\"firebase-admin\").apps is undefined — documents exactly why the modular migration was necessary", async () => {
+    const legacyAdmin = require("firebase-admin");
+    assert.strictEqual(
+      legacyAdmin.apps,
+      undefined,
+      "if this ever becomes an array again (e.g. a firebase-admin downgrade), re-review whether the modular-only rule in this file is still required"
+    );
+  });
+
+  await test("initializeFirebaseAdmin against the REAL installed firebase-admin v14 package succeeds end-to-end (app -> auth -> firestore), no network call made, no legacy API touched", async () => {
+    const { initializeApp, cert, getApps, getApp } = require("firebase-admin/app");
+    const { getAuth } = require("firebase-admin/auth");
+    const { getFirestore } = require("firebase-admin/firestore");
+
+    const testServiceAccount = {
+      project_id: "edenatlas-smoke-test",
+      client_email: "smoke-test@edenatlas-smoke-test.iam.gserviceaccount.com",
+      private_key: REAL_TEST_PRIVATE_KEY,
+    };
+
+    const app = initializeFirebaseAdmin({
+      getApps,
+      getApp,
+      initializeApp,
+      cert,
+      projectId: "edenatlas-smoke-test",
+      serviceAccountRaw: JSON.stringify(testServiceAccount),
+    });
+
+    assert.ok(app, "initializeFirebaseAdmin must return a real App instance from the real package");
+    assert.strictEqual(getApps().length, 1, "exactly one real app must now be initialized");
+
+    // Constructing Auth/Firestore instances is a local operation (no network call) — only an
+    // actual verifyIdToken()/collection().get() call would reach the network, and this smoke
+    // test deliberately stops short of that, matching this pass's "mocked/local tests only, no
+    // live calls" convention. Reaching this point at all already proves the full modular chain
+    // (initializeApp -> cert -> getAuth -> getFirestore) is wired correctly against the real,
+    // currently-installed package — exactly the chain buildProductionDeps() uses in production.
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    assert.strictEqual(typeof auth.verifyIdToken, "function");
+    assert.strictEqual(typeof db.collection, "function");
+  });
+
+  await test("repository guard: zero legacy firebase-admin namespace calls remain in production Function code (comments excluded)", async () => {
+    // Strips comments before scanning specifically so this file's OWN historical documentation
+    // (which names the removed APIs on purpose, for future readers — see this file's and
+    // lib/firebase-admin.js's header comments) can never itself trip the guard. This is a
+    // durable, low-maintenance regression check: it scans every .js file under netlify/functions
+    // (production Function source), not just the two files this pass touched, so a future file
+    // that reintroduces `require("firebase-admin")` + legacy namespace calls fails here too.
+    const root = path.resolve(__dirname, "..", "..", "..");
+    const functionsDir = path.join(root, "netlify", "functions");
+
+    function stripComments(src) {
+      return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    }
+
+    function collectJsFiles(dir) {
+      let files = [];
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === "__tests__") continue; // test doubles are allowed any shape
+          files = files.concat(collectJsFiles(full));
+        } else if (entry.name.endsWith(".js")) {
+          files.push(full);
+        }
+      }
+      return files;
+    }
+
+    const LEGACY_PATTERNS = [
+      { name: 'require("firebase-admin") (bare, legacy namespace import)', re: /require\(\s*["']firebase-admin["']\s*\)/ },
+      { name: "admin.apps", re: /\badmin\.apps\b/ },
+      { name: "admin.app(", re: /\badmin\.app\s*\(/ },
+      { name: "admin.initializeApp(", re: /\badmin\.initializeApp\s*\(/ },
+      { name: "admin.credential.cert(", re: /\badmin\.credential\.cert\s*\(/ },
+      { name: "admin.auth(", re: /\badmin\.auth\s*\(/ },
+      { name: "admin.firestore(", re: /\badmin\.firestore\s*\(/ },
+    ];
+
+    const violations = [];
+    for (const file of collectJsFiles(functionsDir)) {
+      const stripped = stripComments(fs.readFileSync(file, "utf8"));
+      for (const pattern of LEGACY_PATTERNS) {
+        if (pattern.re.test(stripped)) {
+          violations.push(`${path.relative(root, file)}: ${pattern.name}`);
+        }
+      }
+    }
+    assert.deepStrictEqual(violations, [], `legacy firebase-admin namespace calls found in production code:\n${violations.join("\n")}`);
   });
 
   console.log("\nHandler-level classification: config/init failures are 500, never 401 — and never call Qwen");

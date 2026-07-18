@@ -192,14 +192,16 @@ function createHandler(deps) {
 
     // 2. Firebase Admin initialization boundary — deliberately its own step, run for every
     // caller before origin/method/auth, and deliberately NOT inside the token-verification try/
-    // catch below. This is the fix for a real production incident: parsing/validating
-    // FIREBASE_SERVICE_ACCOUNT and calling admin.initializeApp() used to happen lazily inside
-    // verifyIdToken(), so any failure there (malformed JSON, a missing field, a mis-escaped
-    // private key, admin.initializeApp() itself throwing) got caught by the same catch block as
-    // an actual invalid token and reported as 401 invalid_or_expired_token — which is why
-    // production logs showed "token verification failed: undefined" (a config error has no
-    // auth/... code) for what was actually a credential problem, not a bad token. See
-    // netlify/functions/lib/firebase-admin.js for the parsing/normalization logic itself.
+    // catch below. This is the fix for two stacked production incidents: (1) parsing/validating
+    // FIREBASE_SERVICE_ACCOUNT and initializing the Admin app used to happen lazily inside
+    // verifyIdToken(), so any failure there got caught by the same catch block as an actual
+    // invalid token and reported as 401 invalid_or_expired_token; (2) after that was fixed, this
+    // file was still calling firebase-admin's removed legacy namespace API
+    // (`require("firebase-admin")`'s `.apps`/`.app()`/etc.), which v14 no longer supports —
+    // `buildProductionDeps()` below now uses only the v14 modular entry points
+    // (`firebase-admin/app`, `firebase-admin/auth`, `firebase-admin/firestore`). See
+    // netlify/functions/lib/firebase-admin.js for the full history and the parsing/normalization
+    // logic itself.
     try {
       await deps.ensureFirebaseAdmin();
     } catch (err) {
@@ -347,20 +349,32 @@ function createHandler(deps) {
 // factory above, so tests never need it installed to exercise business logic) ----
 
 function buildProductionDeps() {
-  const admin = require("firebase-admin");
+  // firebase-admin v14 removed legacy namespace support (`require("firebase-admin")`'s
+  // `.apps`/`.app()`/`.initializeApp()`/`.credential.cert()`/`.auth()`/`.firestore()` no longer
+  // exist in the shape this code used to assume — see lib/firebase-admin.js's header comment for
+  // the production incident this caused). Every Admin SDK call in this file goes through the v14
+  // modular entry points instead — never a bare `require("firebase-admin")`.
+  const { initializeApp, cert, getApps, getApp } = require("firebase-admin/app");
+  const { getAuth } = require("firebase-admin/auth");
+  const { getFirestore } = require("firebase-admin/firestore");
   const { initializeFirebaseAdmin } = require("./lib/firebase-admin");
-  let app = null; // memoized ONLY on success — see getApp()'s comment
+  let app = null; // memoized ONLY on success — see ensureApp()'s comment
 
   // Once per warm Function instance: the first successful call caches `app` and every later
   // call (this request or a later one on the same warm instance) returns it instantly with no
   // re-parsing/re-validation. A FAILED attempt is deliberately not cached — a later request on
   // the same warm instance is allowed to retry (e.g. if a Netlify env var change takes effect
   // without a full cold start), and each retry still goes through the exact same classified
-  // parseServiceAccount()/admin.initializeApp() path, never a weaker fallback.
-  function getApp() {
+  // parseServiceAccount()/initializeApp() path, never a weaker fallback. Named `ensureApp`, not
+  // `getApp`, specifically so it can't be confused with (or accidentally shadow) the modular
+  // `getApp` imported from `firebase-admin/app` above.
+  function ensureApp() {
     if (app) return app;
     app = initializeFirebaseAdmin({
-      admin,
+      getApps,
+      getApp,
+      initializeApp,
+      cert,
       projectId: process.env.FIREBASE_PROJECT_ID,
       serviceAccountRaw: process.env.FIREBASE_SERVICE_ACCOUNT,
     });
@@ -373,13 +387,13 @@ function buildProductionDeps() {
     // The dedicated initialization boundary (see assistant.js's handler, step 2, and
     // lib/firebase-admin.js) — throws a classified FirebaseConfigError on failure, never
     // reaches or is reachable from verifyIdToken().
-    ensureFirebaseAdmin: async () => { getApp(); },
-    verifyIdToken: (token) => admin.auth(getApp()).verifyIdToken(token, true),
+    ensureFirebaseAdmin: async () => { ensureApp(); },
+    verifyIdToken: (token) => getAuth(ensureApp()).verifyIdToken(token, true),
     getUserDoc: async (uid) => {
-      const snap = await admin.firestore(getApp()).collection("users").doc(uid).get();
+      const snap = await getFirestore(ensureApp()).collection("users").doc(uid).get();
       return snap.exists ? snap.data() : null;
     },
-    getDb: () => admin.firestore(getApp()),
+    getDb: () => getFirestore(ensureApp()),
     fetchImpl: undefined, // use global fetch
   };
 }

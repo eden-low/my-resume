@@ -1,20 +1,38 @@
 // Firebase Admin initialization boundary — deliberately separate from ID-token verification.
 //
-// Root cause this file fixes (production incident): the previous version of
+// Root cause #1 (first production incident): the previous version of
 // netlify/functions/assistant.js called a lazy `getApp()` *inside* `verifyIdToken()`, and the
 // handler wrapped that whole call in one try/catch that mapped ANY thrown error to
 // `401 invalid_or_expired_token`. That meant malformed JSON, a missing service-account field, a
-// mis-escaped private key, or `admin.initializeApp()` itself throwing — none of which have
-// anything to do with whether a given ID token is valid — all surfaced as "the token is invalid
-// or expired." Production logs showed `[assistant] token verification failed: undefined`
-// (`err.code` was undefined) precisely because the thrown error was never actually a Firebase
-// Auth error (those always carry an `auth/...` code) — it was a credential/config error, whose
-// real shape got thrown away before it ever reached a log line.
+// mis-escaped private key, or `initializeApp()` itself throwing — none of which have anything to
+// do with whether a given ID token is valid — all surfaced as "the token is invalid or expired."
+// Fixed by giving initialization its own boundary (this file) with classified errors.
+//
+// Root cause #2 (second production incident, after root cause #1 was fixed): this file and
+// netlify/functions/assistant.js were still written against firebase-admin's LEGACY namespace
+// API (`require("firebase-admin")`, `admin.apps`, `admin.app()`, `admin.initializeApp()`,
+// `admin.credential.cert()`, `admin.auth()`, `admin.firestore()`) while package.json installs
+// firebase-admin ^14.2.0 — and v14 removed legacy namespace support entirely. Confirmed directly
+// against the actual installed package (not assumed): `require("firebase-admin").apps` is
+// `undefined` in v14, so the very first line of the old `initializeFirebaseAdmin()` —
+// `if (admin.apps.length) return admin.app();` — threw a plain `TypeError` (no `.code`) reading
+// `.length` off `undefined`, *before* any service-account parsing or validation ever ran. That
+// TypeError propagated up uncaught by the `try/catch` around `initializeApp()` (which starts
+// after that line) and was classified generically as `stage=admin_initialization code=no_code` —
+// which is exactly what production logged. This file is now written entirely against v14's
+// modular entry points (`firebase-admin/app`, `firebase-admin/auth`, `firebase-admin/firestore`)
+// instead — see `initializeFirebaseAdmin()`'s parameters below, which take the specific modular
+// functions (`getApps`, `getApp`, `initializeApp`, `cert`) as arguments rather than a legacy
+// `admin` namespace object, so this module never touches a removed API again and stays testable
+// (real modular functions from the installed package in production, injectable fakes in tests —
+// see netlify/functions/__tests__/assistant.test.js's "real package" smoke test, which is what
+// actually caught this class of bug: the old mock's fake `admin.apps` array papered over the
+// real package's incompatibility).
 //
 // This module's only job is turning `FIREBASE_SERVICE_ACCOUNT` + `FIREBASE_PROJECT_ID` into an
-// initialized Admin app, failing with a *classified* error (one of the four stages below) when
-// it can't — never silently, never disguised as a token-verification failure. It never touches
-// `admin.auth().verifyIdToken()` at all; that call happens only in assistant.js, after this
+// initialized Admin app, failing with a *classified* error (one of the three stages below) when
+// it can't — never silently, never disguised as a token-verification failure. It never calls
+// `getAuth(app).verifyIdToken()` at all; that call happens only in assistant.js, after this
 // module has already succeeded.
 
 const crypto = require("node:crypto");
@@ -86,10 +104,10 @@ function parseServiceAccount(raw, expectedProjectId) {
 }
 
 // Real, local, synchronous PEM validation via Node's own `crypto` module — deliberately NOT
-// left to firebase-admin's `admin.credential.cert()`. Confirmed against the actual installed
-// firebase-admin package (not assumed): `credential.cert()`/`initializeApp()` do NOT eagerly
-// parse or validate the private key at all — a garbage string sails through both calls without
-// throwing. The key is only ever actually used later, lazily, when the SDK signs a JWT bearer
+// left to firebase-admin's modular `cert()` (from `firebase-admin/app`). Confirmed against the
+// actual installed firebase-admin package (not assumed): `cert()`/`initializeApp()` do NOT
+// eagerly parse or validate the private key at all — a garbage string sails through both calls
+// without throwing. The key is only ever actually used later, lazily, when the SDK signs a JWT bearer
 // assertion to mint an OAuth access token for a real Admin API call (Firestore reads, or
 // `verifyIdToken(token, true)`'s revocation check, which needs that access token). That is
 // precisely how the original production bug manifested: a malformed key caused a signing
@@ -110,22 +128,26 @@ function assertPrivateKeyIsUsable(privateKey) {
   }
 }
 
-// Initializes (or reuses) the Admin app for this warm Function instance. `admin` is passed in
-// rather than required here so this module stays independently testable without the real
-// firebase-admin package installed.
-function initializeFirebaseAdmin({ admin, projectId, serviceAccountRaw }) {
-  if (admin.apps.length) return admin.app();
+// Initializes (or reuses) the Admin app for this warm Function instance, using firebase-admin
+// v14's MODULAR API only. `getApps`/`getApp`/`initializeApp`/`cert` are passed in as explicit
+// function arguments — normally the real ones from `require("firebase-admin/app")` (see
+// assistant.js's production wiring) — rather than a legacy `admin` namespace object, both
+// because that namespace no longer has the shape this code needs in v14 (see the header
+// comment) and so this module stays independently testable with injectable fakes, without the
+// real firebase-admin package installed.
+function initializeFirebaseAdmin({ getApps, getApp, initializeApp, cert, projectId, serviceAccountRaw }) {
+  if (getApps().length) return getApp();
 
   const serviceAccount = parseServiceAccount(serviceAccountRaw, projectId);
   assertPrivateKeyIsUsable(serviceAccount.private_key);
 
   try {
-    return admin.initializeApp({ credential: admin.credential.cert(serviceAccount), projectId });
+    return initializeApp({ credential: cert(serviceAccount), projectId });
   } catch {
-    // A real PEM key passed the crypto check above but admin.credential.cert()/initializeApp()
-    // still rejected it (e.g. a key/cert type Admin doesn't accept) — still a configuration
-    // problem, never a token-verification one. The underlying SDK error is deliberately not
-    // forwarded — it can include text that echoes fragments of the malformed input.
+    // A real PEM key passed the crypto check above but cert()/initializeApp() still rejected it
+    // (e.g. a key/cert type Admin doesn't accept) — still a configuration problem, never a
+    // token-verification one. The underlying SDK error is deliberately not forwarded — it can
+    // include text that echoes fragments of the malformed input.
     throw new FirebaseConfigError(
       "firebase-admin failed to initialize from the provided credential",
       "admin_initialization",

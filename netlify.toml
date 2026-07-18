@@ -36,6 +36,16 @@
   publish = "site"
   functions = "netlify/functions"
 
+# firebase-admin ^14.2.0 (netlify/functions/assistant.js's one dependency) requires Node >=22 —
+# matches package.json's own "engines" field. Explicit here too (not just left to Netlify's
+# platform default, which can trail the latest LTS) because a Function bundled/run under an
+# older Node version is exactly the kind of mismatch that produces confusing, hard-to-diagnose
+# runtime errors rather than a clear "unsupported engine" failure at install time. Also written
+# to .nvmrc for tools (and Netlify's own build image, which reads either) that check that file
+# instead of this one.
+[build.environment]
+  NODE_VERSION = "22"
+
 [functions]
   node_bundler = "esbuild"
 
