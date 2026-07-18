@@ -762,6 +762,8 @@
     "evidence_searched": "Searched",
     "evidence_sources": "Sources",
     "evidence_source_count": "{count} sources",
-    "evidence_zero_results": "0 matching records"
+    "evidence_zero_results": "0 matching records",
+    "scope_change_notice": "Data access changed. A new chat was started.",
+    "select_scope_notice": "Select at least one data source to ask about your records."
   }
 }

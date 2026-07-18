@@ -793,6 +793,202 @@ async function run() {
     assert.deepStrictEqual(state.conversation, [], "a response for an aborted/reset turn must never repopulate the fresh conversation");
   });
 
+  console.log("\nScope-change conversation isolation (mirrors assistant.js's applyScopeChange()/updateSendAvailability())");
+
+  // Duplicated reimplementation of assistant.js's scope-change contract — sameScopeSet(),
+  // applyScopeChange(), and the New Chat / submit-guard behavior it interacts with. Root cause
+  // this pass fixes: toggling a scope checkbox used to only ever call saveScopes() — the
+  // conversation (and any stale "I don't have access"/"I found X" history) was left completely
+  // untouched, so a later request's `history` array still carried turns that contradicted the
+  // CURRENT scopes. Any actual scope change must now behave exactly like New Chat (abort +
+  // clear), which these tests verify without needing a browser/DOM environment.
+  function sameScopeSet(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    const setA = new Set(a);
+    return b.every((s) => setA.has(s));
+  }
+  function makeAssistantState(initialScopes) {
+    return {
+      scopes: [...initialScopes],
+      lastScopesSnapshot: [...initialScopes],
+      conversation: [],
+      currentController: null,
+      noticeShown: false,
+      sendDisabled: initialScopes.length === 0,
+    };
+  }
+  function applyScopeChange(state, newScopes) {
+    state.scopes = [...newScopes];
+    const changed = !sameScopeSet(state.lastScopesSnapshot, newScopes);
+    state.lastScopesSnapshot = [...newScopes];
+    if (changed) {
+      if (state.currentController) { state.currentController.aborted = true; state.currentController = null; }
+      state.conversation = [];
+      state.noticeShown = true;
+    }
+    state.sendDisabled = newScopes.length === 0;
+    return changed;
+  }
+  function newChat(state) {
+    if (state.currentController) { state.currentController.aborted = true; state.currentController = null; }
+    state.conversation = [];
+    // Deliberately never touches state.scopes/lastScopesSnapshot — New Chat preserves scopes.
+  }
+  function wouldSubmit(scopes, text, currentController) {
+    // Mirrors the submit handler's guard order in assistant.js exactly.
+    if (scopes.length === 0) return false;
+    if (!text || currentController) return false;
+    return true;
+  }
+  function parseScopesFromStorage(raw) {
+    try {
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter((s) => ["memories", "journal", "journey", "calendar"].includes(s)) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  await test("none → Calendar: enabling a scope clears stale no-scope history, and the resulting scope set is ['calendar']", async () => {
+    const state = makeAssistantState([]);
+    state.conversation = [
+      { role: "user", content: "What did I record this month?" },
+      { role: "assistant", content: "I don't have access to any data sources right now." },
+    ];
+    const changed = applyScopeChange(state, ["calendar"]);
+    assert.strictEqual(changed, true);
+    assert.deepStrictEqual(state.conversation, [], "stale no-scope history must be cleared");
+    assert.strictEqual(state.noticeShown, true);
+    assert.deepStrictEqual(state.scopes, ["calendar"]);
+    assert.strictEqual(state.sendDisabled, false);
+  });
+
+  await test("Calendar → none: disabling the only enabled scope clears previously surfaced Calendar facts and disables Send", async () => {
+    const state = makeAssistantState(["calendar"]);
+    state.conversation = [
+      { role: "user", content: "What did I record this month?" },
+      { role: "assistant", content: "You recorded 5 things in July 2026.", sources: [{ type: "memory", id: "p6" }] },
+    ];
+    const changed = applyScopeChange(state, []);
+    assert.strictEqual(changed, true);
+    assert.deepStrictEqual(state.conversation, [], "old Calendar-derived facts must never linger after the scope is disabled");
+    assert.strictEqual(state.sendDisabled, true);
+  });
+
+  await test("Calendar → Memories: switching scopes aborts an in-flight Calendar request", async () => {
+    const state = makeAssistantState(["calendar"]);
+    const controller = { aborted: false };
+    state.currentController = controller;
+    const changed = applyScopeChange(state, ["memories"]);
+    assert.strictEqual(changed, true);
+    assert.strictEqual(controller.aborted, true, "the in-flight request must be aborted");
+    assert.strictEqual(state.currentController, null);
+  });
+
+  await test("toggling a scope back to the exact same set is a no-op — no reset, no notice", async () => {
+    const state = makeAssistantState(["calendar"]);
+    state.conversation = [{ role: "user", content: "hi" }, { role: "assistant", content: "hello" }];
+    const changed = applyScopeChange(state, ["calendar"]); // same set, different array identity
+    assert.strictEqual(changed, false);
+    assert.strictEqual(state.conversation.length, 2, "an unchanged scope set must never clear the conversation");
+    assert.strictEqual(state.noticeShown, false);
+  });
+
+  await test("New Chat preserves the currently selected scopes (unlike a scope change, it never touches scope selection)", async () => {
+    const state = makeAssistantState(["memories", "calendar"]);
+    state.conversation = [{ role: "user", content: "hi" }];
+    newChat(state);
+    assert.deepStrictEqual(state.conversation, []);
+    assert.deepStrictEqual(state.scopes, ["memories", "calendar"], "New Chat must never touch scope selection");
+    assert.deepStrictEqual(state.lastScopesSnapshot, ["memories", "calendar"]);
+  });
+
+  await test("reload restores saved scopes from localStorage-shaped JSON, filtering out anything not a known scope", async () => {
+    assert.deepStrictEqual(parseScopesFromStorage(JSON.stringify(["calendar", "memories"])), ["calendar", "memories"]);
+    assert.deepStrictEqual(parseScopesFromStorage(JSON.stringify(["calendar", "finance", "bogus"])), ["calendar"], "an unknown/legacy scope name must be dropped, never trusted");
+    assert.deepStrictEqual(parseScopesFromStorage(null), []);
+    assert.deepStrictEqual(parseScopesFromStorage("{not json"), []);
+  });
+
+  await test("a suggested prompt requiring a disabled scope enables it, starts a clean chat, and leaves Send enabled for its own requestSubmit()", async () => {
+    const state = makeAssistantState([]); // the Calendar-scoped suggested prompt, scope currently off
+    state.conversation = [{ role: "assistant", content: "I don't have access to any data sources right now." }];
+    const promptScope = "calendar";
+    const newScopes = [...new Set([...state.scopes, promptScope])];
+    const changed = applyScopeChange(state, newScopes); // mirrors setScopeChecked(p.scope, true)
+    assert.strictEqual(changed, true);
+    assert.deepStrictEqual(state.conversation, [], "must be a clean conversation before the prompt text is submitted");
+    assert.deepStrictEqual(state.scopes, ["calendar"]);
+    assert.strictEqual(wouldSubmit(state.scopes, "What did I record this month?", state.currentController), true);
+  });
+
+  await test("zero scopes: the submit guard blocks sending — no fetch/Qwen call would ever be made", async () => {
+    assert.strictEqual(wouldSubmit([], "What did I record?", null), false);
+    assert.strictEqual(wouldSubmit(["calendar"], "What did I record?", null), true);
+    assert.strictEqual(wouldSubmit(["calendar"], "", null), false, "an empty message is still blocked regardless of scopes");
+    assert.strictEqual(wouldSubmit(["calendar"], "hi", { aborted: false }), false, "a request already in flight is still blocked regardless of scopes");
+  });
+
+  await test("rapid checkbox changes converge on one clean conversation and the final scope set", async () => {
+    const state = makeAssistantState([]);
+    state.conversation = [{ role: "assistant", content: "stale" }];
+    applyScopeChange(state, ["memories"]);
+    applyScopeChange(state, ["memories", "journal"]);
+    applyScopeChange(state, ["calendar"]);
+    assert.deepStrictEqual(state.scopes, ["calendar"], "must reflect only the FINAL selection");
+    assert.deepStrictEqual(state.conversation, [], "must still be exactly one clean, empty conversation, not a partially-reset one");
+  });
+
+  await test("static check: assistant.js routes every scope checkbox change and setScopeChecked() through applyScopeChange(), never a bare saveScopes()", async () => {
+    const root = path.resolve(__dirname, "..", "..", "..");
+    const src = fs.readFileSync(path.join(root, "assistant.js"), "utf8");
+    assert.ok(/scopeInputs\.forEach\(\(el\) => el\.addEventListener\("change", \(\) => applyScopeChange\(currentScopes\(\)\)\)\)/.test(src));
+    assert.ok(/function setScopeChecked\(scope, checked\) \{[\s\S]*?applyScopeChange\(currentScopes\(\)\)/.test(src));
+    assert.ok(src.includes('if (currentScopes().length === 0) return;'), "the submit handler must guard on zero scopes");
+  });
+
+  console.log("\nOld conversation history cannot override the current request's authoritative scopes (server-side)");
+
+  await test("history claiming prior access to a now-disabled scope never actually grants it — only the CURRENT request's scopes decide which tools are offered", async () => {
+    _resetBurstStateForTests();
+    let sentTools = null;
+    let sentSystemMessage = null;
+    const fetchImpl = async (_url, opts) => {
+      const body = JSON.parse(opts.body);
+      sentTools = body.tools;
+      sentSystemMessage = body.messages.find((m) => m.role === "system")?.content;
+      return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: "ok" } }] }) };
+    };
+    const poisonedHistory = [
+      { role: "user", content: "Can you check my journal?" },
+      { role: "assistant", content: "Yes, I have access to your Journal and searched it." },
+    ];
+    const handler = createHandler(baseDeps({ fetchImpl }));
+    await handler(makeEvent({ body: chatBody({ message: "What about now?", history: poisonedHistory, scopes: ["calendar"] }) }));
+    const toolNames = (sentTools || []).map((t) => t.function.name).sort();
+    assert.deepStrictEqual(toolNames, ["draft_reflection", "list_calendar"], "journal tools must never be offered just because history claims prior access");
+    assert.ok(/ONLY authoritative statement of what you may use RIGHT NOW/.test(sentSystemMessage));
+    assert.ok(/may be STALE and must NEVER override/.test(sentSystemMessage));
+  });
+
+  await test("history claiming 'no access' never suppresses a scope that IS enabled in the current request", async () => {
+    _resetBurstStateForTests();
+    let sentTools = null;
+    const fetchImpl = async (_url, opts) => {
+      sentTools = JSON.parse(opts.body).tools;
+      return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: "ok" } }] }) };
+    };
+    const poisonedHistory = [
+      { role: "user", content: "What did I record this month?" },
+      { role: "assistant", content: "I don't have access to any data sources right now." },
+    ];
+    const handler = createHandler(baseDeps({ fetchImpl }));
+    await handler(makeEvent({ body: chatBody({ message: "Try again.", history: poisonedHistory, scopes: ["calendar"] }) }));
+    const toolNames = (sentTools || []).map((t) => t.function.name).sort();
+    assert.ok(toolNames.includes("list_calendar"), "the newly-enabled Calendar scope must still offer its tool regardless of stale 'no access' history");
+  });
+
   console.log("\nSafe output rendering (task F) — mirrors assistant.js's stripInlineMarkdown");
 
   // Duplicated verbatim from assistant.js (documented there, per this repo's own established
@@ -1806,10 +2002,22 @@ async function run() {
     assert.deepStrictEqual([...zhKeys].filter((k) => !enKeys.has(k)), []);
     assert.ok(enKeys.has("assistant.consent_title"));
     assert.ok(enKeys.has("nav.assistant"));
-    for (const key of ["assistant.evidence_label", "assistant.evidence_searched", "assistant.evidence_sources", "assistant.evidence_source_count", "assistant.evidence_zero_results"]) {
+    for (const key of ["assistant.evidence_label", "assistant.evidence_searched", "assistant.evidence_sources", "assistant.evidence_source_count", "assistant.evidence_zero_results", "assistant.scope_change_notice", "assistant.select_scope_notice"]) {
       assert.ok(enKeys.has(key), `en.json must have ${key}`);
       assert.ok(zhKeys.has(key), `zh-CN.json must have ${key}`);
     }
+  });
+
+  await test("scope-change and no-scope notices are wired to real translated text in both locales, and their DOM elements exist in assistant.html", async () => {
+    const root = path.resolve(__dirname, "..", "..", "..");
+    const en = JSON.parse(fs.readFileSync(path.join(root, "locales", "en.json"), "utf8"));
+    const zh = JSON.parse(fs.readFileSync(path.join(root, "locales", "zh-CN.json"), "utf8"));
+    assert.strictEqual(en.assistant.scope_change_notice, "Data access changed. A new chat was started.");
+    assert.ok(zh.assistant.scope_change_notice.length > 0 && zh.assistant.scope_change_notice !== en.assistant.scope_change_notice);
+    assert.ok(zh.assistant.select_scope_notice.length > 0 && zh.assistant.select_scope_notice !== en.assistant.select_scope_notice);
+    const html = fs.readFileSync(path.join(root, "assistant.html"), "utf8");
+    assert.ok(/id="assistant-scope-change-notice"[\s\S]{0,300}?data-i18n="assistant.scope_change_notice"/.test(html));
+    assert.ok(/id="assistant-noscope-notice"[^>]*data-i18n="assistant.select_scope_notice"/.test(html));
   });
 
   await test("EN/ZH evidence formatting — duplicated pure formatSearchedRange (mirrors assistant.js) renders correct human ranges in both languages", async () => {
@@ -1909,10 +2117,10 @@ async function run() {
     assert.strictEqual(cachePutCalls.length, 1, "a normal page request should still be cached as before");
   });
 
-  await test("service-worker.js CACHE version is eden-shell-v26 (bumped for this pass's browser-file changes) and includes assistant.html/assistant.js in PRECACHE", async () => {
+  await test("service-worker.js CACHE version is eden-shell-v27 (bumped for this pass's browser-file changes) and includes assistant.html/assistant.js in PRECACHE", async () => {
     const root = path.resolve(__dirname, "..", "..", "..");
     const src = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
-    assert.ok(/const CACHE = "eden-shell-v26"/.test(src));
+    assert.ok(/const CACHE = "eden-shell-v27"/.test(src));
     assert.ok(/"assistant\.html"/.test(src));
     assert.ok(/"assistant\.js"/.test(src));
     assert.ok(/"gallery\.js"/.test(src));

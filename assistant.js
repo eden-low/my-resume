@@ -55,6 +55,8 @@ const errorBanner = document.getElementById("assistant-error-banner");
 const errorText = document.getElementById("assistant-error-text");
 const retryBtn = document.getElementById("assistant-retry-btn");
 const scopeInputs = [...document.querySelectorAll('#assistant-scopes input[data-scope]')];
+const scopeChangeNoticeEl = document.getElementById("assistant-scope-change-notice");
+const noScopeNoticeEl = document.getElementById("assistant-noscope-notice");
 
 const consentModal = document.getElementById("assistant-consent-modal");
 const consentBackdrop = document.getElementById("assistant-consent-backdrop");
@@ -66,6 +68,13 @@ let conversation = []; // [{ role: "user"|"assistant", content, sources?, ts }]
 let currentController = null;
 let lastUserMessage = null;
 let thinkingTimer = null;
+let scopeNoticeTimer = null;
+// The scope set as of the last time we actually acted on it — compared against on every change
+// event so a change back to the SAME set (e.g. toggling a checkbox twice) never triggers a
+// spurious reset. Seeded from localStorage at module load and re-seeded from the actual checkbox
+// state once auth resolves (see onAuthStateChanged below) — programmatic `.checked` assignment
+// never fires a "change" event, so this can never race the initial checkbox setup.
+let lastScopesSnapshot = loadScopes();
 
 function loadScopes() {
   try {
@@ -84,6 +93,50 @@ function saveScopes(scopes) {
 
 function currentScopes() {
   return scopeInputs.filter((el) => el.checked).map((el) => el.dataset.scope);
+}
+
+function sameScopeSet(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  const setA = new Set(a);
+  return b.every((s) => setA.has(s));
+}
+
+// Scope selection is a privacy boundary, not just a UI preference: a disabled scope must never
+// keep sending old answers containing that scope's data back to Qwen, and a newly-enabled scope
+// must never be shadowed by an earlier "I don't have access" answer still sitting in history. So
+// ANY actual change to the selected scope set — from a checkbox, or from a suggested prompt that
+// auto-enables one (see renderSuggestedPrompts()) — resets the conversation exactly like New
+// Chat, then shows a short, accessible notice. New Chat itself is unaffected: it never calls this
+// function, so it never touches the scope checkboxes, only the conversation (see
+// resetConversation()) — "New Chat preserves the currently selected scopes."
+function applyScopeChange(newScopes) {
+  saveScopes(newScopes);
+  const changed = !sameScopeSet(lastScopesSnapshot, newScopes);
+  lastScopesSnapshot = newScopes;
+  if (changed) {
+    resetConversation();
+    showScopeChangeNotice();
+  }
+  updateSendAvailability();
+  return changed;
+}
+
+function showScopeChangeNotice() {
+  if (!scopeChangeNoticeEl) return;
+  scopeChangeNoticeEl.classList.remove("hidden");
+  clearTimeout(scopeNoticeTimer);
+  scopeNoticeTimer = setTimeout(() => scopeChangeNoticeEl.classList.add("hidden"), 4000);
+}
+
+// Zero scopes selected => nothing this page could ask Qwen would ever be backed by real evidence
+// (draft_reflection has no data scope of its own, but with no prior scoped search this turn it
+// would have nothing to draft from either) — so Send is disabled outright rather than spending a
+// request just to have the model explain that. See the submit handler below for the matching
+// server-request guard (defense in depth beyond just disabling the button).
+function updateSendAvailability() {
+  const hasScopes = currentScopes().length > 0;
+  sendBtn.disabled = !hasScopes;
+  if (noScopeNoticeEl) noScopeNoticeEl.classList.toggle("hidden", hasScopes);
 }
 
 function loadConversation() {
@@ -381,7 +434,7 @@ function renderSuggestedPrompts() {
 function setScopeChecked(scope, checked) {
   const el = scopeInputs.find((s) => s.dataset.scope === scope);
   if (el) el.checked = checked;
-  saveScopes(currentScopes());
+  applyScopeChange(currentScopes());
 }
 
 function renderAll() {
@@ -608,6 +661,11 @@ consentBackdrop.addEventListener("click", () => {});
 formEl.addEventListener("submit", (e) => {
   e.preventDefault();
   if (!hasConsented()) { openConsentModal(); return; }
+  // Defense in depth alongside sendBtn.disabled (updateSendAvailability()): this is the one
+  // place that actually calls sendMessage(), so it's the authoritative gate regardless of how
+  // submission was triggered (Send click, Enter key, or a suggested prompt's requestSubmit()) —
+  // never spend a request just to have the model explain that no scopes are enabled.
+  if (currentScopes().length === 0) return;
   const text = inputEl.value.trim();
   if (!text || currentController) return;
   inputEl.value = "";
@@ -660,13 +718,19 @@ function resetConversation() {
 newChatBtn.addEventListener("click", resetConversation);
 clearBtn.addEventListener("click", resetConversation);
 
-scopeInputs.forEach((el) => el.addEventListener("change", () => saveScopes(currentScopes())));
+scopeInputs.forEach((el) => el.addEventListener("change", () => applyScopeChange(currentScopes())));
 
 // ---- Init ----
 onAuthStateChanged(auth, (user) => {
   if (!user) return; // auth-guard.js owns the redirect for a signed-out visitor
   const savedScopes = loadScopes();
   scopeInputs.forEach((el) => { el.checked = savedScopes.includes(el.dataset.scope); });
+  // Programmatic `.checked` assignment above never fires a "change" event, so this re-seed is
+  // the only place lastScopesSnapshot needs to reflect reality before any user interaction —
+  // reading it back from the checkboxes themselves (not `savedScopes`) so it's exactly what
+  // applyScopeChange() will next compare against, even if the two ever drifted.
+  lastScopesSnapshot = currentScopes();
+  updateSendAvailability();
   conversation = loadConversation();
   renderSuggestedPrompts();
   renderAll();

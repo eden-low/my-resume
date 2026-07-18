@@ -762,6 +762,8 @@
     "evidence_searched": "已搜索",
     "evidence_sources": "来源",
     "evidence_source_count": "{count} 个来源",
-    "evidence_zero_results": "0 条匹配记录"
+    "evidence_zero_results": "0 条匹配记录",
+    "scope_change_notice": "数据访问范围已更改，已开始新对话。",
+    "select_scope_notice": "请至少选择一个数据来源，才能询问你的记录。"
   }
 }

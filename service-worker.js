@@ -1,6 +1,13 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v27 (scope-change conversation isolation pass): assistant.js changed again (any scope checkbox
+// change now aborts the in-flight request, clears the conversation + sessionStorage, and shows an
+// accessible "Data access changed. A new chat was started." notice; zero scopes selected disables
+// Send with a "Select at least one data source..." notice instead of ever calling Qwen) and
+// locales/en.json+zh-CN.json gained the new assistant.scope_change_notice/select_scope_notice
+// keys these render with. netlify/functions/assistant.js's system prompt also changed (scope
+// authority instruction) but Function source was never part of PRECACHE (see prior entries).
 // v26 (trust/provenance pass): assistant.js changed again (server-generated evidence-row
 // rendering — "Searched: ...", "Sources: ...", source count, and a "0 matching records" empty
 // state, all built ONLY from the server's own non-model-controlled `provenance` object, never
@@ -46,7 +53,7 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v26";
+const CACHE = "eden-shell-v27";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
