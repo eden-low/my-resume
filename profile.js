@@ -112,16 +112,16 @@ function renderHeader(person) {
   headerEl.innerHTML = `
     <div class="flex items-center gap-4">
       <div class="w-16 h-16 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple overflow-hidden flex-shrink-0">
-        ${person.photoURL ? `<img src="${person.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-2xl"></i>`}
+        ${person.photoURL ? `<img src="${esc(person.photoURL)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-2xl"></i>`}
       </div>
       <div class="min-w-0">
-        <h1 class="font-cyber font-black text-2xl text-white truncate">${publicDisplayName(person)}</h1>
-        ${formatHandle(person.username) ? `<p class="text-textGray font-code text-sm mt-0.5">${formatHandle(person.username)}</p>` : ""}
+        <h1 class="font-cyber font-black text-2xl text-white truncate">${esc(publicDisplayName(person))}</h1>
+        ${formatHandle(person.username) ? `<p class="text-textGray font-code text-sm mt-0.5">${esc(formatHandle(person.username))}</p>` : ""}
       </div>
     </div>
-    ${person.bio ? `<p class="mt-4 text-sm text-white">${person.bio}</p>` : ""}
+    ${person.bio ? `<p class="mt-4 text-sm text-white">${esc(person.bio)}</p>` : ""}
     <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-textGray font-code">
-      ${person.location ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${person.location}</span>` : ""}
+      ${person.location ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${esc(person.location)}</span>` : ""}
       ${joined ? `<span><i class="fa-solid fa-calendar mr-1"></i>${i18nT("profile.joined").replace("{date}", joined)}</span>` : ""}
     </div>`;
 }
@@ -262,7 +262,7 @@ function renderPhotoGrid() {
       el.title = i18nT("profile.open_memory");
       el.className = "aspect-square overflow-hidden bg-darkBg/40 relative";
       el.innerHTML = `
-        <img src="${post.url}" alt="${post.caption || i18nT("profile.photo_alt")}" class="w-full h-full object-cover hover:opacity-80 transition-opacity">
+        <img src="${esc(post.url)}" alt="${esc(post.caption || i18nT("profile.photo_alt"))}" class="w-full h-full object-cover hover:opacity-80 transition-opacity">
         ${post.featured ? '<i class="fa-solid fa-star absolute top-1.5 right-1.5 text-amber-400 text-xs drop-shadow"></i>' : ""}`;
       el.addEventListener("click", () => openPhotoModal(post));
       return el;
@@ -281,7 +281,7 @@ function renderTimelineList(events) {
       el.type = "button";
       el.title = i18nT("profile.open_journey");
       el.className = "w-full text-left flex items-center justify-between gap-3 py-1.5 px-2 -mx-2 rounded-lg border-b border-borderNeon/30 last:border-0 hover:bg-neonPurple/10 transition-colors";
-      el.innerHTML = `<span class="text-sm text-white truncate">${e.title || "Untitled"}</span>
+      el.innerHTML = `<span class="text-sm text-white truncate">${esc(e.title) || "Untitled"}</span>
         <span class="flex items-center gap-2 flex-shrink-0"><span class="text-[11px] font-code text-textGray">${fmtDate(e.date)}</span><i class="fa-solid fa-chevron-right text-[9px] text-textGray/50"></i></span>`;
       el.addEventListener("click", () => openItemModal("journey", e));
       return el;
@@ -298,8 +298,8 @@ function renderJournalList(journals) {
       el.type = "button";
       el.title = i18nT("profile.open_journal");
       el.className = "w-full text-left flex items-center justify-between gap-3 py-1.5 px-2 -mx-2 rounded-lg border-b border-borderNeon/30 last:border-0 hover:bg-neonPurple/10 transition-colors";
-      const snippet = (j.content || "").replace(/[#*_`>-]/g, "").slice(0, 90);
-      el.innerHTML = `<span class="min-w-0"><span class="block text-sm text-white truncate">${j.title || "Untitled"}</span><span class="block text-xs text-textGray mt-0.5 truncate">${snippet}</span></span>
+      const snippet = esc((j.content || "").replace(/[#*_`>-]/g, "").slice(0, 90));
+      el.innerHTML = `<span class="min-w-0"><span class="block text-sm text-white truncate">${esc(j.title) || "Untitled"}</span><span class="block text-xs text-textGray mt-0.5 truncate">${snippet}</span></span>
         <i class="fa-solid fa-chevron-right text-[9px] text-textGray/50 flex-shrink-0"></i>`;
       el.addEventListener("click", () => openItemModal("journal", j));
       return el;
@@ -357,8 +357,8 @@ function renderCareer(experiences, projects) {
       el.innerHTML = `
         <span class="w-8 h-8 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-xs flex-shrink-0 mt-0.5"><i class="fa-solid ${item.icon}"></i></span>
         <div class="min-w-0">
-          <p class="text-sm text-white truncate">${item.title}</p>
-          ${item.subtitle ? `<p class="text-xs text-textGray font-code mt-0.5 truncate">${item.subtitle}</p>` : ""}
+          <p class="text-sm text-white truncate">${esc(item.title)}</p>
+          ${item.subtitle ? `<p class="text-xs text-textGray font-code mt-0.5 truncate">${esc(item.subtitle)}</p>` : ""}
         </div>`;
       return el;
     })
@@ -389,7 +389,7 @@ function renderAtlasPlaces(photos, journals, events) {
       el.href = "atlas.html";
       el.title = i18nT("profile.view_on_atlas");
       el.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-borderNeon bg-darkBg/40 text-xs text-white hover:border-neonPurple/60 hover:bg-neonPurple/10 transition-colors";
-      el.innerHTML = `<i class="fa-solid fa-location-dot text-neonPurple text-[10px]"></i> ${name} <span class="text-textGray font-code">&times;${count}</span>`;
+      el.innerHTML = `<i class="fa-solid fa-location-dot text-neonPurple text-[10px]"></i> ${esc(name)} <span class="text-textGray font-code">&times;${count}</span>`;
       return el;
     })
   );
@@ -469,7 +469,7 @@ function renderRecentActivity({ photos, journals, events }) {
       el.className = "w-full text-left flex items-center gap-3 px-2 py-1 -mx-2 rounded-lg hover:bg-neonPurple/10 transition-colors";
       el.innerHTML = `
         <span class="w-7 h-7 rounded-lg bg-neonPurple/10 text-neonPurple flex items-center justify-center text-xs flex-shrink-0"><i class="fa-solid ${i.icon}"></i></span>
-        <span class="text-sm text-white truncate flex-1">${i.text}</span>
+        <span class="text-sm text-white truncate flex-1">${esc(i.text)}</span>
         <i class="fa-solid fa-chevron-right text-[9px] text-textGray/50 flex-shrink-0"></i>`;
       el.addEventListener("click", i.open);
       return el;
@@ -625,8 +625,8 @@ function renderComments(post, comments) {
   const list = comments.length
     ? comments.map((c) => `
         <div class="text-xs">
-          <span class="font-semibold text-white">${c.email}</span>
-          <span class="text-textGray ml-1.5">${c.text}</span>
+          <span class="font-semibold text-white">${esc(c.email)}</span>
+          <span class="text-textGray ml-1.5">${esc(c.text)}</span>
         </div>`).join("")
     : `<p class="text-xs font-code text-textGray">${i18nT("common.no_comments_yet")}</p>`;
 
