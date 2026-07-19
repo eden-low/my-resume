@@ -19,6 +19,14 @@ import {
 import { getLang, t as i18nT } from "./js/i18n.js";
 import { resolveDisplayName } from "./js/identity.js";
 
+// Security audit fix: collection title/description/coverImageUrl/color/icon are Firestore-stored
+// free text any participant can write, and collections default to isMineOrPublic (public/
+// connections collections are readable by other signed-in users) -- every interpolation into
+// innerHTML below must be escaped. Same implementation as calendar.js's pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 const authControl = document.getElementById("auth-control");
 const accessNote = document.getElementById("collections-access-note");
 const grid = document.getElementById("collections-grid");
@@ -125,18 +133,18 @@ function collectionCard(c, isUncategorized = false) {
   const card = document.createElement("article");
   card.className = "is-visible bg-cardBg/90 neon-border-purple rounded-2xl overflow-hidden card-lift";
   card.innerHTML = `
-    <a href="collection-detail.html?id=${isUncategorized ? "uncategorized" : c.id}" class="block">
-      ${cover ? `<img src="${cover}" alt="" class="w-full h-32 object-cover">`
-        : `<div class="w-full h-32 flex items-center justify-center" style="background:${color}22"><i data-lucide="${c.icon || "layers"}" class="w-8 h-8" style="color:${color}"></i></div>`}
+    <a href="collection-detail.html?id=${isUncategorized ? "uncategorized" : encodeURIComponent(c.id)}" class="block">
+      ${cover ? `<img src="${esc(cover)}" alt="" class="w-full h-32 object-cover">`
+        : `<div class="w-full h-32 flex items-center justify-center" style="background:${esc(color)}22"><i data-lucide="${esc(c.icon || "layers")}" class="w-8 h-8" style="color:${esc(color)}"></i></div>`}
       <div class="p-4 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <h2 class="text-sm font-semibold truncate">${title}</h2>
+          <h2 class="text-sm font-semibold truncate">${esc(title)}</h2>
           ${!isUncategorized ? `
             <span class="text-[10px] font-code px-2 py-0.5 rounded-full flex-shrink-0 border ${vis.cls}">
               <i class="fa-solid ${vis.icon}"></i>
             </span>` : ""}
         </div>
-        ${description ? `<p class="text-xs text-textGray line-clamp-2">${description}</p>` : ""}
+        ${description ? `<p class="text-xs text-textGray line-clamp-2">${esc(description)}</p>` : ""}
         <div class="flex flex-wrap items-center gap-3 text-[10px] font-code pt-1">${countBadges(counts)}</div>
       </div>
     </a>
