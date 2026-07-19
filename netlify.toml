@@ -53,6 +53,20 @@
 [functions]
   node_bundler = "esbuild"
 
+# --- Firebase Auth handler proxy (iOS standalone-PWA sign-in fix) ---
+# Firebase's OAuth redirect flow serves its handler page at /__/auth/handler on whatever host
+# is configured as `authDomain` (see firebase-init.js). Proxying that path through this site's
+# own production domain instead of sending the browser to lfj-profolio.firebaseapp.com keeps
+# the redirect flow same-origin end to end, which is what makes signInWithRedirect reliable
+# inside an iOS home-screen-installed PWA (see login.html for the full flow). `force = true` so
+# this always wins even if a future catch-all rewrite is added; no `publish`-directory
+# interaction here since redirects are evaluated independently of the publish folder.
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://lfj-profolio.firebaseapp.com/__/auth/:splat"
+  status = 200
+  force = true
+
 # --- Baseline security headers for the whole site ---
 # Additive only: does not change caching behaviour for any page (service-worker.js already
 # owns the app-shell caching strategy client-side) and does not touch Firebase/Google Sign-In,

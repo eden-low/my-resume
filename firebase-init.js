@@ -5,9 +5,30 @@ import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } 
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
+// authDomain controls where Firebase's OAuth handler page (/__/auth/handler) lives. The default,
+// {project}.firebaseapp.com, is a third-party origin relative to this site — on iOS, a
+// home-screen-installed ("standalone") PWA uses a storage partition that does not reliably
+// survive a round trip through a different top-level origin, which is why signInWithRedirect
+// used to strand standalone users on Google's page with no way back (see login.html). Pointing
+// authDomain at this site's own production host instead — with netlify.toml proxying
+// /__/auth/* through to the real Firebase handler — keeps the whole OAuth handshake same-origin
+// from the browser's point of view, which fixes that. This only works when actually served from
+// that host (the proxy rule is Netlify-only), so every other context (localhost, `file://`,
+// Netlify deploy previews) falls back to the original Firebase-hosted authDomain, where the
+// proxy doesn't exist but the default flow still works. Requires this host to be listed under
+// Firebase Console -> Authentication -> Settings -> Authorized domains, and
+// `https://edenatlas.netlify.app/__/auth/handler` to be an Authorized redirect URI on the
+// matching Google Cloud OAuth 2.0 Client ID — both are manual console steps, not code.
+const PRODUCTION_HOST = "edenatlas.netlify.app";
+const DEFAULT_AUTH_DOMAIN = "lfj-profolio.firebaseapp.com";
+const authDomain =
+  typeof location !== "undefined" && location.hostname === PRODUCTION_HOST
+    ? PRODUCTION_HOST
+    : DEFAULT_AUTH_DOMAIN;
+
 const firebaseConfig = {
   apiKey: "AIzaSyBLJmKmn4Nwc2Ad3CG_KoPAn96HSfuvvU8",
-  authDomain: "lfj-profolio.firebaseapp.com",
+  authDomain,
   projectId: "lfj-profolio",
   storageBucket: "lfj-profolio.firebasestorage.app",
   messagingSenderId: "173360347563",

@@ -1,6 +1,14 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v32 (iOS standalone-PWA sign-in fix): login.html/firebase-init.js changed (see those files'
+// own comments) — standalone PWAs now complete Google sign-in via signInWithRedirect against a
+// same-origin-proxied authDomain instead of being punted out to Safari. This SW's fetch handler
+// gained NEVER_INTERCEPT_PATH_PREFIXES ("/__/auth/") so the new same-origin OAuth handler path
+// (proxied by netlify.toml) is left completely untouched, the same way cross-origin requests
+// already are — intercepting it with fetch()-then-cache.put() would risk breaking the
+// redirect/cookie handshake the OAuth flow depends on. Bumped so the changed login.html/
+// firebase-init.js (both precached) actually reach an already-installed worker.
 // v31 (Recent Memories invisible-click-target fix): home.html changed — memoryCard() (Home's
 // "Recent Memories" widget) was assigning dynamically-created card anchors the `.reveal` class,
 // but scripts.js's scroll-reveal IntersectionObserver only ever scans for `.reveal` elements
@@ -97,7 +105,7 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v31";
+const CACHE = "eden-shell-v32";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
@@ -135,6 +143,14 @@ const BYPASS_HOSTS = [
 // rejection, or an auth error must never be replayed from a cache.
 const NEVER_CACHE_PATH_PREFIXES = ["/.netlify/functions/"];
 
+// The Firebase Auth OAuth handler, proxied same-origin via netlify.toml (see that file's
+// "Firebase Auth handler proxy" block and firebase-init.js's authDomain comment) so the iOS
+// standalone-PWA sign-in fix can work at all. This path carries redirects, cookies, and
+// postMessage handshakes the SW's fetch()-then-cache.put() dance must never sit in front of —
+// it's handled exactly like a cross-origin request below (never event.respondWith at all, let
+// the browser drive it natively), not merely excluded from caching.
+const NEVER_INTERCEPT_PATH_PREFIXES = ["/__/auth/"];
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
@@ -152,10 +168,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   const isCrossOrigin = url.origin !== location.origin;
   const isBypassHost = BYPASS_HOSTS.some((host) => url.hostname.includes(host));
+  const isNeverInterceptPath = NEVER_INTERCEPT_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
   const isNeverCachePath = NEVER_CACHE_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
 
-  if (isCrossOrigin || isBypassHost) {
-    return; // let the browser handle Auth/Firestore/Storage/weather/CDN requests untouched
+  if (isCrossOrigin || isBypassHost || isNeverInterceptPath) {
+    return; // let the browser handle Auth/Firestore/Storage/weather/CDN/OAuth-handler requests untouched
   }
 
   if (isNeverCachePath) {

@@ -1794,6 +1794,66 @@ needed no changes.
    permissions change, no dormant CDN feature flag (removed outright, not kept behind a toggle),
    no commit/push/PR/deploy.
 
+**"Production Hardening — iOS standalone-PWA Google sign-in fix" (most recent, unmerged —
+`fix/ios-pwa-auth-v2` branch)** replaces `login.html`'s old workaround (bounce a standalone
+iPhone PWA user out to a real Safari tab, then hope the installed app happens to share Safari's
+storage on reopen) with a sign-in flow that completes entirely inside the standalone app itself.
+The old assumption was the actual bug: iOS partitions a home-screen-installed PWA's storage
+separately from Safari's in a way that doesn't reliably survive a round trip through a different
+top-level origin — which is also why plain `signInWithPopup`/`signInWithRedirect` against the
+default Firebase-hosted `authDomain` used to strand the user on Google's page with no way back.
+1. **Split sign-in strategy** — `login.html`'s `signin-btn` click handler now branches on
+   `isStandalone()` (unchanged detection: `matchMedia("(display-mode: standalone)")` /
+   `navigator.standalone`): a normal browser tab still uses `signInWithPopup` exactly as before;
+   a standalone launch now uses `signInWithRedirect` (previously: hide the button, show an "Open
+   in Safari to Sign In" link — both removed). A new `redirectCheckPromise` (`getRedirectResult(auth)`,
+   called once at page load, always resolved not rejected) identifies the one page load
+   immediately following a redirect round trip; `onAuthStateChanged`'s handler awaits it before
+   deciding whether an incoming user is a fresh redirect sign-in (run the full
+   log/notify/upsert flow) or a plain session restore (unchanged, no logging) — the two paths
+   share one new `completeFreshSignIn(user)` helper with `signInWithPopup`'s success path, so a
+   redirect sign-in on iOS logs `login_logs`/writes the login `notifications` doc/resolves
+   role/upserts `users`+`public_profiles` exactly like popup always has (this pass changes *how*
+   sign-in completes, never *what* a successful sign-in records).
+2. **Same-origin `authDomain` in production** — `firebase-init.js` now computes `authDomain` at
+   runtime: `edenatlas.netlify.app` (this site's own production host) when `location.hostname`
+   matches it, else the original `lfj-profolio.firebaseapp.com` (localhost, `file://`, Netlify
+   deploy previews — anywhere the proxy below doesn't exist). This is *why* the redirect flow can
+   work at all inside a standalone PWA: Firebase's OAuth handler page
+   (`/__/auth/handler`) now lives on the app's own origin instead of a third-party one, so the
+   handshake never crosses a top-level-origin boundary the standalone storage partition would
+   drop. **`netlify.toml`** gained a `[[redirects]] from = "/__/auth/*" to =
+   "https://lfj-profolio.firebaseapp.com/__/auth/:splat" status = 200 force = true` proxy rule —
+   the URL bar stays on `edenatlas.netlify.app` while Netlify transparently fetches the real
+   Firebase-hosted handler behind it.
+3. **Service worker never intercepts the proxy path** — `service-worker.js` gained
+   `NEVER_INTERCEPT_PATH_PREFIXES` (`/__/auth/`), checked alongside the existing cross-origin/
+   bypass-host checks so a request under that prefix is left completely untouched (not merely
+   excluded from caching, unlike `/.netlify/functions/*`) — the OAuth handler's redirects/
+   cookies/postMessage handshake must never sit behind the SW's `fetch()`-then-`cache.put()`
+   proxying. `CACHE` bumped `eden-shell-v31` → `eden-shell-v32` since `login.html`/
+   `firebase-init.js` are both precached.
+4. **No Firestore/Storage rules change** — this was never a rules-layer issue; every write this
+   flow makes (`users`, `public_profiles`, `login_logs`, `notifications`) is unchanged in shape
+   and gating from before this pass.
+5. **Gate: requires manual Firebase/Google Cloud Console configuration before this can be merged
+   or deployed** — `edenatlas.netlify.app` must be added under Firebase Console → Authentication
+   → Settings → Authorized domains, and `https://edenatlas.netlify.app/__/auth/handler` must be
+   an Authorized redirect URI (plus `https://edenatlas.netlify.app` an Authorized JavaScript
+   origin) on the matching Google Cloud OAuth 2.0 Client ID. Until both are done, the redirect
+   flow in production would fail at the OAuth-handler step even though every line of code here is
+   correct — this is an infrastructure prerequisite, not something a future code change can fix.
+6. **Verification performed**: `node --check` on `firebase-init.js`/`service-worker.js`, a
+   syntax check of `login.html`'s extracted inline module script, `npm run build`, and the full
+   `npm test` + `npm run test:tailwind-migration` suites (one pre-existing test,
+   `home-recent-memories.test.js`'s hardcoded `eden-shell-v31` assertion, was updated to a
+   `>= 31` floor check, since it was pinned to the exact version string from an earlier,
+   unrelated pass and this pass legitimately bumps it further). **Not performed** (no physical
+   iPhone in this environment, and Console config isn't done yet regardless): real iPhone Safari
+   sign-in, real Home-Screen-installed PWA sign-in, or any interactive browser QA — required
+   before merge per this pass's own instructions, and called out to the user as the actual
+   blocking step rather than silently assumed to work.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

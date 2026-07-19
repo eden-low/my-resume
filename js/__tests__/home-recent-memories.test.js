@@ -167,9 +167,14 @@ await test("renderRecentMemories() clears the list before showing the empty stat
 
 // ==== Service worker cache: this exact fix is the reason the shell version was bumped ====
 
-await test("service-worker.js CACHE is exactly eden-shell-v31 (this fix's own bump, home.html is precached)", () => {
+await test("service-worker.js CACHE has been bumped to at least eden-shell-v31 (this fix's own bump, home.html is precached)", () => {
   const sw = fs.readFileSync(path.join(ROOT, "service-worker.js"), "utf8");
-  assert.match(sw, /const CACHE = "eden-shell-v31";/, "expected the exact current shell version bumped by this fix");
+  const m = sw.match(/const CACHE = "eden-shell-v(\d+)";/);
+  assert.ok(m, "expected a version-stamped CACHE constant");
+  // Pinned to a floor, not an exact string: this fix's own bump was v31, but a later,
+  // unrelated fix (e.g. the iOS standalone-PWA sign-in pass) legitimately bumps it further —
+  // this test only needs to confirm it never regressed below the version this fix required.
+  assert.ok(Number(m[1]) >= 31, "expected the shell version to be at least the bump this fix required");
 });
 
 // ==== Decorative marks must never intercept a click meant for real content ====

@@ -34,12 +34,6 @@
       <button id="signin-btn" class="mt-9 w-full px-6 py-3.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-full text-sm font-semibold tracking-wide text-white hover:scale-[1.02] active:scale-[0.99] transition-transform duration-200 flex items-center justify-center gap-3">
         <i class="fa-brands fa-google"></i> <span data-i18n="login.continue_google">Continue with Google</span>
       </button>
-      <p id="standalone-note" class="hidden mt-5 text-xs text-textGray leading-relaxed">
-        Google sign-in doesn't reliably complete inside the installed app on iPhone. Tap below to sign in using Safari, then reopen this app from your Home Screen — it'll remember you.
-      </p>
-      <a id="signin-safari-link" href="#" target="_blank" rel="noopener" class="hidden mt-5 w-full px-6 py-3.5 bg-gradient-to-r from-neonViolet to-neonPurple rounded-full text-sm font-semibold tracking-wide text-white hover:scale-[1.02] transition-transform duration-200 items-center justify-center gap-3">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in Safari to Sign In
-      </a>
       <p id="signin-status" class="mt-4 text-xs font-code text-textGray"></p>
 
       <p class="mt-7 text-[11px] text-textGray/70 leading-relaxed" data-i18n="login.privacy">Your data stays private — only you decide what to share.</p>
@@ -71,13 +65,13 @@
   <script src="scripts.js" defer></script>
   <script type="module">
     import { auth, googleProvider, db, isOwner, USER_MODE_KEY } from "./firebase-init.js";
-    import { onAuthStateChanged, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import {
+      onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     import { addDoc, collection, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     const signinBtn = document.getElementById("signin-btn");
     const statusEl = document.getElementById("signin-status");
-    const standaloneNote = document.getElementById("standalone-note");
-    const safariLink = document.getElementById("signin-safari-link");
     const loginCard = document.getElementById("login-card");
     const loginLoading = document.getElementById("login-loading");
     const loginLoadingInner = document.getElementById("login-loading-inner");
@@ -103,30 +97,36 @@
       setTimeout(() => { location.href = target; }, 450);
     }
 
-    // A standalone/installed iPhone PWA cannot reliably complete Google sign-in from inside
-    // its own window — tried both signInWithPopup (no usable opener link back from the popup)
-    // and signInWithRedirect (the pending-redirect marker Firebase stores client-side doesn't
-    // survive the round trip through Google's origin in this context), and both silently strand
-    // the user on Google's page with no way back. The only flow that reliably works is doing the
-    // OAuth dance in a real Safari tab (target="_blank" forces iOS to hand off to Safari even
-    // from a standalone window) and letting the installed app pick up the persisted session
-    // (browserLocalPersistence, same-origin storage) the next time it's opened — no repeat
-    // sign-in needed inside the standalone shell itself.
+    // A standalone/installed iPhone PWA uses a storage partition that doesn't reliably survive
+    // a round trip through a different top-level origin (that's the actual root cause of the
+    // old "stranded on Google's page" failure — not something specific to popup vs. redirect).
+    // Rather than route around it via a real Safari tab and hope the installed app happens to
+    // share Safari's storage (it doesn't, reliably, on iOS — see firebase-init.js's authDomain
+    // comment for the fix that removes this whole assumption), sign-in now works from inside
+    // the PWA itself: a normal browser tab uses signInWithPopup as before, while a standalone
+    // launch uses signInWithRedirect against a same-origin-proxied authDomain, which keeps the
+    // whole OAuth handshake on this site's own origin end to end.
     function isStandalone() {
       return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     }
 
-    if (isStandalone()) {
-      signinBtn.classList.add("hidden");
-      standaloneNote.classList.remove("hidden");
-      safariLink.classList.remove("hidden");
-      safariLink.classList.add("flex");
-      safariLink.href = location.href;
-    }
-
-    // Guards against onAuthStateChanged redirecting away mid-click, which would tear down
-    // the page (and cancel the in-flight login_logs write below) before it can complete.
+    // Guards against onAuthStateChanged racing an in-flight interactive sign-in (popup or a
+    // just-returned redirect), which would otherwise double-run the login-logging/notification
+    // writes below or navigate away mid-write. Reset per page load; a signInWithRedirect
+    // round trip is a fresh page load, so this doesn't need to persist across that hop — the
+    // redirectCheckPromise below is what identifies "this session load IS the sign-in".
     let signingIn = false;
+
+    // getRedirectResult resolves with the just-completed sign-in exactly once, on the page load
+    // immediately following signInWithRedirect's round trip — null on every other load (a plain
+    // session restore, or no pending redirect at all). Always safe to call. Caught here (never
+    // left to reject inside onAuthStateChanged) so a transient failure surfaces as a normal
+    // "try again" message instead of leaving the page stuck on auth-check-pending.
+    const redirectCheckPromise = getRedirectResult(auth).catch((err) => {
+      console.error("[login] redirect sign-in failed:", err);
+      statusEl.textContent = "Sign-in failed — please try again.";
+      return null;
+    });
 
     // Same-site, repository-relative allowlist only — a bare filename matching this exact set,
     // never a path with a slash/colon/protocol (blocks `//evil.example`, `https://...`,
@@ -206,33 +206,11 @@
       }
     }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        if (signingIn) return;
-        // Session restore (not a fresh interactive sign-in): just refresh the cached role
-        // in case whitelist status changed since last time, no logging.
-        const mode = await resolveUserMode(user);
-        localStorage.setItem(USER_MODE_KEY, mode);
-        await upsertUserProfile(user, mode);
-        transitionToApp(getRedirectTarget());
-        return;
-      }
-      document.body.classList.remove("auth-check-pending");
-    });
-
-    signinBtn.addEventListener("click", async () => {
-      statusEl.textContent = "";
-      signingIn = true;
-      let user;
-      try {
-        ({ user } = await signInWithPopup(auth, googleProvider));
-      } catch (err) {
-        signingIn = false;
-        console.error("[login] sign-in failed:", err);
-        statusEl.textContent = "Sign-in failed — please try again.";
-        return;
-      }
-
+    // Shared by both interactive sign-in paths (popup's immediate resolution, and redirect's
+    // resolution one page load later via getRedirectResult) — same role-resolve, profile-upsert,
+    // login_logs, and notification writes either way, so a redirect sign-in on iOS logs and
+    // notifies exactly like a popup sign-in always has.
+    async function completeFreshSignIn(user) {
       const mode = await resolveUserMode(user);
       localStorage.setItem(USER_MODE_KEY, mode);
       await upsertUserProfile(user, mode);
@@ -266,6 +244,58 @@
       }
 
       transitionToApp(getRedirectTarget());
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      const redirectResult = await redirectCheckPromise;
+      if (user) {
+        if (signingIn) return;
+        if (redirectResult && redirectResult.user && redirectResult.user.uid === user.uid) {
+          // This page load IS a standalone-PWA redirect sign-in completing — treat it as a
+          // fresh interactive sign-in (log + notify), not a silent session restore.
+          signingIn = true;
+          await completeFreshSignIn(user);
+          return;
+        }
+        // Session restore (not a fresh interactive sign-in): just refresh the cached role
+        // in case whitelist status changed since last time, no logging.
+        const mode = await resolveUserMode(user);
+        localStorage.setItem(USER_MODE_KEY, mode);
+        await upsertUserProfile(user, mode);
+        transitionToApp(getRedirectTarget());
+        return;
+      }
+      document.body.classList.remove("auth-check-pending");
+    });
+
+    signinBtn.addEventListener("click", async () => {
+      statusEl.textContent = "";
+
+      if (isStandalone()) {
+        // Navigates away immediately; this page instance ends here. The rest of the sign-in
+        // (role resolve, profile upsert, logging, notification) happens on the next load, once
+        // the browser returns from Google and getRedirectResult picks up the result above.
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (err) {
+          console.error("[login] redirect initiation failed:", err);
+          statusEl.textContent = "Sign-in failed — please try again.";
+        }
+        return;
+      }
+
+      signingIn = true;
+      let user;
+      try {
+        ({ user } = await signInWithPopup(auth, googleProvider));
+      } catch (err) {
+        signingIn = false;
+        console.error("[login] sign-in failed:", err);
+        statusEl.textContent = "Sign-in failed — please try again.";
+        return;
+      }
+
+      await completeFreshSignIn(user);
     });
   </script>
 </body>
