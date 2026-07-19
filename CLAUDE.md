@@ -1868,6 +1868,61 @@ approach too) had never accounted for:
    especially on an actual iPhone status bar, is recommended before merge, consistent with this
    repo's own established pattern of calling out what wasn't tested rather than assuming success.
 
+**"...follow-up: infinite auth-pulse regression fix" (most recent, same `audit/dark-light-theme`
+branch)** — manual QA on the pass above found a real regression: the full-page background
+continuously pulsed/flickered, worst on Light mode (both desktop and mobile), present but less
+noticeable in Dark mode.
+1. **Root cause**: `html::before`'s `animation: eden-auth-pulse 1.6s ease-in-out infinite` was
+   unconditional — it never stopped, not just during the brief `body.auth-check-pending` window
+   the surrounding comment already said it was for. Normally hidden behind opaque page content
+   once auth resolves, but this app is full of deliberately translucent, blurred glass cards
+   (`bg-cardBg/90`, `backdrop-blur-sm`, etc. — the whole point of the glassmorphism aesthetic) that
+   let whatever's compositing behind them show through faintly. The pass above's own fix — making
+   this backplate always-dark rather than theme-switching — is what made the always-running
+   animation dramatically more visible specifically in Light mode: a dark, pulsing layer behind
+   near-white translucent cards reads as an obvious flicker, where the old theme-matching version
+   would have blended into a similarly-dark Dark-mode page.
+2. **Fix**: the animation itself is now scoped to `html:has(body.auth-check-pending)::before` —
+   CSS's `:has()` relational pseudo-class (universally supported by every evergreen browser this
+   app already targets, including iOS Safari 16.4+), reaching "up" from the `body` element that
+   actually carries the class to condition `html`'s own pseudo-element, with no JS change needed
+   at all (`auth-guard.js` already toggles that exact class today). The base, non-conditional
+   `html::before` rule keeps a static `opacity: 0.55` (matching the animation's own trough value)
+   instead of defaulting to fully opaque, so the transition from "animating" to "static" at the
+   auth-resolved boundary is a value the eye already saw mid-pulse, not a visible jump.
+   `prefers-reduced-motion`'s override was re-scoped to the identical selector (equal specificity
+   is required for the cascade tie-break — a mismatched selector would have let the higher-
+   specificity animating rule win regardless of source order, silently breaking reduced-motion
+   for the whole auth-check window). `#eden-splash-mark`'s own separate, always-tied-to-its-own-
+   element pulse (visible only while the temporary splash overlay itself is on screen) is
+   untouched — this was never part of the bug, and stays exactly as it was, per the preferred
+   behavior of keeping a pulse only on the temporary splash, never on the permanent layer.
+3. **New `js/__tests__/auth-pulse-scope.test.js`** (9 assertions, wired into `test:frontend`) — a
+   structural check on the real `styles.css` text (same convention `home-recent-memories.test.js`
+   already uses for CSS assertions, since this repo has no CSS-parser/computed-style test
+   infrastructure): the base `html::before` rule carries no `animation` property; the scoped
+   `:has()` rule carries the infinite animation; `prefers-reduced-motion` overrides the *same*
+   selector, positioned after it in source order; the base `body` rule (the actual page
+   background) never carries an `animation` property (only its existing one-shot fade-in
+   `transition`, which is fine and untouched); `#eden-splash-mark` still has its own independent
+   pulse and reduced-motion override; the `@media print` override is unaffected. **Verified as a
+   real regression guard, not a tautology**: manually stashed the CSS fix and re-ran the suite —
+   5 of 9 assertions failed against the actual pre-fix rule (confirmed, not assumed), then passed
+   again once the fix was restored.
+4. A pre-existing test needed the same kind of update as the Part 3 follow-up's identical
+   situation: `scripts/__tests__/tailwind-migration.test.js`'s pinned `test:frontend` command list
+   folded `home-recent-memories.test.js` into its baseline and added `auth-pulse-scope.test.js` as
+   the new addition — an ordered-superset check, not a loosened one.
+5. **Verification performed**: `npm run build` (clean), full `npm test` (Assistant 160/160,
+   Weather 37/37, date-utils 9/9, reflection 18/18, home-recent-memories 15/15, the new
+   auth-pulse-scope 9/9), `npm run test:tailwind-migration` (23/23) — every command run
+   individually with its exact pass count recorded. **Not performed**: a live browser/device
+   trace of actual frame-by-frame opacity (no browser-automation tool available in this
+   environment) — the fix and its test both operate on the CSS's declared structure, which is a
+   faithful proxy for the browser's actual cascade/animation behavior but not a substitute for
+   watching it render on a real device, consistent with this branch's own already-documented "not
+   performed: interactive browser/device QA" limitation above.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

@@ -188,6 +188,21 @@ body.auth-check-pending {
    a single, unified dark brand backplate in both themes (same reasoning as .eden-logo-plate and
    #eden-splash below) — it's only ever seen for the brief window before auth resolves, so a
    theme-independent dark flash reads as an intentional branded loading beat, not a mismatch. */
+/* Regression fix (manual QA, Part 2 follow-up): `animation: eden-auth-pulse ... infinite` used
+   to sit on the bare, unconditional `html::before` rule below — so it kept pulsing forever, not
+   just during the auth check the comment above describes. It's normally hidden behind opaque
+   page content once auth resolves, but this app is full of deliberately translucent, blurred
+   glass cards (`bg-cardBg/90`, `backdrop-blur-sm`, etc.) that let whatever's compositing behind
+   them show through faintly — so an infinite opacity animation on a full-viewport, always-dark
+   layer read as a continuous background flicker, most visible in Light mode (where the
+   always-dark backplate above contrasts hardest against light-mode's near-white translucent
+   cards) but present in Dark mode too, just lower-contrast. `:has()` scopes the animation itself
+   to exactly the window body.auth-check-pending is present (universally supported by every
+   evergreen browser this app already targets, including iOS Safari 16.4+) — no JS change needed,
+   auth-guard.js already toggles that exact class. The base (non-animating) rule keeps a static
+   opacity matching the animation's own trough value, so stepping from "animating" to "static" at
+   the auth-check boundary is a value the eye already saw mid-pulse, not a sudden jump to fully
+   opaque. */
 html::before {
   content: "";
   position: fixed;
@@ -196,6 +211,10 @@ html::before {
   pointer-events: none;
   background: #0a0a0e url("images/logo-mark.png") no-repeat center center;
   background-size: 44px 44px;
+  opacity: 0.55;
+}
+
+html:has(body.auth-check-pending)::before {
   animation: eden-auth-pulse 1.6s ease-in-out infinite;
 }
 
@@ -205,7 +224,7 @@ html::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html::before {
+  html:has(body.auth-check-pending)::before {
     animation: none;
   }
 }
