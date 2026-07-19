@@ -12,6 +12,14 @@ import {
   updateDoc,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+// Security audit fix: n.title/n.message can embed other users' free text (e.g. gallery.js's
+// "like" notification embeds the liked post's caption verbatim into its message), and
+// publicDisplayName(actor) is a Firestore-stored displayName/username — every interpolation
+// into innerHTML below must be escaped. Same implementation as calendar.js's pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 export const TYPE_META = {
   login: { icon: "fa-right-to-bracket", color: "text-neonBlue", bg: "bg-neonBlue/10" },
   expense_alert: { icon: "fa-wallet", color: "text-rose-400", bg: "bg-rose-400/10" },
@@ -74,15 +82,15 @@ function notifCard(n) {
 
   // Actor avatar (clickable) when we could resolve one, otherwise the plain type icon.
   const avatarHtml = profileUrl
-    ? `<a href="${profileUrl}" class="w-9 h-9 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity" title="${t("people.open_profile")}">
-        ${actor.photoURL ? `<img src="${actor.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-xs"></i>`}
+    ? `<a href="${esc(profileUrl)}" class="w-9 h-9 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity" title="${t("people.open_profile")}">
+        ${actor.photoURL ? `<img src="${esc(actor.photoURL)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user text-xs"></i>`}
       </a>`
     : `<div class="w-9 h-9 rounded-lg ${meta.bg} ${meta.color} flex items-center justify-center flex-shrink-0"><i class="fa-solid ${meta.icon}"></i></div>`;
 
   const actorNameHtml = profileUrl
-    ? `<a href="${profileUrl}" class="inline-flex items-center gap-1.5 min-w-0 hover:underline">
-        <span class="text-sm font-semibold text-white truncate">${publicDisplayName(actor)}</span>
-        ${handle ? `<span class="text-[11px] text-textGray font-code truncate">${handle}</span>` : ""}
+    ? `<a href="${esc(profileUrl)}" class="inline-flex items-center gap-1.5 min-w-0 hover:underline">
+        <span class="text-sm font-semibold text-white truncate">${esc(publicDisplayName(actor))}</span>
+        ${handle ? `<span class="text-[11px] text-textGray font-code truncate">${esc(handle)}</span>` : ""}
       </a>`
     : "";
 
@@ -92,13 +100,13 @@ function notifCard(n) {
       ${actorNameHtml}
       <div class="flex items-center gap-2 ${actorNameHtml ? "mt-0.5" : ""}">
         ${!n.read ? '<span class="w-1.5 h-1.5 rounded-full bg-neonPurple flex-shrink-0"></span>' : ""}
-        <p class="text-sm ${actorNameHtml ? "text-textGray" : "font-semibold"}">${n.title}</p>
+        <p class="text-sm ${actorNameHtml ? "text-textGray" : "font-semibold"}">${esc(n.title)}</p>
       </div>
-      <p class="text-xs text-textGray mt-1">${n.message}</p>
+      <p class="text-xs text-textGray mt-1">${esc(n.message)}</p>
       <p class="text-[10px] font-code text-textGray/70 mt-1.5">${formatTimestamp(n.createdAt)}</p>
       <div class="flex items-center gap-3 mt-1.5">
         ${LINKED_TYPES.has(n.type) ? `<a href="dashboard.html" class="text-[10px] font-code text-neonPurple hover:underline">${t("inbox.view")}</a>` : ""}
-        ${profileUrl ? `<a href="${profileUrl}" class="text-[10px] font-code text-neonPurple hover:underline">${t("people.open_profile")}</a>` : ""}
+        ${profileUrl ? `<a href="${esc(profileUrl)}" class="text-[10px] font-code text-neonPurple hover:underline">${t("people.open_profile")}</a>` : ""}
       </div>
     </div>
     ${!n.read ? `<button class="mark-read-btn flex-shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-code text-textGray hover:text-neonPurple border border-borderNeon hover:border-neonPurple/50 transition-colors">${t("common.mark_read")}</button>` : ""}`;
