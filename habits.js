@@ -1,6 +1,14 @@
 import { auth, googleProvider, db, canParticipate } from "./firebase-init.js";
 import { t as i18nT } from "./js/i18n.js";
 import { resolveDisplayName } from "./js/identity.js";
+
+// Security audit fix: habit.title/icon are Firestore-stored free text any participant can
+// write, and habits default to isMineOrPublic (public/connections habits are readable by other
+// signed-in users) -- every interpolation into innerHTML below must be escaped. Same
+// implementation as calendar.js's pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -95,9 +103,9 @@ function habitCard(habit) {
   card.innerHTML = `
     <div class="flex items-start justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-xl bg-neonPurple/10 flex items-center justify-center text-xl">${habit.icon || "✅"}</div>
+        <div class="w-11 h-11 rounded-xl bg-neonPurple/10 flex items-center justify-center text-xl">${esc(habit.icon) || "✅"}</div>
         <div>
-          <p class="font-semibold text-sm">${habit.title}</p>
+          <p class="font-semibold text-sm">${esc(habit.title)}</p>
           <p class="text-[11px] font-code text-textGray mt-0.5">
             <i class="fa-solid ${isPrivate ? "fa-lock" : "fa-globe"} mr-1"></i>${isPrivate ? i18nT("common.private") : i18nT("common.public")}
           </p>
