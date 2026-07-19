@@ -36,6 +36,23 @@ function loadSettings() {
 function saveSettings(next) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
 }
+
+// Dark/Light audit fix: every light/dark override in styles.css keys off the `data-theme`
+// attribute alone (plain CSS attribute selectors, no JS-rendered state depends on theme) — so
+// toggling it applies instantly with no reload needed. This used to require a full
+// `location.reload()` (see the old "Saved. Reloading to apply theme…" status message) purely to
+// re-run each page's <head> theme-preload inline script, which is the only other place this
+// attribute got set. Also keeps the theme-color meta tag (iPhone PWA status bar) in sync, since
+// that tag has no attribute-selector equivalent to lean on.
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "light" ? "#f5f5f7" : "#09090e");
+}
 function cap(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
 }
@@ -349,9 +366,9 @@ document.getElementById("save-preferences-btn").addEventListener("click", () => 
   const theme = document.querySelector(".theme-choice-btn.text-white")?.dataset.themeChoice || "dark";
   const defaultVisibility = document.querySelector(".visibility-choice-btn.text-white")?.dataset.visibilityChoice || "public";
   saveSettings({ theme, defaultVisibility, defaultCity: defaultCityInput.value.trim() });
-  preferencesStatus.textContent = "Saved. Reloading to apply theme…";
+  applyTheme(theme);
+  preferencesStatus.textContent = t("common.saved");
   renderPrivacyTab();
-  setTimeout(() => location.reload(), 600);
 });
 
 renderPreferences();

@@ -162,7 +162,7 @@ function topBarHTML() {
     <div id="mobile-topbar" class="md:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between gap-2 px-4 bg-cardBg/90 backdrop-blur-md border-b border-borderNeon">
       <button id="mobile-hamburger-btn" type="button" aria-label="Open menu" aria-expanded="false" class="min-w-[44px] min-h-[44px] flex-shrink-0 flex items-center justify-center text-white text-lg"><i class="fa-solid fa-bars"></i></button>
       <span id="mobile-topbar-brand" class="flex items-center gap-2 min-w-0 overflow-hidden">
-        <img src="images/logo-mark.png" alt="" class="w-5 h-5 object-contain flex-shrink-0">
+        <img src="images/logo-mark.png" alt="" class="w-5 h-5 object-contain flex-shrink-0 eden-logo-plate">
         <span class="font-cyber font-semibold text-sm tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple truncate">EdenAtlas</span>
       </span>
       <a href="me.html" aria-label="Account" class="min-w-[44px] min-h-[44px] flex-shrink-0 flex items-center justify-center text-white text-lg"><i class="fa-solid fa-circle-user"></i></a>
@@ -203,7 +203,7 @@ function drawerHTML(isOwnerRole, user) {
     <div id="mobile-drawer" role="dialog" aria-label="Navigation menu" class="md:hidden -translate-x-full fixed top-0 left-0 bg-cardBg neon-border-purple">
       <div id="mobile-drawer-header" class="flex items-center justify-between gap-2 px-4 py-3 border-b border-borderNeon/60">
         <span class="flex items-center gap-2 min-w-0">
-          <img src="images/logo-mark.png" alt="" class="object-contain flex-shrink-0">
+          <img src="images/logo-mark.png" alt="" class="object-contain flex-shrink-0 eden-logo-plate">
           <span class="min-w-0 leading-tight">
             <span class="block font-cyber font-semibold text-sm text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple truncate">EdenAtlas</span>
             ${handle ? `<span class="block text-[11px] text-textGray truncate">${handle}</span>` : ""}

@@ -1794,6 +1794,80 @@ needed no changes.
    permissions change, no dormant CDN feature flag (removed outright, not kept behind a toggle),
    no commit/push/PR/deploy.
 
+**"Production Hardening — Dark/Light theme audit" (most recent, `audit/dark-light-theme`
+branch)** — a targeted, code-verified pass (every finding confirmed by reading the actual CSS
+rule and, for contrast claims, computing the real WCAG relative-luminance ratio against this
+codebase's own palette — never asserted from a screenshot or guessed) fixing five real
+light-mode bugs the blanket `html[data-theme="light"] [class*="..."]` override strategy
+(styles.css, "a simple, functional override, not a full redesign" — unchanged as this pass's own
+approach too) had never accounted for:
+1. **Colored/gradient buttons lost contrast, not gained it** — `[class*="text-white"]` forces
+   near-black (#16151a) onto *every* `text-white`-classed element, including labels sitting on a
+   saturated fill (primary purple CTAs, rose/red destructive buttons like Memories' "Permanently
+   Delete," the unread-notification badge) rather than a plain dark surface. Measured against
+   this palette, near-black-on-rose-500/600 comes out to ~3.9:1 — *below* WCAG AA (4.5:1), and
+   worse than the white text these buttons shipped with (~4.7:1). Fixed with a light-mode
+   exception (`[class*="bg-gradient-to-r"]`/`[class*="bg-rose-"]`/`[class*="bg-red-"]`/
+   `[class*="bg-emerald-"]`/`[class*="bg-amber-"]`, each `[class*="text-white"]`) that keeps
+   white text on a self-painted saturated background in both themes.
+2. **The sitewide "EdenAtlas" wordmark could render invisible** — `from-white` (Tailwind's
+   gradient-stop utility backing `text-transparent bg-clip-text bg-gradient-to-r from-white
+   to-neonPurple`, used in ~21 files: every nav brand mark, login's `<h1>`, etc.) starts the
+   text-clip gradient at pure white, which is near-zero contrast against light mode's
+   ~#f5f5f7 page background — the wordmark's first few letters were effectively unreadable.
+   Fixed by overriding only the `--tw-gradient-from` custom property in light mode (`#16151a`),
+   leaving `to-neonPurple` and every other gradient utility on the page untouched.
+3. **`images/logo-mark.png`'s baked-in glow reads as a gray halo on light backgrounds** — the
+   source PNG (kept as-is, never regenerated, per design direction) has a soft drop-shadow
+   designed for a dark canvas; placed directly on a now-light sidebar/mobile-nav/login-card/
+   portfolio-header background (all of which go near-white via the `bg-cardBg`/`bg-darkBg`
+   overrides), that shadow read as a dirty smudge rather than a clean mark. Fixed with a new
+   `.eden-logo-plate` class (`background-color:#0a0a0e; border-radius:999px`) applied to every
+   logo `<img>`/wrapper sitewide (login card + post-sign-in transition mark, the desktop sidebar
+   brand mark, the mobile top bar and drawer-header marks, the Portfolio header mark) — deliberately
+   named apart from `bg-darkBg` so the light-mode override can't re-lighten it. The two
+   full-viewport dark logo treatments (`html::before`'s auth-check pulse mark, `#eden-splash`)
+   had their own light-mode background/text swaps removed instead — both are already framed as a
+   "unified dark brand backplate" and are only ever visible for a brief loading window, so staying
+   dark in both themes reads as an intentional branded beat rather than a mismatch.
+4. **Theme switch required a full reload** — `me.js`'s Save Preferences handler used to write
+   `localStorage` then show "Saved. Reloading to apply theme…" and `location.reload()` after
+   600ms, purely to re-run the `<head>` theme-preload inline script — but every light/dark rule in
+   styles.css is a plain `data-theme` attribute selector with no other JS-rendered state
+   depending on it, so toggling the attribute directly applies every rule instantly. New
+   `applyTheme(theme)` sets/removes `data-theme` and updates the `theme-color` meta tag in one
+   call; the reload is gone.
+5. **`<meta name="theme-color">` never reflected the stored theme at all** (iPhone PWA status bar
+   / Safari toolbar color) — hardcoded `#09090e` in all 25 pages' static `<head>`, with nothing
+   ever writing to it, at load or at runtime. Every page's theme-color meta tag gained a one-line
+   inline `<script>` immediately after it (scripted sitewide edit, byte-identical insertion — the
+   theme-preload script itself, one line earlier in `<head>`, can't touch this tag directly since
+   it runs before the tag exists in the DOM yet) that flips it to `#f5f5f7` when the stored theme
+   is light, mirroring what `applyTheme()` now also does at runtime.
+6. **Focus ring contrast** — `focus-visible:ring-neonPurple`/`focus:ring-neonPurple` (#a78bfa)
+   measures ~2.7:1 against a light-mode background, under WCAG 1.4.11's 3:1 floor for a required
+   non-text UI indicator. A `[class*="ring-neonPurple"]:focus`/`:focus-visible` light-mode
+   override swaps `--tw-ring-color` to a deeper violet (#7c3aed, ~5.7:1) — same hue family, no
+   markup change.
+7. **Deliberately deferred, not silently ignored**: modal backdrops (`bg-darkBg/80
+   backdrop-blur-sm`, the standard convention behind every modal sitewide) lose their intended
+   translucent dark scrim in light mode — the `bg-darkBg` override forces a flat opaque
+   `#f5f5f7`, which still visually separates the modal from the page but no longer shows a
+   dimmed backdrop through the blur. Fixing this correctly needs a dedicated marker class
+   (`.eden-modal-backdrop` or similar) swept across every modal `<div>` in every page — a wider,
+   riskier change than this pass's other fixes, scoped out and recommended as a follow-up rather
+   than attempted here. `border-borderNeon`'s light-mode value (`rgba(0,0,0,0.10)`) is also
+   visibly faint on some card-on-card surfaces and would benefit from real-device visual QA, not
+   flagged as broken outright.
+8. **Verification performed**: `node --check` on every changed `.js` file, `npm run build`, the
+   full `npm test` + `npm run test:tailwind-migration` suites (all pass unmodified — no test
+   needed updating for this pass), and WCAG contrast ratios computed by hand against this
+   codebase's actual documented hex palette (`tailwind.config.js`) for every contrast claim above,
+   not estimated by eye. **Not performed**: interactive browser/device QA (no browser-automation
+   tool available in this environment) — real-device visual confirmation across both themes,
+   especially on an actual iPhone status bar, is recommended before merge, consistent with this
+   repo's own established pattern of calling out what wasn't tested rather than assuming success.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model

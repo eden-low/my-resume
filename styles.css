@@ -181,6 +181,13 @@ body.auth-check-pending {
    shows through naturally. Once auth-guard.js removes .auth-check-pending, body fades back to
    opaque and covers this mark again — so in practice it's only ever seen for the brief window
    before auth resolves, not a permanent watermark. */
+/* Dark/Light audit fix: this pulse mark used to swap to a light background in light mode
+   (`html[data-theme="light"]::before` below) — but images/logo-mark.png bakes in a soft
+   drop-shadow/glow designed for a dark canvas, which read as a dirty gray halo on a light
+   background. Per design direction the source PNG stays untouched; instead this mark now keeps
+   a single, unified dark brand backplate in both themes (same reasoning as .eden-logo-plate and
+   #eden-splash below) — it's only ever seen for the brief window before auth resolves, so a
+   theme-independent dark flash reads as an intentional branded loading beat, not a mismatch. */
 html::before {
   content: "";
   position: fixed;
@@ -190,10 +197,6 @@ html::before {
   background: #0a0a0e url("images/logo-mark.png") no-repeat center center;
   background-size: 44px 44px;
   animation: eden-auth-pulse 1.6s ease-in-out infinite;
-}
-
-html[data-theme="light"]::before {
-  background-color: #f5f5f7;
 }
 
 @keyframes eden-auth-pulse {
@@ -239,6 +242,43 @@ html[data-theme="light"] [class*="text-textGray"] { color: #6b6878 !important; }
 html[data-theme="light"] [class*="border-borderNeon"] { border-color: rgba(0, 0, 0, 0.10) !important; }
 html[data-theme="light"] [class*="divide-borderNeon"] > * + * { border-color: rgba(0, 0, 0, 0.10) !important; }
 
+/* Dark/Light audit fix: the blanket `[class*="text-white"]` rule above forces near-black text
+   (#16151a) onto EVERY text-white-classed element, including labels sitting on a saturated
+   gradient/solid-color fill (primary purple CTAs, rose/red destructive-action buttons, the
+   unread-notification badge) — not just plain dark surfaces. Measured against this codebase's
+   actual palette, near-black text drops well below WCAG AA (4.5:1) on rose-500/600 destructive
+   buttons specifically (~3.9:1), which is worse than the white text these buttons shipped with
+   (~4.7:1). Buttons/badges that paint their own saturated background keep white text in both
+   themes instead of following the page-background swap — matched by the same "bg-{color}-N00"
+   Tailwind naming convention already relied on elsewhere in this file, plus gradient fills. */
+html[data-theme="light"] [class*="bg-gradient-to-r"][class*="text-white"],
+html[data-theme="light"] [class*="bg-rose-"][class*="text-white"],
+html[data-theme="light"] [class*="bg-red-"][class*="text-white"],
+html[data-theme="light"] [class*="bg-emerald-"][class*="text-white"],
+html[data-theme="light"] [class*="bg-amber-"][class*="text-white"] {
+  color: #ffffff !important;
+}
+
+/* Dark/Light audit fix: `from-white` (Tailwind's gradient-stop utility, e.g.
+   `text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple` — the sitewide
+   "EdenAtlas" wordmark) makes text-clipped content start at pure white. Against a light-mode
+   page (~#f5f5f7 background), that means the wordmark's first few characters render at
+   near-zero contrast — effectively invisible — before fading into the visible violet tail.
+   Overriding only the `--tw-gradient-from` custom property (not the whole gradient) keeps
+   `to-neonPurple`'s end stop and every other gradient utility on the page untouched. */
+html[data-theme="light"] [class*="from-white"] {
+  --tw-gradient-from: #16151a !important;
+}
+
+/* Dark/Light audit fix: the purple focus ring (`focus-visible:ring-neonPurple` /
+   `focus:ring-neonPurple`, #a78bfa) sits at ~2.7:1 against a light-mode background — under
+   WCAG 1.4.11's 3:1 minimum for a required non-text UI indicator. A deeper violet only in light
+   mode keeps the same hue family while clearing that floor (~5.7:1). */
+html[data-theme="light"] [class*="ring-neonPurple"]:focus,
+html[data-theme="light"] [class*="ring-neonPurple"]:focus-visible {
+  --tw-ring-color: #7c3aed !important;
+}
+
 html[data-theme="light"] .neon-border-purple {
   box-shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.12);
 }
@@ -249,6 +289,19 @@ html[data-theme="light"] ::-webkit-scrollbar-track {
 
 html[data-theme="light"] ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.18);
+}
+
+/* Dark/Light audit fix: images/logo-mark.png bakes in a soft drop-shadow/glow around the mark,
+   designed against a dark canvas — placed directly on a light-mode surface (sidebar, mobile
+   nav, login card, portfolio header), that glow reads as a dirty gray smudge rather than a
+   clean logo. Per design direction the source PNG stays untouched; every appearance of the mark
+   instead sits on this small, always-dark, rounded backplate — a class deliberately named apart
+   from `bg-darkBg` so it is NOT caught (and re-lightened) by the `[class*="bg-darkBg"]`
+   light-mode override above. Safe to apply directly to an <img> (object-contain leaves the
+   PNG's own transparent margins for the dark fill to show through) or to its wrapper div. */
+.eden-logo-plate {
+  background-color: #0a0a0e;
+  border-radius: 999px;
 }
 
 /* ================================================================
@@ -896,7 +949,11 @@ body.drawer-open {
 }
 
 /* Splash screen (js/splash.js). Sits above everything (including the mobile top/bottom bars
-   and desktop sidebar) while body.auth-check-pending is present, then fades out. */
+   and desktop sidebar) while body.auth-check-pending is present, then fades out. Dark/Light
+   audit fix: this used to swap to a light background in light mode, but images/logo-mark.png's
+   own baked-in glow reads as a gray halo against it (same issue as html::before above) — kept
+   as one unified dark brand backplate in both themes instead, so #eden-splash-word's color
+   below also no longer needs a light-mode override. */
 #eden-splash {
   position: fixed;
   inset: 0;
@@ -907,10 +964,6 @@ body.drawer-open {
   background: #0a0a0e;
   opacity: 1;
   transition: opacity 300ms ease;
-}
-
-html[data-theme="light"] #eden-splash {
-  background: #f5f5f7;
 }
 
 #eden-splash.eden-splash-out {
@@ -943,10 +996,6 @@ html[data-theme="light"] #eden-splash {
   font-size: 0.95rem;
   letter-spacing: -0.01em;
   color: #ffffff;
-}
-
-html[data-theme="light"] #eden-splash-word {
-  color: #16151a;
 }
 
 #eden-splash-msg {
