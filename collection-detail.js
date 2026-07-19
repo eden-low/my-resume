@@ -28,6 +28,15 @@ function formatTimestamp(ts) {
   return ts.toDate().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 }
 
+// Security audit fix: every record type rendered on this page (photos/journal/journey/expenses/
+// projects) carries Firestore-stored free text any participant can write, and most default to
+// isMineOrPublic (public/connections items are readable by other signed-in users) -- every
+// interpolation into innerHTML below must be escaped. Same implementation as calendar.js's
+// pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // Cached from the last successful fetch, so the eden:langchange listener below can re-render
 // bilingual content (the collection's own title/description, and career.js-style title_en/zh
 // project fields) without re-querying Firestore — same "re-render from cached data" contract
@@ -77,7 +86,7 @@ async function fetchMyOnly(name) {
 function renderMemories(photos) {
   const gridEl = document.getElementById("memories-grid");
   const emptyEl = document.getElementById("memories-empty");
-  gridEl.innerHTML = photos.slice(0, 24).map((p) => `<img src="${p.url}" alt="" class="w-full h-24 object-cover rounded-lg">`).join("");
+  gridEl.innerHTML = photos.slice(0, 24).map((p) => `<img src="${esc(p.url)}" alt="" class="w-full h-24 object-cover rounded-lg">`).join("");
   emptyEl.classList.toggle("hidden", photos.length > 0);
 }
 
@@ -87,7 +96,7 @@ function renderJournal(entries) {
   listEl.innerHTML = entries.slice(0, 20).map((e) => `
     <div class="bg-darkBg/40 border border-borderNeon/60 rounded-xl p-3">
       <div class="flex items-center justify-between gap-3">
-        <h3 class="text-sm font-medium">${e.title}</h3>
+        <h3 class="text-sm font-medium">${esc(e.title)}</h3>
         <span class="text-[10px] font-code text-textGray flex-shrink-0">${formatTimestamp(e.createdAt)}</span>
       </div>
     </div>`).join("");
@@ -99,7 +108,7 @@ function renderFinance(expenses) {
   const emptyEl = document.getElementById("finance-empty");
   listEl.innerHTML = expenses.slice(0, 30).map((e) => `
     <div class="flex items-center justify-between bg-darkBg/40 border border-borderNeon/60 rounded-lg px-3 py-2">
-      <span class="text-xs text-textGray truncate">${e.note || e.category}</span>
+      <span class="text-xs text-textGray truncate">${esc(e.note || e.category)}</span>
       <span class="font-code text-xs font-semibold flex-shrink-0">RM ${Number(e.amount).toFixed(2)}</span>
     </div>`).join("");
   emptyEl.classList.toggle("hidden", expenses.length > 0);
@@ -111,7 +120,7 @@ function renderJourney(events) {
   listEl.innerHTML = events.slice(0, 20).map((e) => `
     <div class="bg-darkBg/40 border border-borderNeon/60 rounded-xl p-3">
       <div class="flex items-center justify-between gap-3">
-        <h3 class="text-sm font-medium">${e.title}</h3>
+        <h3 class="text-sm font-medium">${esc(e.title)}</h3>
         <span class="text-[10px] font-code text-textGray flex-shrink-0">${formatTimestamp(e.date)}</span>
       </div>
     </div>`).join("");
@@ -123,8 +132,8 @@ function renderCareer(projects) {
   const emptyEl = document.getElementById("career-empty");
   listEl.innerHTML = projects.slice(0, 20).map((p) => `
     <div class="bg-darkBg/40 border border-borderNeon/60 rounded-xl p-3">
-      <h3 class="text-sm font-medium">${bi(p, "title")}</h3>
-      <p class="text-xs text-textGray mt-1 line-clamp-2">${bi(p, "summary")}</p>
+      <h3 class="text-sm font-medium">${esc(bi(p, "title"))}</h3>
+      <p class="text-xs text-textGray mt-1 line-clamp-2">${esc(bi(p, "summary"))}</p>
     </div>`).join("");
   emptyEl.classList.toggle("hidden", projects.length > 0);
 }
@@ -214,11 +223,11 @@ function renderHeader(c, isOwner) {
   renderHeaderText(c);
   const cover = document.getElementById("collection-cover");
   if (!isUncategorized && c.coverImageUrl) {
-    cover.innerHTML = `<img src="${c.coverImageUrl}" alt="" class="w-full h-full object-cover">`;
+    cover.innerHTML = `<img src="${esc(c.coverImageUrl)}" alt="" class="w-full h-full object-cover">`;
   } else {
     const color = c?.color || "#a78bfa";
     cover.style.background = `${color}22`;
-    cover.innerHTML = `<i data-lucide="${isUncategorized ? "inbox" : (c.icon || "layers")}" class="w-10 h-10" style="color:${color}"></i>`;
+    cover.innerHTML = `<i data-lucide="${esc(isUncategorized ? "inbox" : (c.icon || "layers"))}" class="w-10 h-10" style="color:${esc(color)}"></i>`;
   }
   const badge = document.getElementById("collection-visibility-badge");
   if (isUncategorized) {

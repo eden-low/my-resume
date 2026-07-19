@@ -24,6 +24,31 @@ import {
   getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
+// Security audit fix: entry.title/content/tags/locationName are Firestore-stored free text —
+// any participant can write them, and journals default to isMineOrPublic (public/connections
+// entries are readable by other signed-in users) — so every interpolation into innerHTML below
+// must be escaped. Same implementation as calendar.js's pre-existing esc(), for consistency.
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Follow-up security fix: escaping entry.content *before* marked.parse() (the original fix)
+// neutralized raw <script>/<img onerror> tags, but not a Markdown-generated
+// [text](javascript:...) link — marked.js's own built-in URL sanitizer was removed upstream in
+// v5 (2023), and this app's CDN version was never pinned, so nothing was actually blocking that
+// scheme. Pre-escaping also broke legitimate Markdown (`>` blockquotes, `<url>` autolinks) by
+// mangling the syntax characters before the parser ever saw them. The canonical fix — used here
+// instead — is the standard marked+DOMPurify pairing: let marked.parse() run on the RAW content
+// (so all real Markdown syntax works, including blockquotes/autolinks), then run DOMPurify.
+// sanitize() on the resulting HTML. DOMPurify strips javascript:/data: URIs, on* event-handler
+// attributes, and <script>/<iframe>/<object> by default — no custom config needed, since a
+// narrower-than-default config risks accidentally permitting something DOMPurify's own defaults
+// already block. marked/DOMPurify are both loaded pinned-with-SRI in journal.html (see that
+// file), so window.marked/window.DOMPurify are guaranteed present here.
+function renderMarkdownSafe(content) {
+  return DOMPurify.sanitize(marked.parse(content || ""));
+}
+
 const MOOD_META = {
   happy: { emoji: "😊", i18nKey: "journal.mood_happy" },
   calm: { emoji: "😌", i18nKey: "journal.mood_calm" },
@@ -124,7 +149,7 @@ function formatTimestamp(ts) {
 
 function snippet(text, max = 160) {
   const flat = text.replace(/[#*_`>~-]/g, "").replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max)}&hellip;` : flat;
+  return flat.length > max ? `${esc(flat.slice(0, max))}&hellip;` : esc(flat);
 }
 
 function entryKey(entry) {
@@ -185,16 +210,16 @@ function journalCard(entry) {
   card.tabIndex = -1; // programmatically focusable (for the deep-link highlight) without joining the normal Tab order
 
   const tagsHtml = (entry.tags || [])
-    .map((t) => `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray">#${t}</span>`)
+    .map((t) => `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray">#${esc(t)}</span>`)
     .join(" ");
   const user = auth.currentUser;
   const isMine = !!user && entry.uid === user.uid;
 
   card.innerHTML = `
-    ${entry.imageUrl ? `<img src="${entry.imageUrl}" alt="" class="w-full h-40 object-cover">` : ""}
+    ${entry.imageUrl ? `<img src="${esc(entry.imageUrl)}" alt="" class="w-full h-40 object-cover">` : ""}
     <div class="p-4 space-y-2.5">
       <div class="flex items-start justify-between gap-3">
-        <h2 class="text-sm font-semibold leading-snug">${mood ? `${mood.emoji} ` : ""}${entry.title}</h2>
+        <h2 class="text-sm font-semibold leading-snug">${mood ? `${mood.emoji} ` : ""}${esc(entry.title)}</h2>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           <span class="text-[10px] font-code px-2 py-0.5 rounded-full border ${vis.cls}">
             <i class="fa-solid ${vis.icon}"></i>
@@ -202,8 +227,8 @@ function journalCard(entry) {
           ${isMine ? `<button class="edit-entry-btn text-textGray hover:text-neonPurple transition-colors" title="${i18nT("common.edit_metadata")}"><i class="fa-solid fa-pen text-xs"></i></button>` : ""}
         </div>
       </div>
-      <div class="text-sm text-textGray leading-relaxed journal-body">${expanded ? marked.parse(entry.content || "") : snippet(entry.content || "")}</div>
-      <div class="flex flex-wrap items-center gap-1.5">${tagsHtml}${entry.locationName ? `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray"><i class="fa-solid fa-location-dot mr-1"></i>${entry.locationName}</span>` : ""}</div>
+      <div class="text-sm text-textGray leading-relaxed journal-body">${expanded ? renderMarkdownSafe(entry.content) : snippet(entry.content || "")}</div>
+      <div class="flex flex-wrap items-center gap-1.5">${tagsHtml}${entry.locationName ? `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray"><i class="fa-solid fa-location-dot mr-1"></i>${esc(entry.locationName)}</span>` : ""}</div>
       <p class="text-[11px] text-textGray/70 font-code">${formatTimestamp(entry.createdAt)}</p>
     </div>`;
 

@@ -25,6 +25,25 @@ import { PROFILE, EDUCATION, EXPERIENCE, PROJECTS, LEADERSHIP, RESUME_SKILLS } f
 
 const authControl = document.getElementById("auth-control");
 
+// Security audit fix: career CMS fields (role/company/dates/title/category/document names/
+// project links) are Firestore-stored free text the Owner writes -- Career is Owner-only-write,
+// but resume.html is reachable by unauthenticated HR visitors (isCareerReadable's public branch,
+// see firestore.rules), so a payload planted here (e.g. via a session compromised elsewhere)
+// would reach every visitor with no auth check at all. Same esc() implementation as calendar.js's
+// pre-existing one; project links additionally get an http(s)-only scheme check before being
+// used as an href, closing the javascript:-URI vector a plain esc() alone wouldn't.
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function safeHref(url) {
+  try {
+    const u = new URL(url, location.href);
+    return u.protocol === "http:" || u.protocol === "https:" ? esc(u.href) : "";
+  } catch {
+    return "";
+  }
+}
+
 // ---- Bilingual content helper ----
 // Career docs store title_en/title_zh (etc.) as flat fields — this picks the active language,
 // falling back to English so a partially-translated entry never renders blank.
@@ -637,19 +656,19 @@ function renderExperiences() {
       el.className = "bg-darkBg/60 border border-borderNeon rounded-xl p-5";
       // Fallback entries carry bilingual company/location + a preformatted datesText; CMS docs use
       // a monolingual company/location string and startDate/endDate fields.
-      const dates = exp.datesText || `${exp.startDate || ""} – ${exp.endDate || "Present"}`;
-      const company = (exp.company_en || exp.company_zh) ? bi(exp, "company") : (exp.company || "");
-      const loc = (exp.location_en || exp.location_zh) ? bi(exp, "location") : (exp.location || "");
-      const skills = (exp.skills || []).map((s) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${s}</span>`).join(" ");
+      const dates = esc(exp.datesText || `${exp.startDate || ""} – ${exp.endDate || "Present"}`);
+      const company = esc((exp.company_en || exp.company_zh) ? bi(exp, "company") : (exp.company || ""));
+      const loc = esc((exp.location_en || exp.location_zh) ? bi(exp, "location") : (exp.location || ""));
+      const skills = (exp.skills || []).map((s) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${esc(s)}</span>`).join(" ");
       // Fallback entries carry a bullets[] ({en,zh}) list; CMS docs use a single description field.
       const body = exp.bullets && exp.bullets.length
-        ? `<ul class="mt-3 space-y-1.5 text-sm text-textGray leading-relaxed list-disc list-inside">${exp.bullets.map((b) => `<li>${biBullet(b)}</li>`).join("")}</ul>`
-        : `<p class="text-sm text-textGray mt-3 leading-relaxed">${bi(exp, "description")}</p>`;
+        ? `<ul class="mt-3 space-y-1.5 text-sm text-textGray leading-relaxed list-disc list-inside">${exp.bullets.map((b) => `<li>${esc(biBullet(b))}</li>`).join("")}</ul>`
+        : `<p class="text-sm text-textGray mt-3 leading-relaxed">${esc(bi(exp, "description"))}</p>`;
       const itemOwner = owner && !exp._fallback;
       el.innerHTML = `
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="font-cyber font-bold text-sm text-white">${bi(exp, "role")}</p>
+            <p class="font-cyber font-bold text-sm text-white">${esc(bi(exp, "role"))}</p>
             <p class="text-xs text-neonPurple font-code mt-0.5">${company}</p>
             <p class="text-[11px] text-textGray font-code mt-0.5">${dates}${loc ? " · " + loc : ""}</p>
           </div>
@@ -737,22 +756,22 @@ function renderProjects() {
 function projectCard(project, owner) {
   const el = document.createElement("div");
   el.className = "card-lift bg-darkBg/60 border border-borderNeon rounded-xl overflow-hidden hover:border-neonPurple/40 transition-all cursor-pointer flex flex-col";
-  const tech = (project.techStack || []).slice(0, 4).map((s) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${s}</span>`).join(" ");
+  const tech = (project.techStack || []).slice(0, 4).map((s) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${esc(s)}</span>`).join(" ");
   const cover = project.images?.[0]?.url || project.images?.[0];
   const coverHTML = cover
-    ? `<img src="${cover}" alt="" class="w-full h-36 object-cover">`
+    ? `<img src="${esc(cover)}" alt="" class="w-full h-36 object-cover">`
     : `<div class="w-full h-36 bg-darkBg/80 flex items-center justify-center text-textGray/50"><i class="fa-solid fa-diagram-project text-2xl"></i></div>`;
   el.innerHTML = `
     ${coverHTML}
     <div class="p-5 flex-1 flex flex-col">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <p class="font-cyber font-bold text-sm text-white truncate">${bi(project, "title")}</p>
-          <p class="text-[10px] font-code text-neonPurple mt-1 uppercase tracking-wider">${project.category || ""}</p>
+          <p class="font-cyber font-bold text-sm text-white truncate">${esc(bi(project, "title"))}</p>
+          <p class="text-[10px] font-code text-neonPurple mt-1 uppercase tracking-wider">${esc(project.category || "")}</p>
         </div>
         ${owner && !project._fallback ? ownerControlsHTML(project.id, "career_projects") : ""}
       </div>
-      <p class="text-xs text-textGray mt-3 leading-relaxed flex-1">${bi(project, "summary")}</p>
+      <p class="text-xs text-textGray mt-3 leading-relaxed flex-1">${esc(bi(project, "summary"))}</p>
       ${tech ? `<div class="flex flex-wrap gap-1.5 mt-3">${tech}</div>` : ""}
       <button type="button" class="view-details-btn mt-4 self-start flex items-center gap-1.5 text-xs font-code text-neonPurple hover:underline">
         View Details <i class="fa-solid fa-arrow-right text-[10px]"></i>
@@ -783,20 +802,22 @@ function openProjectDetail(project) {
   document.getElementById("project-detail-reflection").textContent = bi(project, "reflection");
   document.getElementById("project-detail-reflection-section").classList.toggle("hidden", !bi(project, "reflection"));
 
-  const tech = (project.techStack || []).map((s) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${s}</span>`).join(" ");
+  const tech = (project.techStack || []).map((s) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${esc(s)}</span>`).join(" ");
   document.getElementById("project-detail-tech").innerHTML = tech;
 
   const links = [];
-  if (project.githubUrl) links.push(`<a href="${project.githubUrl}" target="_blank" rel="noopener" class="text-neonPurple hover:underline text-xs"><i class="fa-brands fa-github mr-1"></i>GitHub</a>`);
-  if (project.demoUrl) links.push(`<a href="${project.demoUrl}" target="_blank" rel="noopener" class="text-neonPurple hover:underline text-xs"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Demo</a>`);
+  if (project.githubUrl && safeHref(project.githubUrl)) links.push(`<a href="${safeHref(project.githubUrl)}" target="_blank" rel="noopener" class="text-neonPurple hover:underline text-xs"><i class="fa-brands fa-github mr-1"></i>GitHub</a>`);
+  if (project.demoUrl && safeHref(project.demoUrl)) links.push(`<a href="${safeHref(project.demoUrl)}" target="_blank" rel="noopener" class="text-neonPurple hover:underline text-xs"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Demo</a>`);
   document.getElementById("project-detail-links").innerHTML = links.join(" &middot; ");
   document.getElementById("project-detail-links-section").classList.toggle("hidden", links.length === 0);
 
-  const images = (project.images || []).map((img) => `<img src="${img.url || img}" class="w-full h-32 object-cover rounded-lg">`).join("");
+  const images = (project.images || []).map((img) => `<img src="${esc(img.url || img)}" class="w-full h-32 object-cover rounded-lg">`).join("");
   document.getElementById("project-detail-images").innerHTML = images;
   document.getElementById("project-detail-gallery-section").classList.toggle("hidden", !(project.images || []).length);
 
-  const docs = (project.documents || []).map((d) => `<a href="${d.url || d}" target="_blank" rel="noopener" class="flex items-center gap-2 text-xs text-neonPurple hover:underline"><i class="fa-solid fa-file"></i>${d.name || "Document"}</a>`).join("");
+  const docs = (project.documents || []).map((d) => (d.url || d) && safeHref(d.url || d)
+    ? `<a href="${safeHref(d.url || d)}" target="_blank" rel="noopener" class="flex items-center gap-2 text-xs text-neonPurple hover:underline"><i class="fa-solid fa-file"></i>${esc(d.name || "Document")}</a>`
+    : "").join("");
   document.getElementById("project-detail-documents").innerHTML = docs;
   document.getElementById("project-detail-documents-section").classList.toggle("hidden", !(project.documents || []).length);
 
@@ -926,12 +947,12 @@ function renderCertificates() {
     ...sorted.map((cert) => {
       const el = document.createElement("div");
       el.className = "bg-darkBg/60 border border-borderNeon rounded-xl p-4";
-      const link = cert.credentialUrl || cert.fileUrl;
+      const link = safeHref(cert.credentialUrl || cert.fileUrl || "");
       el.innerHTML = `
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="font-cyber font-bold text-xs text-white">${bi(cert, "title")}</p>
-            <p class="text-[11px] text-neonPurple font-code mt-0.5">${cert.issuer || ""} ${cert.issueDate ? "· " + cert.issueDate : ""}</p>
+            <p class="font-cyber font-bold text-xs text-white">${esc(bi(cert, "title"))}</p>
+            <p class="text-[11px] text-neonPurple font-code mt-0.5">${esc(cert.issuer || "")} ${cert.issueDate ? "· " + esc(cert.issueDate) : ""}</p>
             ${link ? `<a href="${link}" target="_blank" rel="noopener" class="text-[11px] text-textGray hover:text-neonPurple mt-1 inline-block"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>View</a>` : ""}
           </div>
           ${owner ? ownerControlsHTML(cert.id, "career_certificates") : ""}
@@ -1017,9 +1038,9 @@ function renderAwards() {
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <i class="fa-solid fa-trophy text-amber-400 text-lg mb-2"></i>
-            <p class="font-cyber font-bold text-xs text-white">${bi(award, "title")}</p>
-            <p class="text-[11px] text-amber-400 font-code mt-0.5">${award.issuer || ""} ${award.date ? "· " + award.date : ""}</p>
-            <p class="text-xs text-textGray mt-2">${bi(award, "description")}</p>
+            <p class="font-cyber font-bold text-xs text-white">${esc(bi(award, "title"))}</p>
+            <p class="text-[11px] text-amber-400 font-code mt-0.5">${esc(award.issuer || "")} ${award.date ? "· " + esc(award.date) : ""}</p>
+            <p class="text-xs text-textGray mt-2">${esc(bi(award, "description"))}</p>
           </div>
           ${owner ? ownerControlsHTML(award.id, "career_awards") : ""}
         </div>`;

@@ -22,6 +22,15 @@ import {
 
 const authControl = document.getElementById("auth-control");
 
+// Security audit fix: publicDisplayName(person)/person.bio are Firestore-stored free text any
+// signed-in user can set on their own users/{uid} doc (readable by any signed-in user per
+// firestore.rules), and this page renders every discoverable person's card -- every
+// interpolation into innerHTML below must be escaped. Same implementation as calendar.js's
+// pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // ---- Connections (v3.2 "Trusted Connections") ----
 //
 // A real, mutual-consent friend-request graph — separate from the legacy owner/friend/viewer
@@ -298,18 +307,18 @@ function personCard(person) {
   el.innerHTML = `
     <a href="profile.html?${person.username ? "u=" + encodeURIComponent(person.username) : "uid=" + encodeURIComponent(person.uid)}" class="card-lift flex items-start gap-3 min-w-0 flex-1">
       <div class="w-11 h-11 rounded-full bg-neonPurple/10 flex items-center justify-center text-neonPurple text-sm overflow-hidden flex-shrink-0">
-        ${person.photoURL ? `<img src="${person.photoURL}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user"></i>`}
+        ${person.photoURL ? `<img src="${esc(person.photoURL)}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-user"></i>`}
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5 min-w-0">
-          <p class="text-sm font-semibold text-white truncate">${publicDisplayName(person)}</p>
+          <p class="text-sm font-semibold text-white truncate">${esc(publicDisplayName(person))}</p>
           ${person.role === "owner" ? `<i class="fa-solid fa-star text-neonPurple text-[10px]" title="${t("people.owner_badge")}"></i>` : ""}
           ${state === "friend" ? `<i class="fa-solid fa-user-check text-emerald-400 text-[10px]" title="${t("people.friend")}"></i>` : ""}
         </div>
-        ${handle ? `<p class="text-[11px] text-textGray font-code truncate">${handle}</p>` : ""}
-        ${person.bio ? `<p class="text-xs text-white/80 mt-1.5 line-clamp-2">${person.bio}</p>` : ""}
+        ${handle ? `<p class="text-[11px] text-textGray font-code truncate">${esc(handle)}</p>` : ""}
+        ${person.bio ? `<p class="text-xs text-white/80 mt-1.5 line-clamp-2">${esc(person.bio)}</p>` : ""}
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[10px] font-code text-textGray">
-          ${person.location ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${person.location}</span>` : ""}
+          ${person.location ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${esc(person.location)}</span>` : ""}
           <span class="collections-count-slot"><i class="fa-solid fa-layer-group mr-1"></i>&hellip;</span>
         </div>
         <span class="inline-flex items-center gap-1.5 mt-3 text-[11px] font-code text-neonPurple">

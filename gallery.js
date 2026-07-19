@@ -29,6 +29,14 @@ import {
   deleteObject,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
+// Security audit fix: post.caption/comment text are Firestore-stored free text from any
+// participant, and photos default to isMineOrPublic (public/connections posts are readable by
+// other signed-in users) — every interpolation into innerHTML below must be escaped. Same
+// implementation as calendar.js's pre-existing esc(), for consistency.
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // Albums, replacing the old Personal/Event/Work/Project categories.
 const CATEGORY_META = {
   travel: { i18nKey: "memories.album_travel", text: "text-neonBlue", bg: "bg-neonBlue/10", border: "border-neonBlue/30" },
@@ -176,9 +184,9 @@ function postCard(post) {
       <label class="absolute top-3 left-3 z-10 w-6 h-6 rounded-md bg-darkBg/80 border border-borderNeon flex items-center justify-center cursor-pointer">
         <input type="checkbox" class="select-checkbox w-4 h-4" ${selectedIds.has(post.id) ? "checked" : ""}>
       </label>` : ""}
-    <img src="${post.url}" alt="${post.caption || "Gallery post"}" class="w-full max-h-[520px] object-cover">
+    <img src="${esc(post.url)}" alt="${esc(post.caption || "Gallery post")}" class="w-full max-h-[520px] object-cover">
     <div class="p-4 space-y-3">
-      ${post.caption ? `<p class="text-sm text-white">${post.caption}</p>` : ""}
+      ${post.caption ? `<p class="text-sm text-white">${esc(post.caption)}</p>` : ""}
       <div class="flex flex-wrap items-center gap-2 text-[10px] font-code">
         <span class="px-2 py-0.5 rounded-full border ${meta.border} ${meta.bg} ${meta.text}">${i18nT(meta.i18nKey)}</span>
         <span class="px-2 py-0.5 rounded-full border ${vis.cls}">
@@ -756,9 +764,9 @@ function trashCard(post) {
   // *original* value from visibilityBeforeTrash so it's clear what Restore brings it back to.
   const vis = visibilityBadge(post.visibilityBeforeTrash || "private");
   el.innerHTML = `
-    <img src="${post.url}" alt="" class="w-full h-28 object-cover opacity-70">
+    <img src="${esc(post.url)}" alt="" class="w-full h-28 object-cover opacity-70">
     <div class="p-2 space-y-1.5">
-      <p class="text-[11px] text-white truncate">${post.caption || i18nT("common.untitled")}</p>
+      <p class="text-[11px] text-white truncate">${esc(post.caption) || i18nT("common.untitled")}</p>
       <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border ${vis.cls} text-[9px] font-code" title="${i18nT("memories.restores_to", { visibility: vis.label })}">
         <i class="fa-solid ${vis.icon}"></i>${vis.label}
       </span>
@@ -1128,8 +1136,8 @@ async function renderCommentsPanel(post, card) {
   const list = comments.length
     ? comments.map((c) => `
         <div class="text-xs">
-          <span class="font-semibold text-white">${c.email}</span>
-          <span class="text-textGray ml-1.5">${c.text}</span>
+          <span class="font-semibold text-white">${esc(c.email)}</span>
+          <span class="text-textGray ml-1.5">${esc(c.text)}</span>
         </div>`).join("")
     : `<p class="text-xs font-code text-textGray">${i18nT("common.no_comments_yet")}</p>`;
 
@@ -1194,7 +1202,7 @@ async function renderAnalyticsPanel(post, card) {
         ${recent.length ? `
           <div class="pt-1.5 border-t border-borderNeon/40">
             <p class="text-textGray mb-1">Recent Visitors</p>
-            ${recent.map((v) => `<p class="text-white">${v.viewerEmail}</p>`).join("")}
+            ${recent.map((v) => `<p class="text-white">${esc(v.viewerEmail)}</p>`).join("")}
           </div>` : ""}
       </div>`;
   } catch (err) {

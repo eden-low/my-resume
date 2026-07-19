@@ -20,6 +20,14 @@ import {
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+// Security audit fix: event.title/locationName are Firestore-stored free text any participant
+// can write, and journey events default to isMineOrPublic (public/connections events are
+// readable by other signed-in users) -- every interpolation into innerHTML below must be
+// escaped. Same implementation as calendar.js's pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 const TYPE_META = {
   career: { label: "Career", icon: "fa-briefcase", text: "text-neonBlue", bg: "bg-neonBlue/10", border: "border-neonBlue/30" },
   education: { label: "Education", icon: "fa-graduation-cap", text: "text-neonPurple", bg: "bg-neonPurple/10", border: "border-neonPurple/30" },
@@ -136,7 +144,7 @@ function eventRow(event) {
       <div class="flex items-start justify-between gap-3">
         <div>
           <p class="text-[11px] font-code text-textGray">${formatDate(event.date)}</p>
-          <h3 class="text-sm font-semibold mt-0.5">${event.title}</h3>
+          <h3 class="text-sm font-semibold mt-0.5">${esc(event.title)}</h3>
         </div>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           <span class="text-[10px] font-code px-2 py-0.5 rounded-full border ${meta.border} ${meta.bg} ${meta.text}">
@@ -148,11 +156,11 @@ function eventRow(event) {
           ${isMine ? `<button class="edit-event-btn text-textGray hover:text-neonPurple transition-colors" title="${i18nT("common.edit_metadata")}"><i class="fa-solid fa-pen text-xs"></i></button>` : ""}
         </div>
       </div>
-      ${event.description ? `<p class="text-xs text-textGray mt-2 leading-relaxed ${expanded ? "" : "hidden"}">${event.description}</p>` : ""}
+      ${event.description ? `<p class="text-xs text-textGray mt-2 leading-relaxed ${expanded ? "" : "hidden"}">${esc(event.description)}</p>` : ""}
       ${(event.tags || []).length || event.locationName ? `
         <div class="flex flex-wrap items-center gap-1.5 mt-2">
-          ${(event.tags || []).map((t) => `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray">#${t}</span>`).join("")}
-          ${event.locationName ? `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray"><i class="fa-solid fa-location-dot mr-1"></i>${event.locationName}</span>` : ""}
+          ${(event.tags || []).map((t) => `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray">#${esc(t)}</span>`).join("")}
+          ${event.locationName ? `<span class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray"><i class="fa-solid fa-location-dot mr-1"></i>${esc(event.locationName)}</span>` : ""}
         </div>` : ""}
     </div>`;
 

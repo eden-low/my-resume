@@ -1794,6 +1794,149 @@ needed no changes.
    permissions change, no dormant CDN feature flag (removed outright, not kept behind a toggle),
    no commit/push/PR/deploy.
 
+**"Production Hardening — Security/Reliability/UX audit: stored XSS remediation" (most recent,
+`audit/security-reliability-ux` branch)** — a read-only audit first (firestore.rules/
+storage.rules re-read line by line — no new gaps found beyond what prior passes already closed;
+open redirects re-audited — no new findings; SW cache/proxy bypass cross-checked against the
+pending iOS PWA branch to avoid duplicating that work), which surfaced one severe, sitewide,
+previously-undiscovered class of bug: **stored XSS via unescaped Firestore content interpolated
+into `innerHTML`**. The codebase had an established `esc()` escaping convention (used correctly
+in `calendar.js`, `js/location-search.js`, and *some* of `portfolio.js`/`profile.js`/
+`gallery.js`), but it was never applied consistently — most page scripts had no escaping at all.
+1. **Root cause, not a one-off**: any participant (`canParticipate()` is enough — Owner or
+   Friend) can write free text into a title/caption/bio/description/note field on almost every
+   collection, and most of those collections default to `isMineOrPublic` (public/connections
+   items are readable by *other* signed-in users, by design — that's how the whole app's
+   public-content model works). A payload planted once in a public record then executes for
+   every viewer who encounters it through any of several independent rendering surfaces.
+2. **Confirmed and fixed, file by file, one commit per file** (`node --check` + full
+   `npm run build && npm test && npm run test:tailwind-migration` after each): `journal.js`
+   (worst instance — `entry.content` was piped through `marked.parse()` with **no sanitizer**,
+   so raw `<script>`/`<img onerror>` executed even in the collapsed preview, which only stripped
+   markdown syntax characters, not HTML; fixed by escaping the raw text *before* `marked.parse()`,
+   which neutralizes HTML while leaving markdown syntax untouched), `gallery.js` (caption in both
+   an `alt=` attribute and content context, plus comments), `notifications.js` (title/message —
+   `gallery.js`'s "someone liked your photo" notification embeds the caption verbatim, so this
+   was a second-order vector reachable from the first), `timeline.js`, `habits.js`, `dashboard.js`
+   (Connections cards — every discoverable person's bio/location/displayName), `global-search.js`
+   (the sitewide Ctrl/Cmd-K palette — the single widest-reach surface, since it's injected on
+   every protected page), `profile.js` (already had `esc()` defined but used it inconsistently —
+   the header, photo grid, Journey/Journal lists, Career preview, Atlas places, Recent Activity,
+   and photo-modal comments were all missed despite the detail modal added in v3.4 being correct),
+   `collections.js` + `collection-detail.js` (title/description/coverImageUrl/color/icon, plus
+   every record type shown inside a collection), `career.js` (Experience/Project/Certificate/
+   Award fields — the highest real-world stakes, since Career is the one collection readable by
+   **unauthenticated** visitors; also added `safeHref()` to validate `githubUrl`/`demoUrl`/
+   `credentialUrl`/document URLs are `http(s)` before use, closing a `javascript:`-URI vector a
+   plain `esc()` wouldn't catch), and `atlas.js` (locationName/locationAddress — including
+   Leaflet's `bindTooltip()`, which treats a string as HTML by default via `setContent()`, a
+   non-obvious injection point outside the usual `innerHTML =` grep pattern).
+3. **Verified safe by design, not fixed because nothing was wrong**: `portfolio.js`/`project.js`
+   render every Firestore-derived value through a small `h()` DOM-builder that only ever sets
+   `.textContent`/element properties, never `innerHTML` — confirmed by re-reading, not assumed
+   from the file's own header comment.
+4. **Deliberately deferred to Medium (documented, not fixed this pass)**: the same unescaped
+   pattern exists in `expenses.js`/`time-capsule.js`/`me.js` (Goals/location) — but every one of
+   those fields lives on always-private, owner-uid-only collections with no `isMineOrPublic`
+   clause, so the worst case is self-XSS (a user attacking only their own browser via their own
+   private data) with no privilege boundary crossed, unlike every Critical fix above.
+5. **Also inventoried, not yet acted on**: ~24 of 26 modals sitewide have no focus trap/Escape/
+   focus-restore (only gallery.js's Trash confirms and assistant.html's consent modal do) — a
+   real WCAG 2.1.2/2.4.3 gap, scoped out of this pass since fixing 24 modals properly needs its
+   own dedicated, tested pass. The full modal inventory (26 `id`s across 13 pages) is recorded so
+   a future pass doesn't have to re-discover it. The Dark/Light audit's deferred modal-backdrop
+   translucency issue is folded into that same future pass, per instruction — fixing it now,
+   before the modal inventory/regression coverage exists, was explicitly ruled out.
+6. **Not part of this pass**: no `firestore.rules`/`storage.rules` changes (this was never a
+   rules-layer gap — every rule correctly allows the reads that make the unescaped renders
+   reachable; the bug was always client-side, at the render boundary), no deploy, nothing merged.
+
+**"...follow-up: Markdown sanitizer + regression coverage" (most recent, same
+`audit/security-reliability-ux` branch)** — a review-only pass over the prior entry's fixes
+found the Journal Markdown fix was incomplete, and that none of the pass's fixes had any
+regression test at all. Both closed here.
+1. **The `marked.parse(esc(content))` fix only closed half the vulnerability.** Escaping before
+   parsing neutralizes raw HTML tags (`<script>`, `<img onerror>`), but does nothing about a URL
+   *Markdown itself generates* — `[click me](javascript:alert(1))` contains none of `& < > "`, so
+   `esc()` passes it through untouched, and marked then emits a live `<a href="javascript:...">`.
+   marked's own built-in URL sanitizer was removed upstream in v5 (2023); this app's `<script
+   src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">` was also unpinned ("latest," never a
+   fixed version), so nothing was actually blocking that scheme. Pre-escaping also silently broke
+   legitimate Markdown — `>` blockquotes and `<url>` autolinks depend on those exact characters
+   reaching the parser unescaped. Fixed with the canonical pairing instead: `journal.js`'s
+   `renderMarkdownSafe(content)` now runs `DOMPurify.sanitize(marked.parse(content))` — marked
+   parses the *raw* content (blockquotes/autolinks/safe links all work again), then DOMPurify
+   strips `javascript:`/`data:` URIs, `on*` event-handler attributes, and `<script>`/`<iframe>` by
+   default (no custom config — a narrower-than-default config risks accidentally permitting
+   something DOMPurify's own defaults already block).
+2. **Both libraries pinned to exact versions with Subresource Integrity** — `journal.html`'s two
+   `<script>` tags now read `marked@18.0.6/lib/marked.umd.js` and
+   `dompurify@3.4.12/dist/purify.min.js`, each with an `integrity="sha384-..."` +
+   `crossorigin="anonymous"` pair. The SRI hashes were computed locally (`sha384` of the exact
+   npm-installed file, via Node's own `crypto` module) rather than copied from a webpage — jsdelivr's
+   npm-mirror CDN serves the literal, unmodified npm tarball contents at that exact versioned path,
+   and npm's own install-time integrity check already guarantees the local `node_modules` copy is
+   authentic, so the locally-computed hash is guaranteed to match what the CDN serves. This is the
+   first use of SRI anywhere in the codebase — scoped to just these two tags, not retrofitted
+   sitewide (every other CDN script stays as it was; a sitewide SRI pass is a separate, larger
+   decision this narrow fix didn't make unilaterally).
+3. **`marked`/`DOMPurify`/`jsdom` added as pinned, exact-version `devDependencies`** (`--save-exact`,
+   no caret/tilde, matching `tailwindcss`'s existing pin) — dev/test-only, never shipped: the
+   frontend still loads both libraries from the pinned CDN URLs above, unaffected by this
+   `package.json` change. They exist so the new test suite can exercise the *real* installed
+   versions (the exact same version numbers as the CDN pins) end-to-end in Node — `jsdom` supplies
+   the `window` DOMPurify requires to run at all outside a browser, and doubles as the HTML parser
+   the tests use to inspect sanitizer output structurally (no `<script>` element, no `onerror`
+   attribute, etc.) rather than substring-matching the output string.
+4. **New `js/__tests__/xss-security.test.js`** (33 assertions, wired into `test:frontend`) —
+   behavioral, not source-regex: every test extracts the *real* function body out of the shipped
+   `.js` file (same `extractFunctionSource()` technique `home-recent-memories.test.js` already
+   established) and executes it against real attack payloads, then parses the result with jsdom to
+   inspect the actual DOM tree. Covers: `esc()` behaviorally (script/onerror/quote-and-ampersand
+   escaping, null/undefined handling, plus a byte-identity drift check across all 10 other files
+   that duplicate it — a future edit to one copy without the rest would silently reopen the gap
+   there); the Journal sanitizer (script/onerror/`data:`-URI/`<iframe>` stripped; blockquotes/
+   autolinks/safe links preserved; **the OLD pre-fix implementation is reconstructed inline and
+   proven to still leak a live `javascript:` href against the real `marked` instance** — literal
+   before/after evidence captured as a permanent regression guard, not just a claim); `career.js`'s
+   `safeHref()` (rejects `javascript:`/`data:`/`vbscript:`, allows real `http(s)://`, escapes
+   attribute-breakout attempts); `global-search.js`'s `resultLabel()` using the *real*
+   `publicDisplayName()` from `js/identity.js` (not a hand-stubbed copy); and `atlas.js`'s
+   `marker.bindTooltip()` call site (Leaflet treats a tooltip string as HTML by default via
+   `setContent()` → `innerHTML` — a non-obvious injection point a plain `grep innerHTML` sweep
+   would miss entirely). A final structural test independently re-confirms Section-by-section what
+   the tests above already showed behaviorally: no `esc()`/`safeHref()`/`renderMarkdownSafe()`
+   result ever reaches an `addDoc`/`updateDoc`/`setDoc` call in any of the 12 fixed files —
+   escaping is render-only, never written back to Firestore, so there is no double-escaping risk
+   on a value's next render.
+5. **One real bug caught while wiring the sandbox, not by the library itself**: `safeHref()`'s
+   tests initially failed for *valid* `https://`/`http://` URLs too — `vm.createContext()` doesn't
+   inherit Node's own globals, so the extracted function's `new URL(...)` threw a bare
+   `ReferenceError: URL is not defined` inside the isolated sandbox, was swallowed by `safeHref()`'s
+   own `try/catch`, and silently returned `""` for every input. Fixed by explicitly injecting `URL`
+   into the sandbox — a reminder that this extraction technique needs every global the extracted
+   function actually touches (`URL`, `location`, `DOMPurify`, `marked`, `esc`) supplied by hand, or
+   failures manifest as the tested function's own catch-all error paths rather than a Node error.
+6. **A pre-existing test needed updating, not weakening** —
+   `scripts/__tests__/tailwind-migration.test.js`'s "existing test scripts still run every prior
+   suite" check pins the exact ordered command list inside `test:frontend` (by design — it already
+   folded in `home-recent-memories.test.js` once before, per its own comment, specifically to catch
+   a *silent removal* disguised as a reorder). Updated the same way again: `home-recent-
+   memories.test.js` moved from "the new addition" into the pinned baseline list, and `xss-
+   security.test.js` became the new addition on top — an ordered-superset check, not a loosened
+   one; dropping or reordering any prior command still fails this test.
+7. **Verification performed**: `npm run build` (clean), `npm run test:functions` (both suites
+   actually executed and counted — Assistant 160/160, Weather 37/37), `npm run test:frontend`
+   (75/75 — date-utils 9, reflection 18, home-recent-memories 15, the new xss-security 33),
+   `npm run test:tailwind-migration` (23/23, after the pinned-command-list fix above) — all four
+   commands run individually and their exact pass counts recorded, not inferred from a single
+   `npm test`. Confirmed `site/`'s allowlisted build output carries no `node_modules`/test-file
+   leakage from the three new devDependencies. Re-merged into a local, unpushed
+   `integration/part2-part3` branch alongside Part 2 (Dark/Light) with a full rebuild/retest — see
+   that branch for the merge-conflict/regression report.
+8. **Not part of this pass**: no other CDN script in the app was retrofitted with SRI (scoped to
+   the two new pins only), no `firestore.rules`/`storage.rules` change, no deploy, nothing merged
+   to `main`.
 **"Production Hardening — Dark/Light theme audit" (most recent, `audit/dark-light-theme`
 branch)** — a targeted, code-verified pass (every finding confirmed by reading the actual CSS
 rule and, for contrast claims, computing the real WCAG relative-luminance ratio against this

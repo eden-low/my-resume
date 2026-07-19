@@ -10,6 +10,15 @@ import { init as initI18n, applyTranslations, t } from "./js/i18n.js";
 import { publicDisplayName } from "./js/identity.js";
 import { excludeDeleted } from "./js/memory-filters.js";
 
+// Security audit fix: resultLabel() below surfaces raw Firestore free text (photo captions,
+// journal/event/habit titles, expense notes, publicDisplayName) across every user's
+// public/mine-merged content -- this palette is reachable from every protected page via
+// Ctrl/Cmd-K, so an unescaped hit here is the widest-reach XSS surface in the app. Same esc()
+// implementation as calendar.js's pre-existing one.
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // "Reports" isn't its own searchable collection (reports.html/insights.js has no documents of
 // its own — it's a derived analytics view over `expenses`), so that bucket is mapped to the
 // actual underlying collection, Expenses, rather than inventing a duplicate result type.
@@ -162,12 +171,12 @@ function matchText(values, q) {
 }
 
 function resultLabel(key, r) {
-  if (key === "users") return publicDisplayName(r);
-  if (key === "photos") return r.caption || "Untitled photo";
-  if (key === "journals") return r.title || "Untitled entry";
-  if (key === "life_events") return r.title || "Untitled event";
-  if (key === "habits") return r.title;
-  if (key === "expenses") return `${r.note || r.category} — RM${r.amount}`;
+  if (key === "users") return esc(publicDisplayName(r));
+  if (key === "photos") return esc(r.caption || "Untitled photo");
+  if (key === "journals") return esc(r.title || "Untitled entry");
+  if (key === "life_events") return esc(r.title || "Untitled event");
+  if (key === "habits") return esc(r.title);
+  if (key === "expenses") return `${esc(r.note || r.category)} — RM${r.amount}`;
   return "";
 }
 

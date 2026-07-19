@@ -10,6 +10,14 @@ import {
   getDocs,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+// Security audit fix: locationName/locationAddress are Firestore-stored free text any
+// participant can write (Memories/Journal/Journey), and the Connections tab aggregates other
+// signed-in users' public location text -- every interpolation into innerHTML below must be
+// escaped. Same implementation as calendar.js's pre-existing esc().
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // Opt-in debug tracing (v3.4.2 follow-up): run
 //   localStorage.setItem("eden_atlas_debug", "1")
 // in the console and reload to see per-collection fetch counts, cluster stats, and the
@@ -278,7 +286,7 @@ function collectionChips(collectionIds) {
   return [...collectionIds].map((id) => {
     const c = cachedCollections.find((x) => x.id === id);
     if (!c) return "";
-    return `<a href="collection-detail.html?id=${id}" class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray hover:text-neonPurple hover:border-neonPurple transition-colors">${bi(c, "title")}</a>`;
+    return `<a href="collection-detail.html?id=${encodeURIComponent(id)}" class="text-[10px] font-code px-2 py-0.5 rounded-full border border-borderNeon text-textGray hover:text-neonPurple hover:border-neonPurple transition-colors">${esc(bi(c, "title"))}</a>`;
   }).join("");
 }
 
@@ -291,7 +299,7 @@ function openDetailPanel(cluster) {
     <span><i class="fa-solid fa-timeline mr-1"></i>${cluster.journey} ${i18nT("atlas.legend_journey")}</span>`;
   document.getElementById("location-detail-collections").innerHTML = collectionChips(cluster.collectionIds);
   document.getElementById("location-detail-photos").innerHTML = cluster.photos.slice(0, 6)
-    .map((url) => `<img src="${url}" alt="" class="w-full h-16 object-cover rounded-lg">`).join("");
+    .map((url) => `<img src="${esc(url)}" alt="" class="w-full h-16 object-cover rounded-lg">`).join("");
   detailPanel.classList.remove("hidden");
   detailPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
@@ -309,7 +317,10 @@ function renderClusters(clusters, color) {
 
   clusters.forEach((cluster) => {
     const marker = L.marker([cluster.lat, cluster.lon], { icon: makeIcon(color) }).addTo(map);
-    marker.bindTooltip(cluster.name, { direction: "top", offset: [0, -8] });
+    // Leaflet's bindTooltip() treats a string as HTML by default (setContent() -> innerHTML) --
+    // cluster.name is Firestore-stored free text, so it must be escaped the same as every other
+    // HTML-context interpolation in this file.
+    marker.bindTooltip(esc(cluster.name), { direction: "top", offset: [0, -8] });
     marker.on("click", () => openDetailPanel(cluster));
     markers.push(marker);
   });
@@ -333,8 +344,8 @@ function renderPlaces(places) {
       el.type = "button";
       el.className = "text-left rounded-xl border border-borderNeon bg-darkBg/40 p-4 hover:border-neonPurple/60 hover:bg-neonPurple/10 transition-colors";
       el.innerHTML = `
-        <p class="text-sm text-white font-semibold flex items-center gap-2 min-w-0"><i class="fa-solid fa-location-dot text-neonPurple text-xs flex-shrink-0"></i><span class="truncate">${p.name}</span></p>
-        ${p.address ? `<p class="text-[11px] font-code text-textGray mt-0.5 truncate">${p.address}</p>` : ""}
+        <p class="text-sm text-white font-semibold flex items-center gap-2 min-w-0"><i class="fa-solid fa-location-dot text-neonPurple text-xs flex-shrink-0"></i><span class="truncate">${esc(p.name)}</span></p>
+        ${p.address ? `<p class="text-[11px] font-code text-textGray mt-0.5 truncate">${esc(p.address)}</p>` : ""}
         <p class="text-[10px] font-code text-textGray mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
           <span><i class="fa-solid fa-images mr-1"></i>${p.memories}</span>
           <span><i class="fa-solid fa-book mr-1"></i>${p.journal}</span>
