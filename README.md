@@ -9,8 +9,9 @@ number of approved "friends" each get their own private expenses/journal/photos/
 space, isolated by Firebase Auth `uid`; anyone else who signs in is a read-only Viewer limited to
 public content — including HR visitors reviewing the public **Career** page. Every page requires
 Google sign-in via `login.html` before it renders — see [Login gate](#login-gate-auth-guardjs--loginhtml)
-below. Built as static HTML/CSS with Tailwind CSS (via CDN) — no build step, no framework, no
-dependencies to install. Installable as a PWA (`manifest.json` + `service-worker.js`, real
+below. Built as static HTML/CSS with Tailwind CSS (a pinned local build, `tailwind.config.js` +
+`npm run build:css` — see Tech stack below) — no framework, no bundler; the frontend JS itself
+stays buildless. Installable as a PWA (`manifest.json` + `service-worker.js`, real
 `images/icon-192.png`/`icon-512.png` app icons) with offline shell caching. Desktop uses a
 permanent left [sidebar](#desktop-sidebar-jssidebarjs); mobile (below the `md` breakpoint) uses
 a fixed top bar, slide-in drawer, bottom nav, and Quick Add sheet — see
@@ -271,7 +272,7 @@ targets are ≥44px.
 
 ## Tech stack
 
-- HTML5 + [Tailwind CSS](https://tailwindcss.com/) (loaded via CDN, configured inline in each page's `<script>` block)
+- HTML5 + [Tailwind CSS](https://tailwindcss.com/) `3.4.19` (pinned exact `devDependency`; compiled locally via `npm run build:css`/`npm run watch:css` from root-level `tailwind.config.js` + `tailwind-input.css` into gitignored `tailwind.generated.css` — single shared config, no per-page CDN script or inline config block)
 - [Chart.js](https://www.chartjs.org/) (loaded via CDN on `resume.html`, `expenses.html`, `dashboard.html`, and `reports.html`) for charts
 - [marked.js](https://marked.js.org/) (loaded via CDN on `journal.html`) for lightweight markdown rendering
 - [Font Awesome 6](https://fontawesome.com/) for icons

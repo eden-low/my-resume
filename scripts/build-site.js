@@ -53,8 +53,12 @@ const ALLOW_FILES = [
   "scripts.js", "settings.js", "time-capsule.js", "timeline.js", "assistant.js",
   // PWA shell
   "service-worker.js", "manifest.json",
-  // Styling
-  "styles.css",
+  // Styling — tailwind.generated.css is build output (produced by `npm run build:css` from
+  // tailwind.config.js/tailwind-input.css, which are themselves deliberately NOT listed here —
+  // source-only config, never published); copyFile() below already throws if an allowlisted
+  // file is missing on disk, so a build run before `build:css` has produced this file fails
+  // loudly here rather than silently shipping a page with no stylesheet.
+  "styles.css", "tailwind.generated.css",
 ];
 
 // Directories copied recursively, in full — each holds only product assets (client-side shared
@@ -66,7 +70,10 @@ const ALLOW_DIRS = ["images", "js", "locales"];
 // brand-book.md, docs/*, firestore.rules, storage.rules, firebase.json, .firebaserc,
 // .gitignore, .env*, netlify.toml, netlify/ (Function source — see the header comment),
 // scripts/ (this build tooling), migrate-career.html (see CLAUDE.md/the completion report for
-// why it's blocked rather than deleted), and anything not explicitly listed above.
+// why it's blocked rather than deleted), tailwind.config.js/tailwind-input.css (Tailwind build
+// source — only their compiled output, tailwind.generated.css, is a product asset),
+// package.json/package-lock.json (Node dependency manifests), and anything not explicitly
+// listed above.
 
 function rmrf(p) {
   fs.rmSync(p, { recursive: true, force: true });

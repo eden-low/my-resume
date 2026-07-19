@@ -31,8 +31,12 @@
 # unmatched/typo'd URL and break that direct-access model, so none is configured here —
 # unmatched paths fall through to Netlify's own 404.
 
+# `npm run build` runs `build:css` (compiles the pinned local Tailwind v3.4.19 build from
+# tailwind.config.js/tailwind-input.css into tailwind.generated.css) before
+# scripts/build-site.js — see package.json's "build" script. Netlify invokes that one repository
+# script rather than duplicating the Tailwind CLI invocation here.
 [build]
-  command = "node scripts/build-site.js"
+  command = "npm run build"
   publish = "site"
   functions = "netlify/functions"
 

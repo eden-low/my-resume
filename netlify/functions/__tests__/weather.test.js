@@ -412,10 +412,13 @@ async function run() {
     assert.strictEqual(cachePutCalls.length, 0);
   });
 
-  await test("service-worker.js CACHE version is bumped to eden-shell-v29 and precaches the new browser assets this pass added", async () => {
+  await test("service-worker.js precaches the browser assets this pass added (Weather Function client)", async () => {
     const root = path.resolve(__dirname, "..", "..", "..");
     const src = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
-    assert.ok(/const CACHE = "eden-shell-v29"/.test(src), "CACHE must be bumped to eden-shell-v29");
+    // CACHE's exact version string is intentionally not asserted here — it is expected to keep
+    // advancing past eden-shell-v29 as later, unrelated passes (e.g. the Tailwind local build
+    // migration's eden-shell-v30) bump it further; this test only cares that the assets THIS
+    // pass added are still precached, not which version number currently owns the bump.
     assert.ok(/"js\/date-utils\.js"/.test(src));
     assert.ok(/"js\/reflection\.js"/.test(src));
     assert.ok(/"js\/weather-client\.js"/.test(src));

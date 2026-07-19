@@ -1,6 +1,16 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v30 (Tailwind local build migration): the runtime Tailwind Play CDN (cdn.tailwindcss.com) is
+// replaced by a pinned local Tailwind v3.4.19 build — every page's `<script
+// src="https://cdn.tailwindcss.com">` and inline `tailwind.config = {...}` block is gone,
+// replaced by one `<link rel="stylesheet" href="tailwind.generated.css">` reading tokens from
+// the new root-level tailwind.config.js (single source of truth, byte-identical values to what
+// every page's inline config used to duplicate). tailwind.generated.css is a new same-origin,
+// build-time-generated asset (never hand-edited, gitignored) and is added to PRECACHE below.
+// cdn.tailwindcss.com is removed from BYPASS_HOSTS — the runtime dependency on that host no
+// longer exists, so there is nothing left for this worker to bypass there; every other bypass
+// host/path and cache rule is unchanged.
 // v29 (Production Hardening Phase 1): home.html/me.js changed — the hardcoded, browser-exposed
 // OpenWeatherMap API key is gone from both; weather now goes through a new authenticated Netlify
 // Function (netlify/functions/weather.js, never part of PRECACHE — Function source is never a
@@ -76,14 +86,14 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v29";
+const CACHE = "eden-shell-v30";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
   "timeline.html", "dashboard.html", "contact.html", "login.html", "settings.html",
   "habits.html", "notifications.html", "calendar.html", "reports.html",
   "profile.html", "atlas.html", "portfolio.html", "project.html", "assistant.html",
-  "styles.css", "scripts.js", "firebase-init.js", "auth-guard.js", "global-search.js",
+  "styles.css", "tailwind.generated.css", "scripts.js", "firebase-init.js", "auth-guard.js", "global-search.js",
   "gallery.js", "expenses.js", "journal.js", "timeline.js", "dashboard.js", "settings.js",
   "habits.js", "notifications.js", "export.js", "calendar.js", "insights.js",
   "profile.js", "career.js", "atlas.js", "portfolio.js", "project.js", "assistant.js",
@@ -99,7 +109,6 @@ const BYPASS_HOSTS = [
   "googleapis.com",
   "firebaseapp.com",
   "openweathermap.org",
-  "cdn.tailwindcss.com",
   "cdnjs.cloudflare.com",
   "cdn.jsdelivr.net",
   "unpkg.com",

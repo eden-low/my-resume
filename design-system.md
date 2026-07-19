@@ -48,8 +48,10 @@ a stat-panel from a game.
 
 ## Colors
 
-Defined identically in every page's inline `tailwind.config` (no single source of truth yet —
-keep all copies in sync manually when changing):
+Defined once in root-level `tailwind.config.js` (single source of truth since the Tailwind local
+build migration pass — Tailwind is pinned to exact version `3.4.19`; run `npm run build:css` or
+`npm run watch:css` after changing a token, and never reintroduce a per-page CDN `<script>` tag
+or inline `tailwind.config = {...}` block):
 
 | Token | Hex | Use |
 |---|---|---|

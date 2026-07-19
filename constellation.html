@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Memory Constellation | EdenAtlas</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="tailwind.generated.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <link rel="stylesheet" href="styles.css" />
@@ -13,28 +13,6 @@
   <meta name="theme-color" content="#09090e">
   <link rel="apple-touch-icon" href="images/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            darkBg: '#0a0a0e',
-            cardBg: '#17151f',
-            borderNeon: '#2a2833',
-            neonPurple: '#a78bfa',
-            neonBlue: '#6ea8fe',
-            neonViolet: '#8b7cf0',
-            textGray: '#9793ab',
-          },
-          fontFamily: {
-            cyber: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'sans-serif'],
-            code: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', '"Fira Code"', 'monospace'],
-            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
 </head>
 <body data-owner-only="true" class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
   <header class="hidden max-w-7xl mx-auto px-4 pt-6">

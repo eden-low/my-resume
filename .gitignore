@@ -6,6 +6,10 @@ node_modules/
 # deploy, never hand-edited, never committed.
 /site/
 
+# Generated Tailwind CSS output (tailwind.config.js/tailwind-input.css are the tracked source) —
+# rebuilt by `npm run build:css` on every build, never hand-edited, never committed.
+/tailwind.generated.css
+
 # Environment / secrets (Netlify Functions prep) — never commit real values.
 # Production secrets belong in Netlify Project configuration -> Environment variables,
 # not in any file in this repo. See .env.example for the documented variable names.
