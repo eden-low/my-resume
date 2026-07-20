@@ -7,8 +7,8 @@
     "build:css": "tailwindcss -c tailwind.config.js -i ./tailwind-input.css -o ./tailwind.generated.css --minify",
     "watch:css": "tailwindcss -c tailwind.config.js -i ./tailwind-input.css -o ./tailwind.generated.css --watch",
     "build": "npm run build:css && node scripts/build-site.js",
-    "test:functions": "node netlify/functions/__tests__/assistant.test.js && node netlify/functions/__tests__/weather.test.js",
-    "test:frontend": "node js/__tests__/date-utils.test.js && node js/__tests__/reflection.test.js && node js/__tests__/home-recent-memories.test.js && node js/__tests__/xss-security.test.js && node js/__tests__/auth-pulse-scope.test.js",
+    "test:functions": "node netlify/functions/__tests__/assistant.test.js && node netlify/functions/__tests__/weather.test.js && node netlify/functions/__tests__/anilist.test.js",
+    "test:frontend": "node js/__tests__/date-utils.test.js && node js/__tests__/reflection.test.js && node js/__tests__/home-recent-memories.test.js && node js/__tests__/xss-security.test.js && node js/__tests__/auth-pulse-scope.test.js && node js/__tests__/discover-security.test.js",
     "test:tailwind-migration": "node scripts/__tests__/tailwind-migration.test.js",
     "test": "npm run test:functions && npm run test:frontend"
   },

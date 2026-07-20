@@ -240,21 +240,25 @@ async function run() {
     const pkg = JSON.parse(read("package.json"));
 
     const functionsCmds = splitCmds(pkg.scripts["test:functions"]);
+    // assistant.test.js/weather.test.js are the prior baseline; anilist.test.js (Discover, anime
+    // MVP) is the new addition on top — never a silent removal disguised as a reorder.
     assert.deepStrictEqual(functionsCmds, [
       "node netlify/functions/__tests__/assistant.test.js",
       "node netlify/functions/__tests__/weather.test.js",
+      "node netlify/functions/__tests__/anilist.test.js",
     ]);
 
     const frontendCmds = splitCmds(pkg.scripts["test:frontend"]);
-    // "Prior" here means "predates both the stored-XSS regression suite (audit/security-reliability-ux,
-    // merged to main as PR #5) and the auth-pulse-scope regression suite (audit/dark-light-theme's
-    // manual-QA follow-up), reconciled here by updating this branch from the latest main" —
-    // home-recent-memories.test.js was itself the new addition the last time this exact assertion
-    // was updated (see git history); it's now folded into the prior/baseline list.
+    // "Prior" here means "predates the Discover (anime MVP) pass's own new suite," reconciled by
+    // folding every previously-new addition (xss-security.test.js, auth-pulse-scope.test.js) into
+    // this baseline list — the same "new addition becomes next pass's baseline" convention this
+    // assertion has followed every time it was updated before.
     const priorFrontendCmds = [
       "node js/__tests__/date-utils.test.js",
       "node js/__tests__/reflection.test.js",
       "node js/__tests__/home-recent-memories.test.js",
+      "node js/__tests__/xss-security.test.js",
+      "node js/__tests__/auth-pulse-scope.test.js",
     ];
     // Every pre-existing command is still present, in its original relative order (a genuine
     // ordered-subsequence check, not just an unordered "includes all of" set check).
@@ -264,13 +268,12 @@ async function run() {
       assert.ok(idx !== -1 && idx >= cursor, `test:frontend dropped or reordered pre-existing command: ${cmd}`);
       cursor = idx + 1;
     });
-    // And exactly two new commands were added on top — the stored-XSS behavioral regression suite
-    // (js/__tests__/xss-security.test.js) followed by the infinite-auth-pulse regression suite
-    // (js/__tests__/auth-pulse-scope.test.js) — never a silent removal disguised as a reorder.
+    // And exactly one new command was added on top — the Discover (anime MVP) security/rules/nav
+    // regression suite (js/__tests__/discover-security.test.js) — never a silent removal disguised
+    // as a reorder.
     assert.deepStrictEqual(frontendCmds, [
       ...priorFrontendCmds,
-      "node js/__tests__/xss-security.test.js",
-      "node js/__tests__/auth-pulse-scope.test.js",
+      "node js/__tests__/discover-security.test.js",
     ]);
 
     assert.strictEqual(pkg.scripts.test, "npm run test:functions && npm run test:frontend");

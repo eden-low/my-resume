@@ -1,6 +1,19 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v33 (Discover — anime MVP, Owner-only): discover.html/discover.js added to PRECACHE (the new
+// page's static client shell — same treatment as every other page/script here). The AniList
+// proxy Function (netlify/functions/anilist.js) is never a static browser asset (Function source
+// is structurally excluded from the deployed site by scripts/build-site.js's publish allowlist,
+// same as every other Function) and its production route, /.netlify/functions/anilist, is
+// already covered by the existing NEVER_CACHE_PATH_PREFIXES rule below with no change needed —
+// every Function response (health, the AI assistant, weather, and now AniList) is always
+// network-only. AniList's own endpoint (graphql.anilist.co) and its image CDN (s4.anilist.co)
+// are never reachable from the browser at all in this design (only netlify/functions/anilist.js
+// calls the GraphQL endpoint, server-side; cover images the browser DOES load directly are
+// already excluded from Cache Storage by the fetch handler's unconditional cross-origin check,
+// with no BYPASS_HOSTS entry needed) — not added to BYPASS_HOSTS since, unlike Qwen's
+// aliyuncs.com entry, there is no in-scope request shape here that check wouldn't already catch.
 // v32 (iOS standalone-PWA sign-in fix): login.html/firebase-init.js changed (see those files'
 // own comments) — standalone PWAs now complete Google sign-in via signInWithRedirect against a
 // same-origin-proxied authDomain instead of being punted out to Safari. This SW's fetch handler
@@ -105,17 +118,17 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v32";
+const CACHE = "eden-shell-v33";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",
   "timeline.html", "dashboard.html", "contact.html", "login.html", "settings.html",
   "habits.html", "notifications.html", "calendar.html", "reports.html",
-  "profile.html", "atlas.html", "portfolio.html", "project.html", "assistant.html",
+  "profile.html", "atlas.html", "portfolio.html", "project.html", "assistant.html", "discover.html",
   "styles.css", "tailwind.generated.css", "scripts.js", "firebase-init.js", "auth-guard.js", "global-search.js",
   "gallery.js", "expenses.js", "journal.js", "timeline.js", "dashboard.js", "settings.js",
   "habits.js", "notifications.js", "export.js", "calendar.js", "insights.js",
-  "profile.js", "career.js", "atlas.js", "portfolio.js", "project.js", "assistant.js",
+  "profile.js", "career.js", "atlas.js", "portfolio.js", "project.js", "assistant.js", "discover.js",
   "js/i18n.js", "js/mobile-nav.js", "js/sidebar.js", "js/splash.js", "js/location-search.js",
   "js/location-fields.js", "js/memory-filters.js", "js/resume-data.js",
   "js/date-utils.js", "js/reflection.js", "js/weather-client.js",

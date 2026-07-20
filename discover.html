@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){try{var s=JSON.parse(localStorage.getItem('lfj:settings')||'{}');if(s.theme==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discover | EdenAtlas</title>
+  <link rel="stylesheet" href="tailwind.generated.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#09090e">
+  <script>try{if(JSON.parse(localStorage.getItem('lfj:settings')||'{}').theme==='light')document.querySelector('meta[name="theme-color"]').setAttribute('content','#f5f5f7');}catch(e){}</script>
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+</head>
+<body data-owner-only="true" class="auth-check-pending bg-darkBg text-white font-sans grid-bg min-h-screen pb-12">
+  <header class="hidden max-w-7xl mx-auto px-4 pt-6">
+    <div class="bg-cardBg/80 backdrop-blur-md neon-border-purple rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-neonViolet to-neonPurple flex items-center justify-center shadow-lg shadow-neonPurple/20">
+          <i class="fa-solid fa-circle-user text-white text-lg animate-pulse"></i>
+        </div>
+        <div>
+          <span class="font-cyber font-semibold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neonPurple">EdenAtlas</span>
+          <span class="text-[10px] block text-neonPurple font-code font-bold tracking-widest -mt-1">DIGITAL ATLAS</span>
+        </div>
+      </div>
+            <nav class="flex-1 min-w-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-cyber font-semibold tracking-wider text-textGray">
+        <a href="home.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-house text-xs"></i> <span data-i18n="nav.home">Home</span></a>
+        <a href="resume.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-scroll text-xs"></i> <span data-i18n="nav.career">Career</span></a>
+        <a href="gallery.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> <span data-i18n="nav.memories">Memories</span></a>
+        <a href="atlas.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-xs"></i> <span data-i18n="nav.atlas">Atlas</span></a>
+        <a href="timeline.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-timeline text-xs"></i> <span data-i18n="nav.journey">Journey</span></a>
+        <a href="dashboard.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-xs"></i> <span data-i18n="nav.people">Connections</span></a>
+        <a href="reports.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-chart-pie text-xs"></i> <span data-i18n="nav.reports">Reports</span></a>
+        <a href="notifications.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-bell text-xs"></i> <span data-i18n="nav.inbox">Inbox</span> <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold"></span></a>
+        <a href="me.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-circle-user text-xs"></i> <span data-i18n="nav.me">Me</span></a>
+        <a href="journal.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-book text-xs"></i> <span data-i18n="nav.journal">Journal</span></a>
+        <a href="expenses.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-wallet text-xs"></i> <span data-i18n="nav.finance">Finance</span></a>
+        <a href="calendar.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-xs"></i> <span data-i18n="nav.calendar">Calendar</span></a>
+        <a href="habits.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-list-check text-xs"></i> <span data-i18n="nav.habits">Habits</span></a>
+        <a href="time-capsule.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-box-archive text-xs"></i> <span data-i18n="nav.time_capsule">Time Capsule</span></a>
+        <a href="discover.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-compass text-xs"></i> <span data-i18n="nav.discover">Discover</span></a>
+        <a href="contact.html" class="hover:text-neonPurple transition-colors flex items-center gap-1.5"><i class="fa-solid fa-envelope text-xs"></i> <span data-i18n="nav.contact">Contact</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-8 space-y-6">
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-6">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 class="font-cyber font-semibold text-2xl" data-i18n="discover.title">Discover</h1>
+          <p class="text-textGray mt-2 text-sm" data-i18n="discover.subtitle">Browse anime and keep your own watch list.</p>
+        </div>
+        <div id="auth-control" class="flex items-center gap-3"></div>
+      </div>
+    </section>
+
+    <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+      <div id="discover-view-tabs" class="flex items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray bg-darkBg/40 rounded-full p-1">
+        <button type="button" data-view="discover" class="view-tab px-3 py-1.5 rounded-full transition-colors" data-i18n="discover.tab_discover">Discover</button>
+        <button type="button" data-view="mylist" class="view-tab px-3 py-1.5 rounded-full transition-colors" data-i18n="discover.tab_mylist">My List</button>
+      </div>
+      <p id="discover-count" class="text-[11px] font-code text-textGray"></p>
+    </section>
+
+    <!-- ---- Discover view ---- -->
+    <div id="discover-view">
+      <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-3 flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
+        <button type="button" data-subtab="this_season" class="discover-subtab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.this_season">This Season</button>
+        <button type="button" data-subtab="trending" class="discover-subtab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.trending">Trending</button>
+        <button type="button" data-subtab="search" class="discover-subtab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.search_tab">Search</button>
+      </section>
+
+      <section id="discover-search-bar" class="hidden reveal bg-cardBg/90 neon-border-purple rounded-2xl p-3 mt-4">
+        <form id="discover-search-form" class="flex items-center gap-2">
+          <input id="discover-search-input" type="text" maxlength="100" data-i18n-placeholder="discover.search_placeholder" placeholder="Search anime…" class="flex-1 bg-darkBg/60 border border-borderNeon rounded-lg px-3 py-2 text-sm text-white placeholder:text-textGray/60">
+          <button type="submit" class="px-4 py-2 bg-gradient-to-r from-neonViolet to-neonPurple rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:scale-105 transition-all" data-i18n="common.search">Search</button>
+        </form>
+      </section>
+
+      <div id="discover-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+        <div class="skeleton h-64 rounded-xl"></div>
+        <div class="skeleton h-64 rounded-xl"></div>
+        <div class="skeleton h-64 rounded-xl hidden sm:block"></div>
+        <div class="skeleton h-64 rounded-xl hidden md:block"></div>
+      </div>
+      <div id="discover-empty" class="hidden text-center py-14">
+        <i class="fa-solid fa-compass text-3xl text-textGray/40 mb-3"></i>
+        <p class="text-sm font-cyber font-semibold text-white" data-i18n="discover.empty_discover">Nothing to show yet.</p>
+        <p class="text-xs font-code text-textGray mt-1.5" data-i18n="discover.empty_discover_subtitle">Try a different tab or search term.</p>
+      </div>
+      <div id="discover-error" class="hidden text-center py-14">
+        <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400/70 mb-3"></i>
+        <p id="discover-error-message" class="text-sm font-code text-rose-400"></p>
+        <button id="discover-retry-btn" type="button" class="mt-3 px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-neonPurple transition-all" data-i18n="common.retry">Retry</button>
+      </div>
+    </div>
+
+    <!-- ---- My List view ---- -->
+    <div id="mylist-view" class="hidden">
+      <section class="reveal bg-cardBg/90 neon-border-purple rounded-2xl p-3 flex flex-wrap items-center gap-1.5 text-xs font-cyber font-bold tracking-wider text-textGray">
+        <button type="button" data-filter="all" class="mylist-filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="common.all">All</button>
+        <button type="button" data-filter="planning" class="mylist-filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.status_planning">Plan to Watch</button>
+        <button type="button" data-filter="watching" class="mylist-filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.status_watching">Watching</button>
+        <button type="button" data-filter="completed" class="mylist-filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.status_completed">Completed</button>
+        <button type="button" data-filter="paused" class="mylist-filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.status_paused">Paused</button>
+        <button type="button" data-filter="dropped" class="mylist-filter-tab px-3 py-1.5 rounded-full hover:text-neonPurple hover:bg-neonPurple/10 transition-colors" data-i18n="discover.status_dropped">Dropped</button>
+      </section>
+
+      <div id="mylist-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+        <div class="skeleton h-64 rounded-xl"></div>
+        <div class="skeleton h-64 rounded-xl hidden sm:block"></div>
+      </div>
+      <div id="mylist-empty" class="hidden text-center py-14">
+        <i class="fa-solid fa-list-check text-3xl text-textGray/40 mb-3"></i>
+        <p class="text-sm font-cyber font-semibold text-white" data-i18n="discover.empty_mylist">Your list is empty.</p>
+        <p class="text-xs font-code text-textGray mt-1.5" data-i18n="discover.empty_mylist_subtitle">Add anime from Discover to start tracking it here.</p>
+      </div>
+      <div id="mylist-error" class="hidden text-center py-14">
+        <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400/70 mb-3"></i>
+        <p id="mylist-error-message" class="text-sm font-code text-rose-400"></p>
+        <button id="mylist-retry-btn" type="button" class="mt-3 px-4 py-2 bg-cardBg/70 border border-borderNeon rounded-xl text-xs font-cyber font-bold tracking-wider text-white hover:border-neonPurple transition-all" data-i18n="common.retry">Retry</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Accessible anime detail modal: focus trap + Escape + focus restoration (see discover.js's
+       trapFocus(), duplicated from gallery.js's precedent per this repo's per-file convention). -->
+  <div id="anime-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="anime-modal-backdrop" class="absolute inset-0 bg-darkBg/80 backdrop-blur-sm"></div>
+    <div id="anime-modal-panel" role="dialog" aria-modal="true" aria-labelledby="anime-modal-title" class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto bg-cardBg neon-border-purple rounded-2xl p-6">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <h2 id="anime-modal-title" class="font-cyber font-semibold text-lg leading-snug"></h2>
+        <button id="anime-modal-close" type="button" aria-label="Close" class="text-textGray hover:text-white text-xl leading-none flex-shrink-0">&times;</button>
+      </div>
+      <div id="anime-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast (Remove-from-list Undo) -->
+  <div id="discover-toast" class="hidden fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-cardBg neon-border-purple rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg max-w-[90vw]">
+    <span id="discover-toast-text" class="text-sm text-white whitespace-nowrap"></span>
+    <button id="discover-toast-action" type="button" class="hidden text-xs font-cyber font-bold tracking-wider text-neonPurple hover:text-white transition-colors whitespace-nowrap"></button>
+    <button id="discover-toast-close" type="button" aria-label="Close" class="text-textGray hover:text-white text-sm leading-none">&times;</button>
+  </div>
+
+  <script type="module" src="js/splash.js"></script>
+    <script type="module" src="js/i18n.js"></script>
+  <footer class="max-w-7xl mx-auto px-4 mt-10 pb-6 text-center">
+    <p class="text-[11px] font-code text-textGray/70" data-i18n="footer.line">EdenAtlas &middot; by Jun &middot; Version 3.2</p>
+  </footer>
+
+  <script src="scripts.js" defer></script>
+  <script type="module" src="auth-guard.js"></script>
+    <script type="module" src="global-search.js"></script>
+    <script type="module" src="js/mobile-nav.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="discover.js"></script>
+</body>
+</html>
