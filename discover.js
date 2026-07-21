@@ -534,6 +534,13 @@ function switchDiscoverSubtab(subtab) {
   loadDiscoverGrid();
 }
 
+document.querySelectorAll(".discover-subtab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    switchDiscoverSubtab(btn.dataset.subtab);
+    if (btn.dataset.subtab === "search") discoverSearchInput.focus();
+  });
+});
+
 discoverSearchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const q = discoverSearchInput.value.trim();
