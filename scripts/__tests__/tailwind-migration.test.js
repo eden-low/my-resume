@@ -255,11 +255,11 @@ async function run() {
     ]);
 
     const frontendCmds = splitCmds(pkg.scripts["test:frontend"]);
-    // "Prior" here means "predates the Discover tab-click regression fix's own new suite,"
+    // "Prior" here means "predates the Discover description-sanitization fix's own new suite,"
     // reconciled by folding every previously-new addition (xss-security.test.js,
-    // auth-pulse-scope.test.js, discover-security.test.js) into this baseline list — the same
-    // "new addition becomes next pass's baseline" convention this assertion has followed every
-    // time it was updated before.
+    // auth-pulse-scope.test.js, discover-security.test.js, discover-tabs.test.js) into this
+    // baseline list — the same "new addition becomes next pass's baseline" convention this
+    // assertion has followed every time it was updated before.
     const priorFrontendCmds = [
       "node js/__tests__/date-utils.test.js",
       "node js/__tests__/reflection.test.js",
@@ -267,6 +267,7 @@ async function run() {
       "node js/__tests__/xss-security.test.js",
       "node js/__tests__/auth-pulse-scope.test.js",
       "node js/__tests__/discover-security.test.js",
+      "node js/__tests__/discover-tabs.test.js",
     ];
     // Every pre-existing command is still present, in its original relative order (a genuine
     // ordered-subsequence check, not just an unordered "includes all of" set check).
@@ -276,12 +277,13 @@ async function run() {
       assert.ok(idx !== -1 && idx >= cursor, `test:frontend dropped or reordered pre-existing command: ${cmd}`);
       cursor = idx + 1;
     });
-    // And exactly one new command was added on top — the Discover subtab-click (Trending/Search)
-    // regression suite (js/__tests__/discover-tabs.test.js) — never a silent removal disguised
-    // as a reorder.
+    // And exactly one new command was added on top — the Discover description-sanitization
+    // (AniList markup -> safe plain text) regression suite
+    // (js/__tests__/discover-description.test.js) — never a silent removal disguised as a
+    // reorder.
     assert.deepStrictEqual(frontendCmds, [
       ...priorFrontendCmds,
-      "node js/__tests__/discover-tabs.test.js",
+      "node js/__tests__/discover-description.test.js",
     ]);
 
     assert.strictEqual(pkg.scripts.test, "npm run test:functions && npm run test:frontend");

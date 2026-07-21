@@ -811,6 +811,9 @@
     "detail_not_found_title": "Not found",
     "detail_not_found": "This title couldn't be found.",
     "detail_error_title": "Couldn't load details",
-    "view_on_anilist": "View on AniList"
+    "view_on_anilist": "View on AniList",
+    "no_description": "No description available.",
+    "show_more": "Show more",
+    "show_less": "Show less"
   }
 }

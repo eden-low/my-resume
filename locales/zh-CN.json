@@ -811,6 +811,9 @@
     "detail_not_found_title": "未找到",
     "detail_not_found": "找不到该作品。",
     "detail_error_title": "无法加载详情",
-    "view_on_anilist": "在 AniList 查看"
+    "view_on_anilist": "在 AniList 查看",
+    "no_description": "暂无简介。",
+    "show_more": "显示更多",
+    "show_less": "收起"
   }
 }

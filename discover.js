@@ -75,6 +75,64 @@ function setImageWithFallback(imgEl, placeholderEl, url) {
   placeholderEl.classList.add("hidden");
 }
 
+// AniList's `description(asHtml: false)` field is documented to still leave inline markup
+// (`<br>`, `<i>`, `<b>`, etc.) literally embedded in the "plain" string it returns -- asking for
+// asHtml:false only suppresses the outer wrapping, not inline formatting tags. Piping that raw
+// string through esc() (which only HTML-escapes it) and into innerHTML, as the detail modal used
+// to, displays the escaped tag characters as literal visible text ("<br>", "<i>...</i>") instead
+// of real line breaks -- the reported bug. descriptionToPlainText() converts it into inert plain
+// text instead: meaningful <br>/paragraph breaks become real newlines, every remaining tag is
+// removed (keeping its inner text), and HTML entities are decoded LAST, only after all literal
+// tag markup is already gone -- so an attacker can never smuggle a real tag past this function by
+// entity-encoding it (`&lt;script&gt;` only ever decodes into inert, literal display text, never
+// a live tag). The caller (renderAnimeDescription()) always assigns the result via `.textContent`
+// only, never `.innerHTML` -- so even a residual tag-shaped substring (e.g. a malformed tag with
+// no closing `>`, which this function's regexes simply can't match and so leaves untouched) can
+// never execute or be reparsed as HTML, regardless of how imperfect the stripping is.
+const HTML_ENTITY_MAP = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  hellip: "…", mdash: "—", ndash: "–",
+  lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+};
+
+function decodeHtmlEntities(s) {
+  return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, ent) => {
+    if (ent[0] === "#") {
+      const isHex = ent[1] === "x" || ent[1] === "X";
+      const code = parseInt(ent.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+      if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return match;
+      try {
+        return String.fromCodePoint(code);
+      } catch {
+        return match;
+      }
+    }
+    return Object.prototype.hasOwnProperty.call(HTML_ENTITY_MAP, ent) ? HTML_ENTITY_MAP[ent] : match;
+  });
+}
+
+function descriptionToPlainText(raw) {
+  if (typeof raw !== "string" || !raw) return "";
+  let s = raw;
+  // <script>/<style> are the only tags whose CONTENT is dropped along with the tag itself --
+  // never legitimate synopsis prose, and (unlike every other tag) not worth preserving the inner
+  // text of even as inert display text.
+  s = s.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "");
+  s = s.replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "");
+  // Preserve meaningful line/paragraph breaks -- AniList descriptions use <br> (often doubled for
+  // a paragraph gap) rather than <p>, so this alone covers "paragraph boundaries" too.
+  s = s.replace(/<br\s*\/?>/gi, "\n");
+  // Remove every remaining tag -- opening, closing, self-closing, with or without attributes --
+  // keeping any text between/around them. A single flat pass over the raw string handles nested
+  // formatting tags (`<b><i>text</i></b>` -> "text") and isolated void tags like a bare
+  // `<img ...>` (no inner text to keep) without needing to understand tag nesting at all.
+  s = s.replace(/<[^>]*>/g, "");
+  // Decode entities LAST, once no literal tag markup remains -- see the header comment above.
+  s = decodeHtmlEntities(s);
+  s = s.replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n");
+  return s.trim();
+}
+
 // A 401 almost always means a stale cached ID token, not a genuinely invalid session -- exactly
 // one retry with a forced refresh. Duplicated from assistant.js's withOneRetryOn401() per this
 // repo's established per-file convention (see that function's own header comment).
@@ -728,7 +786,7 @@ function renderDetailModal(media) {
       </div>
     </div>
     ${genres.length ? `<div class="flex flex-wrap gap-1.5 mt-4">${genres.map((g) => `<span class="px-2 py-0.5 rounded-full border border-borderNeon text-[10px] font-code text-textGray">${esc(g)}</span>`).join("")}</div>` : ""}
-    ${media.description ? `<p class="mt-4 text-sm text-white leading-relaxed whitespace-pre-wrap">${esc(media.description)}</p>` : ""}
+    <div class="mt-4" data-description></div>
     <div class="mt-4 flex items-center gap-2" data-modal-actions></div>
     ${href ? `<a href="${href}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1.5 text-xs font-code text-neonPurple hover:text-white transition-colors">${esc(i18nT("discover.view_on_anilist"))} <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>` : ""}
   `;
@@ -737,7 +795,51 @@ function renderDetailModal(media) {
   if (cover) {
     setImageWithFallback(animeModalBody.querySelector("[data-cover-img]"), animeModalBody.querySelector("[data-cover-placeholder]"), cover);
   }
+  renderAnimeDescription(animeModalBody.querySelector("[data-description]"), media);
   renderCardActions(animeModalBody.querySelector("[data-modal-actions]"), media, followedDoc);
+}
+
+// The description is deliberately never part of the innerHTML template above -- it's the one
+// field AniList returns with (undocumented) literal inline markup still embedded even when
+// asHtml:false is requested (see descriptionToPlainText()'s header comment). Built entirely via
+// createElement()/.textContent, exactly mirroring how setImageWithFallback() already assigns the
+// cover `src` as a DOM property into a placeholder left by the innerHTML template above, rather
+// than string-interpolating either value into that template.
+function renderAnimeDescription(container, media) {
+  if (!container) return;
+  container.replaceChildren();
+  const plain = descriptionToPlainText(media && media.description);
+
+  const p = document.createElement("p");
+  p.className = "text-sm leading-relaxed whitespace-pre-line";
+  if (!plain) {
+    p.classList.add("text-textGray");
+    p.textContent = i18nT("discover.no_description");
+    container.appendChild(p);
+    return;
+  }
+  p.classList.add("text-white", "line-clamp-6");
+  p.textContent = plain;
+  container.appendChild(p);
+
+  // Only offer Show more/less if the clamp is actually hiding content -- measured from the real,
+  // already-laid-out DOM (the modal is visible by the time this runs) rather than guessed from a
+  // character count, which can't account for the container's real width, font metrics, or actual
+  // line-wrapping. A short description that fits within 6 lines never gets a toggle button.
+  const overflowing = p.scrollHeight > p.clientHeight + 1; // +1: rounding-tolerant
+  if (!overflowing) return;
+
+  let expanded = false;
+  const toggleBtn = document.createElement("button");
+  toggleBtn.type = "button";
+  toggleBtn.className = "description-toggle-btn mt-1.5 text-xs font-cyber font-bold tracking-wider text-neonPurple hover:text-white transition-colors";
+  toggleBtn.textContent = i18nT("discover.show_more");
+  toggleBtn.addEventListener("click", () => {
+    expanded = !expanded;
+    p.classList.toggle("line-clamp-6", !expanded);
+    toggleBtn.textContent = i18nT(expanded ? "discover.show_less" : "discover.show_more");
+  });
+  container.appendChild(toggleBtn);
 }
 
 function refreshOpenModalActions(anilistId) {

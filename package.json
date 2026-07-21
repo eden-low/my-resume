@@ -9,7 +9,7 @@
     "build": "npm run build:css && node scripts/generate-deploy-origin.js && node scripts/build-site.js",
     "generate:deploy-origin": "node scripts/generate-deploy-origin.js",
     "test:functions": "node netlify/functions/__tests__/assistant.test.js && node netlify/functions/__tests__/weather.test.js && node netlify/functions/__tests__/anilist.test.js",
-    "test:frontend": "node js/__tests__/date-utils.test.js && node js/__tests__/reflection.test.js && node js/__tests__/home-recent-memories.test.js && node js/__tests__/xss-security.test.js && node js/__tests__/auth-pulse-scope.test.js && node js/__tests__/discover-security.test.js && node js/__tests__/discover-tabs.test.js",
+    "test:frontend": "node js/__tests__/date-utils.test.js && node js/__tests__/reflection.test.js && node js/__tests__/home-recent-memories.test.js && node js/__tests__/xss-security.test.js && node js/__tests__/auth-pulse-scope.test.js && node js/__tests__/discover-security.test.js && node js/__tests__/discover-tabs.test.js && node js/__tests__/discover-description.test.js",
     "test:tailwind-migration": "node scripts/__tests__/tailwind-migration.test.js",
     "test": "npm run test:functions && npm run test:frontend"
   },
