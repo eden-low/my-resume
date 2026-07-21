@@ -10,7 +10,10 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const { createHandler } = require("../anilist.js");
-const { OPERATIONS, AniListValidationError, currentSeason, sanitizeMediaListItem, sanitizeMediaDetail, isAniListSiteUrl, MAX_BATCH_IDS, MAX_SEARCH_LEN } = require("../lib/anilist-operations.js");
+const {
+  OPERATIONS, AniListValidationError, currentSeason, sanitizeMediaListItem, sanitizeMediaDetail, isAniListSiteUrl,
+  MAX_BATCH_IDS, MAX_SEARCH_LEN, EXCLUDED_GENRES, hasExcludedGenre, CONTENT_FILTER_POLICY_VERSION,
+} = require("../lib/anilist-operations.js");
 const { getCached, setCached, _resetCacheForTests } = require("../lib/anilist-cache.js");
 const { FirebaseConfigError } = require("../lib/firebase-admin.js");
 const { _resetBurstStateForTests } = require("../lib/rate-limit.js");
@@ -449,6 +452,171 @@ async function run() {
     const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "details", args: { id: 999 } }) }));
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(JSON.parse(res.body).result, null);
+  });
+
+  // ---- Excluded-genre content-filter policy: isAdult:false alone does not guarantee a
+  // general-audience catalogue. See lib/anilist-operations.js's header comment for the live-
+  // verified evidence (AniList id 178789 is isAdult:false and still carries the "Ecchi" genre). ----
+
+  for (const [label, operation, args] of [
+    ["browse (this_season)", "browse", { mode: "this_season" }],
+    ["browse (trending)", "browse", { mode: "trending" }],
+    ["search", "search", { query: "naruto" }],
+    ["batch", "batch", { ids: [1, 2] }],
+  ]) {
+    await test(`${label}: the upstream variables object always sends genre_not_in via genreNotIn: EXCLUDED_GENRES`, async () => {
+      const fetchImpl = makeFakeFetch({ data: { Page: { media: [] } } });
+      const deps = makeDeps({ fetchImpl });
+      const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation, args }) }));
+      assert.strictEqual(res.statusCode, 200);
+      assert.deepStrictEqual(fetchImpl.calls[0].body.variables.genreNotIn, EXCLUDED_GENRES);
+      assert.ok(fetchImpl.calls[0].body.query.includes("genre_not_in"), "the query text itself must reference genre_not_in");
+    });
+  }
+
+  await test("details: the upstream variables object never includes genreNotIn -- query-level exclusion is deliberately not used for the singular Media lookup (see lib/anilist-operations.js's DETAILS_QUERY comment: AniList itself returns HTTP 404, not a clean empty result, for an excluded id at the query level)", async () => {
+    const fetchImpl = makeFakeFetch({ data: { Media: makeMediaFixture({ id: 1, genres: ["Action"] }) } });
+    const deps = makeDeps({ fetchImpl });
+    const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "details", args: { id: 1 } }) }));
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual("genreNotIn" in fetchImpl.calls[0].body.variables, false);
+    assert.ok(!fetchImpl.calls[0].body.query.includes("genre_not_in"));
+  });
+
+  for (const [label, operation, args] of [
+    ["browse (this_season)", "browse", { mode: "this_season" }],
+    ["browse (trending)", "browse", { mode: "trending" }],
+    ["search", "search", { query: "romance" }],
+  ]) {
+    await test(`${label}: an Ecchi-genre item (isAdult:false) is excluded from results server-side; an ordinary-genre item alongside it is unaffected`, async () => {
+      const clean = makeMediaFixture({ id: 1, genres: ["Action", "Comedy"] });
+      const excluded = makeMediaFixture({ id: 2, genres: ["Romance", "Ecchi"] });
+      const fetchImpl = makeFakeFetch({ data: { Page: { media: [clean, excluded] } } });
+      const deps = makeDeps({ fetchImpl });
+      const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation, args }) }));
+      const body = JSON.parse(res.body);
+      assert.strictEqual(body.results.length, 1, "the Ecchi-tagged item must be excluded");
+      assert.strictEqual(body.results[0].id, 1);
+    });
+  }
+
+  await test("details: an item that is isAdult:false but carries the Ecchi genre is rejected -- { result: null }, the exact same controlled 'not found' shape as a genuinely missing id, never the record (or its description) itself", async () => {
+    const fetchImpl = makeFakeFetch({
+      data: { Media: makeMediaFixture({ id: 999, isAdult: false, genres: ["Drama", "Ecchi"], description: "a sensitive synopsis that must never leak" }) },
+    });
+    const deps = makeDeps({ fetchImpl });
+    const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "details", args: { id: 999 } }) }));
+    assert.strictEqual(res.statusCode, 200, "must be the ordinary not-found shape, never a 4xx/5xx error");
+    const body = JSON.parse(res.body);
+    assert.strictEqual(body.result, null);
+    assert.ok(!JSON.stringify(body).includes("sensitive synopsis"), "the description must never leak, even on this rejection path");
+  });
+
+  await test("batch: an Ecchi-genre item among several requested ids is omitted from the response; the rest are returned normally", async () => {
+    const items = [
+      makeMediaFixture({ id: 1, genres: ["Action"] }),
+      makeMediaFixture({ id: 2, genres: ["Ecchi", "Comedy"] }),
+      makeMediaFixture({ id: 3, genres: ["Fantasy"] }),
+    ];
+    const fetchImpl = makeFakeFetch({ data: { Page: { media: items } } });
+    const deps = makeDeps({ fetchImpl });
+    const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "batch", args: { ids: [1, 2, 3] } }) }));
+    const body = JSON.parse(res.body);
+    assert.deepStrictEqual(body.results.map((r) => r.id).sort(), [1, 3]);
+  });
+
+  await test("hasExcludedGenre(): exact value only, case-insensitive, whitespace-trimmed -- never a substring match", () => {
+    assert.strictEqual(hasExcludedGenre(["Ecchi"]), true);
+    assert.strictEqual(hasExcludedGenre(["ECCHI"]), true);
+    assert.strictEqual(hasExcludedGenre(["ecchi"]), true);
+    assert.strictEqual(hasExcludedGenre(["  Ecchi  "]), true);
+    assert.strictEqual(hasExcludedGenre(["EcChI"]), true);
+    assert.strictEqual(hasExcludedGenre(["Action", "Comedy"]), false, "ordinary genres must never be caught");
+    assert.strictEqual(hasExcludedGenre(["Ecchiness"]), false, "a genre that merely CONTAINS the excluded word must not match -- exact value only, never substring");
+    assert.strictEqual(hasExcludedGenre(["Not Ecchi At All"]), false);
+    assert.strictEqual(hasExcludedGenre([]), false);
+    assert.strictEqual(hasExcludedGenre(undefined), false);
+    assert.strictEqual(hasExcludedGenre(null), false);
+    assert.strictEqual(hasExcludedGenre("Ecchi"), false, "a bare string (not an array) must never be treated as a genre list");
+  });
+
+  for (const variant of ["ECCHI", "ecchi", "  Ecchi  ", "EcChI"]) {
+    await test(`browse: a case/whitespace variant of the excluded genre ("${variant}") is still caught by the server-side record-level check end-to-end`, async () => {
+      const fetchImpl = makeFakeFetch({ data: { Page: { media: [makeMediaFixture({ id: 1, genres: [variant] })] } } });
+      const deps = makeDeps({ fetchImpl });
+      const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "browse", args: { mode: "trending" } }) }));
+      assert.strictEqual(JSON.parse(res.body).results.length, 0);
+    });
+  }
+
+  // ---- The client cannot override or disable the excluded-genre policy ----
+
+  await test("browse: a client-supplied genreNotIn is rejected as unknown_field before it ever reaches AniList -- there is no code path for the client to override or empty the policy", async () => {
+    const fetchImpl = makeFakeFetch({ data: { Page: { media: [] } } });
+    const deps = makeDeps({ fetchImpl });
+    const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "browse", args: { mode: "trending", genreNotIn: [] } }) }));
+    assert.strictEqual(res.statusCode, 400);
+    assert.strictEqual(JSON.parse(res.body).error, "unknown_field");
+    assert.strictEqual(fetchImpl.calls.length, 0);
+  });
+
+  await test("search: client attempts to disable the policy via 'excludedGenres'/'genres'/'genre_not_in'/a null override are all rejected as unknown_field", async () => {
+    for (const attempt of [{ excludedGenres: [] }, { genres: [] }, { genre_not_in: [] }, { genreNotIn: null }]) {
+      const res = await createHandler(makeDeps())(baseEvent({ body: JSON.stringify({ operation: "search", args: { query: "naruto", ...attempt } }) }));
+      assert.strictEqual(res.statusCode, 400, `expected the client-supplied override attempt ${JSON.stringify(attempt)} to be rejected`);
+      assert.strictEqual(JSON.parse(res.body).error, "unknown_field");
+    }
+  });
+
+  await test("batch: a client-supplied genreNotIn alongside valid ids is rejected outright, never silently merged or ignored", async () => {
+    const fetchImpl = makeFakeFetch({ data: { Page: { media: [] } } });
+    const deps = makeDeps({ fetchImpl });
+    const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "batch", args: { ids: [1, 2], genreNotIn: ["nothing"] } }) }));
+    assert.strictEqual(res.statusCode, 400);
+    assert.strictEqual(fetchImpl.calls.length, 0, "a rejected request must never reach AniList at all");
+  });
+
+  // ---- Cached responses cannot bypass the policy ----
+
+  await test("the cache key is namespaced with CONTENT_FILTER_POLICY_VERSION -- a stale entry cached under the bare pre-policy key shape is never served, and never leaks into a real response", async () => {
+    const staleUnfilteredResults = {
+      results: [{
+        id: 2, title: { romaji: "Stale Unfiltered Ecchi Result", english: null, native: null },
+        coverImage: { large: null, medium: null }, averageScore: null, format: null, status: null,
+        episodes: null, season: null, seasonYear: null, nextAiringEpisode: null, siteUrl: null,
+      }],
+    };
+    // Simulates exactly what a PRE-policy deploy would have cached: keyed by the bare operation
+    // name (no CONTENT_FILTER_POLICY_VERSION suffix) with the OLD variables shape (no genreNotIn).
+    const staleVariables = { page: 1, perPage: 20, isAdult: false };
+    setCached("browse", staleVariables, staleUnfilteredResults, new Date("2026-07-20T04:00:00Z").getTime());
+
+    const freshItems = [makeMediaFixture({ id: 1, genres: ["Action"] }), makeMediaFixture({ id: 2, genres: ["Ecchi"] })];
+    const fetchImpl = makeFakeFetch({ data: { Page: { media: freshItems } } });
+    const deps = makeDeps({ fetchImpl });
+    const res = await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "browse", args: { mode: "trending" } }) }));
+    const body = JSON.parse(res.body);
+
+    assert.strictEqual(fetchImpl.calls.length, 1, "the stale, differently-keyed cache entry must never be matched -- a real upstream call must still happen");
+    assert.strictEqual(body.results.length, 1, "the fresh, correctly-filtered response must be returned, not the stale unfiltered one");
+    assert.strictEqual(body.results[0].id, 1);
+    assert.ok(!JSON.stringify(body).includes("Stale Unfiltered Ecchi Result"), "the stale cache entry's content must never leak into a real response");
+  });
+
+  await test("a response is only ever cached AFTER filtering -- the cached value itself never contains an excluded-genre item, retrievable directly via the real versioned cache key", async () => {
+    const items = [makeMediaFixture({ id: 1, genres: ["Action"] }), makeMediaFixture({ id: 2, genres: ["Ecchi"] })];
+    const fetchImpl = makeFakeFetch({ data: { Page: { media: items } } });
+    const deps = makeDeps({ fetchImpl });
+    await createHandler(deps)(baseEvent({ body: JSON.stringify({ operation: "browse", args: { mode: "trending" } }) }));
+
+    const cachedValue = getCached(
+      `browse:${CONTENT_FILTER_POLICY_VERSION}`,
+      { page: 1, perPage: 20, isAdult: false, genreNotIn: EXCLUDED_GENRES },
+      new Date("2026-07-20T04:00:00Z").getTime()
+    );
+    assert.ok(cachedValue, "expected a populated cache entry under the real versioned key");
+    assert.strictEqual(cachedValue.results.length, 1);
+    assert.strictEqual(cachedValue.results[0].id, 1);
   });
 
   // ---- Input validation and bounds ----

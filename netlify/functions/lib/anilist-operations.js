@@ -12,9 +12,52 @@
 //
 // "Do not bulk-copy or hoard the AniList catalog" (product direction) shapes every limit below:
 // small page/batch sizes, and a fixed, narrow field selection per operation. List operations
-// (browse/search/batch) never request description/genres; only `details` does, and even then
-// only description(asHtml: false) — never externalLinks, streamingEpisodes, characters, staff,
-// or full tags data, none of which this file's queries ever mention.
+// (browse/search/batch) never request description; only `details` does, and even then only
+// description(asHtml: false) — never externalLinks, streamingEpisodes, characters, staff, or full
+// tags data, none of which this file's queries ever mention. `genres` IS now fetched by every
+// operation (added below) — but solely as input to the excluded-genre content-filter check; it is
+// never included in a list-item's sanitized OUTPUT (see sanitizeMediaListItem()), matching the
+// pre-existing "list items never expose genres" shape exactly.
+//
+// ---- Content-filter policy: isAdult:false alone does not guarantee a general-audience catalogue.
+// Live-verified against AniList's production API (2026-07-21): AniList id 178789 ("Mushoku Tensei
+// III: Isekai Ittara Honki Dasu") is isAdult:false and still carries the "Ecchi" genre
+// classification — reachable via Trending/Search/Details/Batch before this fix. EXCLUDED_GENRES
+// is the small, explicit, server-only allowlist of mature-oriented genre classifications Discover
+// excludes on top of isAdult:false. Enforced in TWO layers, per operation:
+//   - Page.media-based operations (browse this_season/trending, search, batch): query-level
+//     `genre_not_in` (a real, schema-verified AniList argument — confirmed via live GraphQL
+//     introspection against https://graphql.anilist.co: `Page.media(genre_not_in: [String])`).
+//     Live-tested: applying it never errors and never changes the HTTP status of a Page query,
+//     even when it excludes every requested id (confirmed 200 with an empty `media: []`).
+//   - Singular Media-based operation (details): query-level `genre_not_in` is deliberately NOT
+//     used, even though the same argument exists on the `Media` field too — live-tested that
+//     applying it to an id whose genres are excluded makes AniList itself respond with HTTP 404
+//     (not a normal empty result), which would misroute through this Function's existing
+//     `!res.ok` upstream-error handling (-> 502) instead of the clean, pre-existing
+//     `{ok:true, result:null}` "not found" shape `details` already uses for a genuinely-missing
+//     id. Relying on record-level filtering ALONE for `details` keeps that response shape exactly
+//     consistent, at no cost to safety (see sanitizeMediaListItem()/sanitizeMediaDetail() below).
+// Every operation ALSO re-validates every record it gets back, server-side, via
+// sanitizeMediaListItem()'s hasExcludedGenre() check — defense-in-depth against any case
+// query-level exclusion doesn't (or, for `details`, deliberately isn't asked to) cover, exactly
+// mirroring how isAdult is already both a query-level filter AND a record-level check above.
+const EXCLUDED_GENRES = ["Ecchi"];
+// Normalized once at module load: trimmed + lowercased, for exact (never substring) case-
+// insensitive comparison against AniList's own genre strings.
+const EXCLUDED_GENRES_NORMALIZED = new Set(EXCLUDED_GENRES.map((g) => g.trim().toLowerCase()));
+
+function hasExcludedGenre(genres) {
+  if (!Array.isArray(genres)) return false;
+  return genres.some((g) => typeof g === "string" && EXCLUDED_GENRES_NORMALIZED.has(g.trim().toLowerCase()));
+}
+
+// Bumped whenever EXCLUDED_GENRES (or the filtering logic itself) changes, and folded into the
+// cache key (see anilist.js) so a response cached under an older content-filter policy can never
+// be served once a newer policy is deployed — an explicit, self-documenting guarantee rather than
+// relying on the (currently also-true, but not a code guarantee) fact that a Netlify Function
+// cold-starts with a fresh, empty in-memory cache on every new deploy.
+const CONTENT_FILTER_POLICY_VERSION = "genre-v1";
 
 class AniListValidationError extends Error {
   constructor(code) {
@@ -63,9 +106,12 @@ function currentSeason(now) {
 
 // ---- Fixed field selections — the actual allowlist. Every field named here is one of:
 // id, title, coverImage, averageScore, format, status, episodes, season, seasonYear,
-// nextAiringEpisode, description, genres, siteUrl (plus isAdult, read server-side only, stripped
-// before the response ever reaches the client — see sanitize*() below). Never
-// externalLinks/streamingEpisodes/characters/staff/tags. ----
+// nextAiringEpisode, genres, siteUrl (plus isAdult, read server-side only, stripped before the
+// response ever reaches the client — see sanitize*() below). `genres` is fetched by every
+// operation solely to enforce EXCLUDED_GENRES server-side (see sanitizeMediaListItem()) — it is
+// deliberately NOT included in a list item's sanitized OUTPUT (only sanitizeMediaDetail() exposes
+// it, unchanged from before). Never externalLinks/streamingEpisodes/characters/staff/full tags
+// data. ----
 const LIST_FIELDS = `
   id
   title { romaji english native }
@@ -79,18 +125,18 @@ const LIST_FIELDS = `
   nextAiringEpisode { airingAt timeUntilAiring episode }
   siteUrl
   isAdult
+  genres
 `;
 
 const DETAIL_FIELDS = `
   ${LIST_FIELDS}
   description(asHtml: false)
-  genres
 `;
 
 const BROWSE_SEASON_QUERY = `
-  query ($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $isAdult: Boolean) {
+  query ($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $isAdult: Boolean, $genreNotIn: [String]) {
     Page(page: $page, perPage: $perPage) {
-      media(type: ANIME, isAdult: $isAdult, season: $season, seasonYear: $seasonYear, sort: POPULARITY_DESC) {
+      media(type: ANIME, isAdult: $isAdult, season: $season, seasonYear: $seasonYear, genre_not_in: $genreNotIn, sort: POPULARITY_DESC) {
         ${LIST_FIELDS}
       }
     }
@@ -98,9 +144,9 @@ const BROWSE_SEASON_QUERY = `
 `;
 
 const BROWSE_TRENDING_QUERY = `
-  query ($page: Int, $perPage: Int, $isAdult: Boolean) {
+  query ($page: Int, $perPage: Int, $isAdult: Boolean, $genreNotIn: [String]) {
     Page(page: $page, perPage: $perPage) {
-      media(type: ANIME, isAdult: $isAdult, sort: TRENDING_DESC) {
+      media(type: ANIME, isAdult: $isAdult, genre_not_in: $genreNotIn, sort: TRENDING_DESC) {
         ${LIST_FIELDS}
       }
     }
@@ -108,15 +154,19 @@ const BROWSE_TRENDING_QUERY = `
 `;
 
 const SEARCH_QUERY = `
-  query ($search: String, $page: Int, $perPage: Int, $isAdult: Boolean) {
+  query ($search: String, $page: Int, $perPage: Int, $isAdult: Boolean, $genreNotIn: [String]) {
     Page(page: $page, perPage: $perPage) {
-      media(type: ANIME, isAdult: $isAdult, search: $search, sort: SEARCH_MATCH) {
+      media(type: ANIME, isAdult: $isAdult, search: $search, genre_not_in: $genreNotIn, sort: SEARCH_MATCH) {
         ${LIST_FIELDS}
       }
     }
   }
 `;
 
+// Deliberately no `genre_not_in` here — see the "Content-filter policy" header comment above for
+// why the singular Media(id:...) lookup relies on record-level filtering alone (sanitizeMediaDetail
+// -> sanitizeMediaListItem) rather than a query-level exclusion that would change AniList's own
+// HTTP response status for an excluded id.
 const DETAILS_QUERY = `
   query ($id: Int, $isAdult: Boolean) {
     Media(id: $id, type: ANIME, isAdult: $isAdult) {
@@ -126,9 +176,9 @@ const DETAILS_QUERY = `
 `;
 
 const BATCH_QUERY = `
-  query ($ids: [Int], $perPage: Int, $isAdult: Boolean) {
+  query ($ids: [Int], $perPage: Int, $isAdult: Boolean, $genreNotIn: [String]) {
     Page(perPage: $perPage) {
-      media(type: ANIME, isAdult: $isAdult, id_in: $ids) {
+      media(type: ANIME, isAdult: $isAdult, id_in: $ids, genre_not_in: $genreNotIn) {
         ${LIST_FIELDS}
       }
     }
@@ -154,6 +204,13 @@ function sanitizeMediaListItem(m) {
   // result whose own isAdult field isn't explicitly false is dropped outright rather than
   // trusted — an adult entry must never reach the client through this function, full stop.
   if (!m || m.isAdult !== false) return null;
+  // Defense-in-depth (and, for `details`, the ONLY layer — see DETAILS_QUERY's comment): a result
+  // carrying an EXCLUDED_GENRES classification is dropped outright too, the exact same early-
+  // return shape as the isAdult check above. This is the one place the excluded-genre policy is
+  // actually enforced — every operation funnels through here (list operations directly; `details`
+  // via sanitizeMediaDetail()'s `base = sanitizeMediaListItem(m)` call below), so the policy only
+  // needs to be implemented once.
+  if (hasExcludedGenre(m.genres)) return null;
   return {
     id: m.id,
     title: {
@@ -206,9 +263,9 @@ const OPERATIONS = {
     buildRequest(v, ctx) {
       if (v.mode === "this_season") {
         const { season, seasonYear } = currentSeason(ctx.now);
-        return { query: BROWSE_SEASON_QUERY, variables: { page: v.page, perPage: v.perPage, season, seasonYear, isAdult: false } };
+        return { query: BROWSE_SEASON_QUERY, variables: { page: v.page, perPage: v.perPage, season, seasonYear, isAdult: false, genreNotIn: EXCLUDED_GENRES } };
       }
-      return { query: BROWSE_TRENDING_QUERY, variables: { page: v.page, perPage: v.perPage, isAdult: false } };
+      return { query: BROWSE_TRENDING_QUERY, variables: { page: v.page, perPage: v.perPage, isAdult: false, genreNotIn: EXCLUDED_GENRES } };
     },
     sanitize(data) {
       const list = data && data.Page && Array.isArray(data.Page.media) ? data.Page.media : [];
@@ -226,7 +283,7 @@ const OPERATIONS = {
       return { query: q, ...validatePaging(a) };
     },
     buildRequest(v) {
-      return { query: SEARCH_QUERY, variables: { search: v.query, page: v.page, perPage: v.perPage, isAdult: false } };
+      return { query: SEARCH_QUERY, variables: { search: v.query, page: v.page, perPage: v.perPage, isAdult: false, genreNotIn: EXCLUDED_GENRES } };
     },
     sanitize(data) {
       const list = data && data.Page && Array.isArray(data.Page.media) ? data.Page.media : [];
@@ -259,7 +316,7 @@ const OPERATIONS = {
       return { ids: deduped };
     },
     buildRequest(v) {
-      return { query: BATCH_QUERY, variables: { ids: v.ids, perPage: v.ids.length, isAdult: false } };
+      return { query: BATCH_QUERY, variables: { ids: v.ids, perPage: v.ids.length, isAdult: false, genreNotIn: EXCLUDED_GENRES } };
     },
     sanitize(data) {
       const list = data && data.Page && Array.isArray(data.Page.media) ? data.Page.media : [];
@@ -279,4 +336,7 @@ module.exports = {
   sanitizeMediaListItem,
   sanitizeMediaDetail,
   isAniListSiteUrl,
+  EXCLUDED_GENRES,
+  hasExcludedGenre,
+  CONTENT_FILTER_POLICY_VERSION,
 };

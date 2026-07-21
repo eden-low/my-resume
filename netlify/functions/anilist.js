@@ -24,7 +24,7 @@
 // This module intentionally never `require()`s any browser ES module (firebase-init.js, etc.) —
 // see assistant.js's identical header note on why (CommonJS Function runtime vs. browser ESM).
 
-const { OPERATIONS, AniListValidationError } = require("./lib/anilist-operations");
+const { OPERATIONS, AniListValidationError, CONTENT_FILTER_POLICY_VERSION } = require("./lib/anilist-operations");
 const { getCached, setCached } = require("./lib/anilist-cache");
 const { checkBurst } = require("./lib/rate-limit");
 const { FirebaseConfigError } = require("./lib/firebase-admin");
@@ -315,7 +315,17 @@ function createHandler(deps) {
     const { query, variables } = opDef.buildRequest(validatedArgs, { now });
 
     // 9. Short-lived bounded cache — never a persistent catalog store (see lib/anilist-cache.js).
-    const cached = deps.getCached(operation, variables, now.getTime());
+    // The cache key is namespaced with CONTENT_FILTER_POLICY_VERSION (not just `operation`) so a
+    // response cached under an older content-filter policy (e.g. before EXCLUDED_GENRES existed,
+    // or before a future addition to it) can never be served once a newer policy is deployed —
+    // an explicit guarantee, not a reliance on this Function's in-memory cache happening to reset
+    // on every deploy's cold start. Applies uniformly to all four operations, including `details`
+    // (whose own request `variables` never changes with EXCLUDED_GENRES — see
+    // lib/anilist-operations.js's DETAILS_QUERY comment for why), so this is the one guarantee
+    // that covers every operation the same way, not just the ones with genre_not_in in their
+    // variables.
+    const cacheKey = `${operation}:${CONTENT_FILTER_POLICY_VERSION}`;
+    const cached = deps.getCached(cacheKey, variables, now.getTime());
     if (cached) {
       return jsonResponse(200, { ok: true, ...cached }, baseHeaders);
     }
@@ -324,7 +334,7 @@ function createHandler(deps) {
     try {
       const raw = await callAniList(deps.fetchImpl || fetch, query, variables, UPSTREAM_TIMEOUT_MS);
       const sanitized = opDef.sanitize(raw);
-      deps.setCached(operation, variables, sanitized, now.getTime());
+      deps.setCached(cacheKey, variables, sanitized, now.getTime());
       return jsonResponse(200, { ok: true, ...sanitized }, baseHeaders);
     } catch (err) {
       if (err instanceof UpstreamError) {
