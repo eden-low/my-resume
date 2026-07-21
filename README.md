@@ -167,6 +167,36 @@ Qwen until the Owner explicitly accepts a bilingual consent notice; per-request 
 `node netlify/functions/__tests__/assistant.test.js` (or `npm run test:functions`) for the
 deterministic, fully-mocked test suite (no real Firebase project or Qwen key needed).
 
+## Discover (anime, Phase 1): `discover.html` + `netlify/functions/anilist.js`
+
+An **Owner-only** personal anime tracker — not in the main nav table above (same treatment as
+Atlas Assistant/Constellation: an Owner-scoped feature with its own dedicated section, not a row
+in the primary-nav page table). Two views: **Discover** (This Season / Trending / Search, backed
+live by [AniList](https://anilist.co)'s public GraphQL API) and **My List** (All / Plan to Watch /
+Watching / Completed / Paused / Dropped), each card showing cover, preferred title, AniList's own
+`averageScore`, format, airing status, available episode count, and next-airing info when
+applicable. Every AniList request goes through `/.netlify/functions/anilist` — a fixed
+operation allowlist (`browse`/`search`/`details`/`batch`, `netlify/functions/lib/
+anilist-operations.js`) that constructs every GraphQL query server-side; the browser never
+supplies a raw query, and `isAdult: false` is force-set into every request, never read from the
+client. The Function reuses `assistant.js`'s exact Owner-authorization shape (a server-verified
+Firebase ID token plus a `users/{uid}.role === "owner"` + email double-check) — a Friend or
+Viewer's request is rejected with `403 owner_only` before any AniList call is ever made, and the
+page itself is unreachable to them: `discover.html` carries `data-owner-only="true"` (the same
+`auth-guard.js` backstop every other Owner-only page uses), and it appears in neither
+`js/sidebar.js`'s nor `js/mobile-nav.js`'s Friend/Viewer ("Light EdenAtlas") link arrays. A short-
+lived, bounded in-memory cache (`netlify/functions/lib/anilist-cache.js`, never a persistent
+catalog store) and My List's batched `id_in` live-refresh (one Function call for the whole list,
+never N+1) keep this from ever hoarding or bulk-copying the AniList catalog. Followed titles are
+stored minimally in a new `followed_anime/{uid}_{anilistId}` collection — denormalized
+title/cover/format/status only, never AniList's description/genres/score/airing schedule (those
+are always fetched live on demand, never persisted) — gated Owner-only end to end by
+`firestore.rules`. Run `node netlify/functions/__tests__/anilist.test.js` (or `npm run
+test:functions`) for the deterministic, fully-mocked test suite. **Not part of Phase 1** (see
+`CLAUDE.md`'s Discover history entry for the full scope): Qwen-personalized recommendations, a
+"For You" feed, Web Push/scheduled episode-airing notifications, TV dramas, and any
+streaming/external watch link beyond a single validated "View on AniList" link.
+
 ## Login gate: `auth-guard.js` + `login.html`
 
 Every page except `login.html` is gated: a single `<script type="module" src="auth-guard.js"></script>` tag checks `onAuthStateChanged` and redirects to `login.html?redirect=<page>` if signed out, or reveals the page once a user is confirmed. `login.html` resolves the signer's role (Owner / Friend / Viewer, cached to `localStorage` as `lfj:userMode`), upserts a `users/{uid}` directory doc, writes a `login_logs` doc, and writes a "new login" notification — all before redirecting into the app. This gate is a UX convenience, not the security boundary — real access control is (and remains) enforced by `firestore.rules`/`storage.rules`.

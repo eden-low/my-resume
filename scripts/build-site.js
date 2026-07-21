@@ -41,16 +41,17 @@ const OUT = path.join(ROOT, "site");
 const ALLOW_FILES = [
   // Pages
   "atlas.html", "calendar.html", "collection-detail.html", "collections.html",
-  "constellation.html", "contact.html", "dashboard.html", "expenses.html", "gallery.html",
-  "habits.html", "home.html", "index.html", "journal.html", "login.html", "me.html",
-  "notifications.html", "portfolio.html", "profile.html", "project.html", "reports.html",
-  "resume.html", "settings.html", "time-capsule.html", "timeline.html", "assistant.html",
+  "constellation.html", "contact.html", "dashboard.html", "discover.html", "expenses.html",
+  "gallery.html", "habits.html", "home.html", "index.html", "journal.html", "login.html",
+  "me.html", "notifications.html", "portfolio.html", "profile.html", "project.html",
+  "reports.html", "resume.html", "settings.html", "time-capsule.html", "timeline.html",
+  "assistant.html",
   // Page scripts / shared root-level modules
   "atlas.js", "auth-guard.js", "calendar.js", "career.js", "collection-detail.js",
-  "collections.js", "constellation.js", "dashboard.js", "expenses.js", "export.js",
-  "firebase-init.js", "gallery.js", "global-search.js", "habits.js", "insights.js",
-  "journal.js", "me.js", "notifications.js", "portfolio.js", "profile.js", "project.js",
-  "scripts.js", "settings.js", "time-capsule.js", "timeline.js", "assistant.js",
+  "collections.js", "constellation.js", "dashboard.js", "discover.js", "expenses.js",
+  "export.js", "firebase-init.js", "gallery.js", "global-search.js", "habits.js",
+  "insights.js", "journal.js", "me.js", "notifications.js", "portfolio.js", "profile.js",
+  "project.js", "scripts.js", "settings.js", "time-capsule.js", "timeline.js", "assistant.js",
   // PWA shell
   "service-worker.js", "manifest.json",
   // Styling — tailwind.generated.css is build output (produced by `npm run build:css` from

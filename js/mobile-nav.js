@@ -20,6 +20,10 @@ const DRAWER_LINKS = [
   { href: "notifications.html", icon: "fa-bell", key: "nav.inbox", label: "Inbox" },
   { href: "timeline.html", icon: "fa-timeline", key: "nav.journey", label: "Journey" },
   { href: "time-capsule.html", icon: "fa-box-archive", key: "nav.time_capsule", label: "Time Capsule" },
+  // Discover (anime, Phase 1) is strictly Owner-only — product decision. Deliberately absent
+  // from LIGHT_DRAWER_LINKS below, so a Friend/Viewer's drawer never shows it, and absent from
+  // QUICK_ADD_ITEMS (no "quick add a followed anime" shortcut in Phase 1, per the brief).
+  { href: "discover.html", icon: "fa-compass", key: "nav.discover", label: "Discover" },
   { href: "constellation.html", icon: "fa-star", key: "nav.constellation", label: "Constellation" },
   { href: "assistant.html", icon: "fa-wand-magic-sparkles", key: "nav.assistant", label: "Atlas Assistant" },
   { href: "me.html", icon: "fa-circle-user", key: "nav.me", label: "Me" },

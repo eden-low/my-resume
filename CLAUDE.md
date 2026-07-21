@@ -2176,11 +2176,230 @@ default Firebase-hosted `authDomain` used to strand the user on Google's page wi
    before merge per this pass's own instructions, and called out to the user as the actual
    blocking step rather than silently assumed to work.
 
+**"EdenAtlas Discover — anime tracker (Phase 1 MVP)" (most recent, unmerged — `feat/discover-
+anime-mvp` branch)** adds a new, **strictly Owner-only** module: a personal AniList-backed anime
+browse/search/follow list. Nav-labeled **Discover** (not "Anime"), deliberately, so a future TV-
+drama pass can extend the same page/collection rather than needing a rename. No Qwen, no VLM/
+Gemini, no Web Push, no scheduled jobs, no TV dramas, no streaming/external watch links beyond one
+validated AniList outbound link — all explicitly out of scope for this pass, reserved for PR B/C.
+1. **Owner-only at every layer, not just the UI** — the product decision (overriding this pass's
+   own preceding architecture audit, which had recommended Friend-available) is that Discover is
+   invisible and unreachable to Friend/Connection/Viewer accounts: absent from `js/sidebar.js`'s
+   `LIGHT_LINKS` and `js/mobile-nav.js`'s `LIGHT_DRAWER_LINKS`/`QUICK_ADD_ITEMS` (present only in
+   `PRIMARY_LINKS`+`SECONDARY_LINKS`/`DRAWER_LINKS`, the Owner-only lists); `discover.html` carries
+   `data-owner-only="true"`, the same `auth-guard.js` backstop `expenses.html`/`time-capsule.html`/
+   `reports.html`/`constellation.html` already use, redirecting a direct-URL non-owner visit to
+   `home.html?notice=private_space`; `netlify/functions/anilist.js` re-derives Owner status
+   server-side using the **exact** two-signal check `assistant.js` already established (a
+   server-verified Firebase ID token's email AND `users/{uid}.role === "owner"` AND that doc's own
+   `email`, all three matching the hardcoded `OWNER_EMAIL` — AND, never OR) before a Friend/Viewer
+   token can reach AniList at all; and `firestore.rules`' new `followed_anime` match block gates
+   every read/write on `isOwner()`, not `canParticipate()` — unlike every other participatory
+   module (Memories/Journal/Journey/Habits/Atlas/Collections/Calendar), which stay Friend-available.
+2. **`netlify/functions/anilist.js` + `netlify/functions/lib/anilist-operations.js`** — a new
+   Netlify Function, structurally templated on `weather.js`'s dependency-injected
+   `createHandler(deps)` shape (env-check → `ensureFirebaseAdmin()` → CORS/origin → method → auth
+   → Owner authorization → burst rate limit, namespaced `anilist:{uid}` so it never shares
+   `assistant.js`'s/`weather.js`'s in-memory burst budget for the same uid → request validation →
+   upstream call). The browser never supplies a GraphQL document: `lib/anilist-operations.js`
+   exposes a fixed **operation allowlist** (`browse` — This Season/Trending, `search`, `details`,
+   `batch`), each with its own hand-rolled `validate()`/`buildRequest()`/`sanitize()`, mirroring
+   `lib/tools.js`'s design for the Atlas Assistant's tool allowlist exactly. `isAdult: false` is
+   baked into every `buildRequest()` unconditionally — no function in either file ever reads an
+   `isAdult` value out of the request body, so there is no code path a client-supplied value could
+   reach; an item whose own `isAdult` field isn't explicitly `false` is additionally dropped
+   server-side as defense-in-depth even though every query already filters it. Limits: search
+   query ≤100 chars, `page` ≤100/`perPage` ≤25 (both integers, never silently clamped — out-of-
+   range is a `400`), `details` id a positive integer, `batch` ids deduplicated and capped at 25.
+   The fixed field selection per operation is a strict allowlist (`id`/`title`/`coverImage`/
+   `averageScore`/`format`/`status`/`episodes`/`season`/`seasonYear`/`nextAiringEpisode`/
+   `siteUrl`, plus `description(asHtml: false)`/`genres` for `details` only) — the GraphQL query
+   text itself never mentions `externalLinks`/`streamingEpisodes`/`characters`/`staff`/full tags
+   data, so there is nothing to accidentally leak even before the response sanitizer runs.
+   `siteUrl` is further validated server-side (`isAniListSiteUrl()`: `https://anilist.co` or a
+   subdomain only) before being returned. My List's live refresh uses `batch`'s `id_in` — one
+   Function call for the whole list, never N+1. **`netlify/functions/lib/anilist-cache.js`** is a
+   short-lived (5 min), bounded (40-entry, oldest-evicted) in-memory cache — module-scope, reset
+   every cold start, explicitly never a persistent catalog store, per the product direction to
+   never bulk-copy or hoard the AniList catalog.
+3. **`discover.html` / `discover.js`** — templated off `time-capsule.html`'s Owner-only page shell
+   and `habits.html`'s filter-tab/card-grid/modal conventions. Two top-level views (segmented tabs,
+   same `.scope-tab`-style pattern `atlas.html` already uses for My Atlas/Connections): **Discover**
+   (This Season / Trending / Search sub-tabs) and **My List** (All / Plan to Watch / Watching /
+   Completed / Paused / Dropped filter tabs). Each card shows cover (DOM-property `img.src`
+   assignment behind an `isSafeImageUrl()` https-only check, never string-interpolated into
+   `innerHTML` — an invalid/failed image falls back to a local, fixed Font Awesome placeholder
+   `<div>`, never a second remote URL), preferred title, AniList's own `averageScore` (Phase 1
+   displays this public score; no personal score/notes field exists in the schema), format,
+   airing status, available episode count (`episodes`, or `nextAiringEpisode.episode - 1` while
+   `RELEASING`), and next-airing time when applicable. Card actions: Add to Plan to Watch / a
+   status `<select>` (the five allowlisted statuses) / Remove (immediate `deleteDoc`, with an
+   `Undo` toast reusing `gallery.js`'s toast-with-action shape — Undo re-follows as a fresh `create`
+   with a new `followedAt`, an honest "follow it again," not a true undelete, since the original
+   doc was genuinely deleted) — and opening the accessible detail modal, which duplicates `gallery.
+   js`'s `trapFocus()` (focus trap, Escape-closes, focus-restoring) per this repo's established
+   per-file modal convention (no shared modal component exists). Every AniList-sourced field
+   (title/description/genres) is `esc()`-escaped at render time (never raw through `innerHTML`);
+   the one external link (`siteUrl`) goes through a Phase-1-scoped `safeAniListHref()` — http(s)
+   only AND `anilist.co`-host-only, a second, independent client-side check behind the server's own
+   `isAniListSiteUrl()`. Language switches and Discover/My-List view switches re-render from
+   already-cached state (a per-subtab `discoverCache` Map) rather than refetching — no unnecessary
+   API calls, matching the brief's explicit requirement.
+4. **Firestore**: `followed_anime/{uid}_{anilistId}` — a deterministic doc ID (the same
+   "structural uniqueness" trick as `daily_reflections`/`usernames`), so follow/already-followed
+   needs no query-then-create race check. Phase-1 stored fields only: `{uid, anilistId, mediaType:
+   "ANIME", title, coverImage, format, status, isAdult: false, followedAt, updatedAt}` — explicitly
+   never AniList's description/genres/averageScore/airing schedule/full title-or-cover objects
+   (those are always fetched live from the Function on demand, never persisted) and never a
+   recommendation result (reserved for PR B, and even then never meant to be cached here). The new
+   `firestore.rules` match block is `isOwner()`-gated end to end (not `canParticipate()`, unlike
+   every Friend-available module): `create` validates the deterministic ID
+   (`id == request.auth.uid + '_' + string(request.resource.data.anilistId)`), an exact
+   `keys().hasOnly([...])` allowlist (rejecting any extra field, including a hypothetical future
+   `score`/`notes`), `mediaType == 'ANIME'`, `isAdult == false`, the five-value `status` allowlist,
+   and `followedAt`/`updatedAt` both equal to `request.time` on create; `update` additionally
+   requires `uid`/`anilistId`/`mediaType` to stay unchanged from `resource.data` (immutable),
+   `followedAt` to stay exactly equal to the existing value (preserved, never re-stamped), and
+   `updatedAt` to always be freshly re-stamped. **This rule was hand-translated into a JS
+   simulation and tested (`js/__tests__/discover-security.test.js`) rather than run against the
+   real Firestore Rules engine** — this sandboxed environment has no Java runtime for the
+   emulator, the same already-documented limitation the "Trash privacy + ownership-merge fix" pass
+   hit; run a real emulator/dry-run check before deploying these rules, same recommendation as
+   every prior rules-only pass in this history.
+5. **Security** (see `js/__tests__/discover-security.test.js` and `netlify/functions/__tests__/
+   anilist.test.js` for the behavioral proof, not just a claim): every AniList-sourced text field
+   is escaped at render time; image `src`/link `href` are DOM-property assignments, never
+   `innerHTML` string interpolation; `isAdult: false` is enforced server-side and unconditionally,
+   with a second, independent drop of any item whose own `isAdult` isn't explicitly `false`; GraphQL
+   variables are always a real `variables` object, never string-concatenated into the query text;
+   raw Firestore document IDs are never exposed to anything AniList-related (the collection has no
+   read path other than the Owner's own `where("uid","==",myUid)` query); no streaming/external
+   watch link exists anywhere in this feature.
+6. **Build/PWA**: `scripts/build-site.js`'s `ALLOW_FILES` gained `discover.html`/`discover.js`
+   (the Function source, `netlify/functions/anilist.js` and its `lib/` modules, stays structurally
+   excluded from the publish output, same as every other Function). `service-worker.js`'s `CACHE`
+   → `eden-shell-v33`, `discover.html`/`discover.js` added to `PRECACHE`; `/.netlify/functions/
+   anilist` needed no new `NEVER_CACHE_PATH_PREFIXES` entry (the existing `/.netlify/functions/`
+   prefix already covers it) and AniList's own hosts (`graphql.anilist.co`, `s4.anilist.co`) needed
+   no `BYPASS_HOSTS` entry either (the browser never calls the GraphQL endpoint directly, and cover
+   images are cross-origin, already excluded from Cache Storage by the fetch handler's
+   unconditional cross-origin check before `BYPASS_HOSTS` is even consulted).
+7. **Tests**: `netlify/functions/__tests__/anilist.test.js` (60 assertions — Owner-only enforcement
+   across anonymous/Friend/Viewer/Owner, the AND-not-OR two-signal check, unknown-operation/
+   unknown-field rejection, a raw-GraphQL-document injection attempt rejected, `isAdult:false`
+   forced for all four operations, an adult item dropped from both list and detail responses,
+   input bounds, batch dedup/max-size/single-upstream-call-not-N+1, upstream timeout/error
+   sanitization, burst rate limiting, the short-lived cache, and the forbidden-field/CACHE-version/
+   never-cached service-worker invariants) and `js/__tests__/discover-security.test.js` (41
+   assertions — `esc()`/`safeAniListHref()`/`isSafeImageUrl()` behavioral XSS/URL-scheme tests
+   extracted from the real `discover.js` source via the same `extractFunctionSource()`/`vm`-sandbox
+   technique `xss-security.test.js` established, the hand-translated Firestore rules simulation
+   from point 4, Owner-only nav-array placement, the build allowlist, service-worker precache/
+   cache-version, and bidirectional `en.json`⇄`zh-CN.json` key parity for the new `discover.*`/
+   `nav.discover` keys). Both suites wired into `package.json`'s `test:functions`/`test:frontend`
+   scripts as the newest addition, and `scripts/__tests__/tailwind-migration.test.js`'s pinned
+   ordered-command-list assertion updated the same way every prior pass updated it — folding the
+   previous newest additions into the baseline, appending this pass's suites as the new top,
+   never a silent removal or reorder. Verification run: `node --check` on every new/changed `.js`
+   file, all four suites (`npm run build`, `test:functions`, `test:frontend`,
+   `test:tailwind-migration`) executed with their exact pass counts recorded.
+8. **Not part of this pass** (reserved for PR B/C per the three-PR plan): Qwen-personalized
+   recommendations, a "For You" feed, Web Push, scheduled episode-airing checks, VLM/Gemini, TV
+   dramas, and personal score/notes fields. No deploy, nothing merged to `main` — this pass
+   branched fresh from `origin/main` (`bd7873e`) as `feat/discover-anime-mvp` and stops at push.
+
+**"Discover: real emulator-backed Firestore Rules tests for `followed_anime`" (most recent, same
+`feat/discover-anime-mvp` branch, PR #8)** — replaces the "hand-translated into a JS simulation,
+not run against the real Firestore Rules engine" caveat the original Discover MVP entry (point 4
+above) explicitly flagged, with an actual `@firebase/rules-unit-testing` suite run against a real
+Firestore Emulator. `js/__tests__/discover-security.test.js`'s hand-translated simulation is
+**not** replaced or removed by this pass — it stays as a fast, offline sanity check — this is a
+second, independent suite exercising the literal, unmodified `firestore.rules` file with real
+Firestore client SDK calls (`setDoc`/`getDoc`/`getDocs`/`updateDoc`/`deleteDoc`/`writeBatch`)
+under real `request.auth`/`request.resource`/`resource.data` semantics, which a hand-translation
+can never fully guarantee matches.
+1. **[firestore/\_\_tests\_\_/discover-rules.test.js](firestore/__tests__/discover-rules.test.js)**
+   (new) — 29 test blocks, 52 real `assertSucceeds`/`assertFails` Rules-engine round trips (68
+   assertions total counting data-integrity checks), covering every success/denial scenario the
+   `followed_anime` rule block expresses: exact field allowlist, all 5 `status` values, real
+   `serverTimestamp()`/`request.time` resolution, the uid-scoped My List query, immutable-field
+   preservation on update, unauthenticated/Friend/Viewer denial, an owner-email-but-wrong-uid and
+   an owner-uid-but-wrong-email scenario (the rules-layer analogue of a "role mismatch" — this
+   collection's `isOwner()` checks only `request.auth.token.email`, with no `users/{uid}.role`
+   cross-check the way `netlify/functions/assistant.js`'s server-side two-signal AND check has;
+   documented here rather than treated as a gap, since a rules-only collection has no clean way
+   to `get()` another document without an extra read), wrong/missing `anilistId`/`mediaType`/
+   `isAdult`/`status`, extra fields on create *and* update, client-literal timestamps instead of
+   `request.time`, `followedAt`/`uid`/`anilistId`/`mediaType` mutation attempts, an unscoped
+   collection query (rejected outright as unprovable, not just empty), and atomic batch failure
+   (one invalid op in a batch fails the whole commit — verified via `withSecurityRulesDisabled()`
+   reads showing neither the valid nor invalid half was written). Requires
+   `FIRESTORE_EMULATOR_HOST` to be set and refuses to run otherwise (a real, enforced check at
+   the top of the file, not just documentation); uses project id `demo-edenatlas-discover-rules`
+   (Firebase's own documented no-real-project convention) so it can never reach `lfj-profolio`;
+   seeds/verifies exclusively through `testEnv.withSecurityRulesDisabled()`, never a real Admin
+   credential.
+2. **Two real bugs found and fixed while building this suite** (in the test helpers, not in
+   `firestore.rules` itself — the rule block passed every scenario on the very first run once the
+   helpers were correct): (a) `@firebase/rules-unit-testing`'s `withSecurityRulesDisabled()` awaits
+   its callback but never propagates the callback's return value (confirmed by reading the
+   installed package's own source) — an admin-bypass read helper that `return`s the library call
+   directly silently resolves to `undefined`; fixed by capturing the result via an outer closure
+   variable instead; (b) `RulesTestContext.firestore()` returns the **compat/namespaced** Firestore
+   instance, not the modular one every other call in the suite uses (per the library's own type
+   declarations and its own JSDoc example, which itself calls the modular `doc(ctx.firestore(),
+   path)` rather than `ctx.firestore().doc(path)`) — calling the compat `.doc(path).get()` method
+   chain directly still "works" but returns a snapshot whose `.exists` is a boolean **property**,
+   not the modular API's `.exists()` **method**, throwing `snap.exists is not a function` the
+   moment a bypass-read helper tried to call it as one. Both are now documented inline in the test
+   file itself so a future edit doesn't reintroduce either mistake.
+3. **New pinned devDependencies** (exact versions, `--save-exact`, matching this repo's existing
+   `tailwindcss`/`dompurify`/`marked`/`jsdom` convention): `firebase@12.16.0`,
+   `@firebase/rules-unit-testing@5.0.1` (its own `peerDependencies` requires `firebase@^12.0.0`,
+   satisfied), `firebase-tools@15.24.0`. All dev-only — the frontend's Firebase usage stays exactly
+   as it was (`firebase-init.js`'s ES-module CDN imports, unrelated to this npm package).
+4. **`firebase.json`** gained a minimal `emulators: { firestore: { port: 8080 } }` block — the only
+   addition, every pre-existing `firestore`/`storage` rules-path config left untouched. `.firebaserc`
+   (`lfj-profolio`, the real production project) was **not** touched at all; the demo project id is
+   passed explicitly via `--project demo-edenatlas-discover-rules` on the CLI instead, so the real
+   default project is never implicated by this suite even by accident.
+5. **`package.json`** gained `test:firestore-rules` (`firebase emulators:exec --project
+   demo-edenatlas-discover-rules --only firestore "node firestore/__tests__/discover-rules.test.js"`)
+   as its own dedicated, standalone command — **deliberately not folded into `npm run test`**
+   (`test:functions && test:frontend`), mirroring `test:tailwind-migration`'s own existing
+   precedent: `npm test`'s documented, repeatedly-stated invariant throughout this file's history
+   is "zero network calls, zero real Firebase project, zero external tool dependency," and this
+   suite needs a live Java-based Firestore Emulator to run at all — folding it in would silently
+   impose a JDK requirement on every future `npm test` run and break that invariant for any
+   environment (including CI) that doesn't have one. A new `test:all` script
+   (`test && test:firestore-rules && test:tailwind-migration`) exists as the umbrella for anyone who
+   wants to run everything, including the emulator suite, in one command. `scripts/__tests__/
+   tailwind-migration.test.js`'s pinned `pkg.scripts.test`/`test:functions`/`test:frontend` string
+   assertions were **not touched** — none of those three scripts changed, so none of that pass's
+   existing pinned-command checks needed updating.
+6. **`.gitignore`** gained `firestore-debug.log`/`ui-debug.log` (the Firestore Emulator's own local
+   log files, generated the first time this suite actually runs locally — this repo had never run
+   any Firebase emulator before this pass, so these never existed until now); `.firebase/`/
+   `firebase-debug.log` were already ignored from an earlier pass and needed no change.
+7. **Verification performed**: `npm run build` (clean, 57 files + 3 directories copied), `npm run
+   test:functions` (95/95), `npm run test:frontend` (30/30), `npm run test:tailwind-migration`
+   (23/23, unaffected by this pass's package.json/firebase.json/.gitignore changes), and `npm run
+   test:firestore-rules` itself (29/29, 52 real assertSucceeds/assertFails calls) — each run
+   individually with its exact pass count recorded, not inferred from a single combined command.
+8. **Explicitly not done, per this pass's own hard boundaries**: `firestore.rules` was not deployed
+   (`npx firebase-tools deploy --only firestore:rules,storage` was never run); PR #8 was not merged;
+   no production Firestore project was ever contacted (every write/read in this pass's new suite
+   targets `demo-edenatlas-discover-rules` against a local emulator process only); `.firebaserc`'s
+   real project id was never touched. A JDK (Eclipse Temurin 21) was installed on this machine via
+   `winget` to make the emulator possible at all — that is a one-time environment change, not a
+   project file, and is called out here since it's the one part of this pass that touched
+   something outside the repository itself.
+
 ## Architecture
 
 ### Roles and the multi-tenant data model
 
-- **Three roles, decided once at login and cached in `localStorage`** (`lfj:userMode` = `OWNER`/`FRIEND`/`VIEWER`, see [firebase-init.js](firebase-init.js)'s `getUserMode()`/`canParticipate()`): **Owner** (`jjun8647@gmail.com`, hardcoded) has full access everywhere and is the only role that sees admin UI (System Logs, Whitelist Management — now in Me's Connections/System Logs tabs, v2.7). **Friend** (an entry in `friends/{email}`, see below) gets their own space for Memories/Journal/Journey/Habits/Atlas/Collections/Calendar — structurally identical to the owner's for those modules, just their own `uid`. As of **v3.3**, Finance/Time Capsule/Daily Reflection are Owner-only regardless of Friend status (`firestore.rules`' `expenses`/`time_capsules`/`daily_reflections` `create` rules require `isOwner()`, not `canParticipate()`) — a Friend's own pre-v3.3 docs in those collections, if any, remain readable/editable, but no new ones can be created. **Viewer** (anyone else who signs in with Google) is read-only: sees public content from the owner and any friend, can like/comment on public gallery posts, but cannot create anything of their own (`canParticipate()` is false, so every "New X" button stays hidden and the Firestore rules would reject the write anyway). Nobody is ever signed out or blocked at login — this deliberately diverges from an earlier draft spec that wanted to bounce non-whitelisted users; the actual product decision is "let anyone in, public-only until promoted." **This role system is entirely separate from v3.2's peer-to-peer friend graph** (`friend_requests`/`friendships`, below) — role decides CRUD permissions and which profiles are even discoverable at all; the friend graph decides, independently, whether `visibility: "connections"` content is shown once a profile *is* reachable. `js/sidebar.js`/`js/mobile-nav.js` (v3.2) also read this same role to decide Owner-vs-Light navigation — see the Pages/Conventions bullets below.
+- **Three roles, decided once at login and cached in `localStorage`** (`lfj:userMode` = `OWNER`/`FRIEND`/`VIEWER`, see [firebase-init.js](firebase-init.js)'s `getUserMode()`/`canParticipate()`): **Owner** (`jjun8647@gmail.com`, hardcoded) has full access everywhere and is the only role that sees admin UI (System Logs, Whitelist Management — now in Me's Connections/System Logs tabs, v2.7). **Friend** (an entry in `friends/{email}`, see below) gets their own space for Memories/Journal/Journey/Habits/Atlas/Collections/Calendar — structurally identical to the owner's for those modules, just their own `uid`. As of **v3.3**, Finance/Time Capsule/Daily Reflection are Owner-only regardless of Friend status (`firestore.rules`' `expenses`/`time_capsules`/`daily_reflections` `create` rules require `isOwner()`, not `canParticipate()`) — a Friend's own pre-v3.3 docs in those collections, if any, remain readable/editable, but no new ones can be created. **Discover** (`discover.html`/`followed_anime`, the anime tracker) is Owner-only end to end from its first release — unlike Finance/Time Capsule/Daily Reflection, it was never Friend-available at any point, so there is no pre-existing-Friend-doc grandfathering concern for it. **Viewer** (anyone else who signs in with Google) is read-only: sees public content from the owner and any friend, can like/comment on public gallery posts, but cannot create anything of their own (`canParticipate()` is false, so every "New X" button stays hidden and the Firestore rules would reject the write anyway). Nobody is ever signed out or blocked at login — this deliberately diverges from an earlier draft spec that wanted to bounce non-whitelisted users; the actual product decision is "let anyone in, public-only until promoted." **This role system is entirely separate from v3.2's peer-to-peer friend graph** (`friend_requests`/`friendships`, below) — role decides CRUD permissions and which profiles are even discoverable at all; the friend graph decides, independently, whether `visibility: "connections"` content is shown once a profile *is* reachable. `js/sidebar.js`/`js/mobile-nav.js` (v3.2) also read this same role to decide Owner-vs-Light navigation — see the Pages/Conventions bullets below.
 - **The core query pattern, used identically across `gallery.js`, `journal.js`, `timeline.js`, `habits.js`**: two Firestore queries merged by doc ID — `where("uid","==",myUid)` (all of *my own* docs, any visibility) plus `where("visibility","==","public")` (everyone's public docs) — deduped into a `Map` keyed by `doc.id` so a doc that's both mine and public isn't double-counted. This replaced the old v1.2 "public query + private query" pattern, which relied on a blanket `where("visibility","==","private")` query that the new per-uid rules would reject outright (the rules engine can't confirm an unfiltered "give me all private docs" query only returns the caller's own — Firestore requires the query itself to be provably scoped). **`expenses` is the one exception**: it has no public/private concept at all anymore (financial data, always private), so `expenses.js`/`dashboard.js`/`export.js`/`calendar.js`/`insights.js` all just do a single `where("uid","==",myUid)` query with no public half.
 - **Every write is gated by `canParticipate()`** (owner or friend) instead of the old `isOwner(user)` — `gallery.js`'s "New Post", `expenses.js`'s "Add Expense", `journal.js`'s "New Entry", `timeline.js`'s "New Event", and `habits.js`'s "New Habit" all switched from owner-only to participant-only. Every new doc is written with `uid: auth.currentUser.uid` (not a hardcoded owner reference), and per-post/per-item "is this mine" checks (e.g. gallery's Analytics-panel visibility, habits' check-in button) compare against `item.uid === auth.currentUser.uid`, not a global `isOwner()` call — ownership is now per-document, not site-wide.
 - **[firestore.rules](firestore.rules)** defines the shared helpers `isOwner()`, `isFriend()` (checks `exists(friends/{email})` — the legacy whitelist-role check), `canParticipate()` (owner or friend — who may `create` in a participatory collection), and `isMineOrPublic(data)` (the read condition shared by `journals`/`life_events`/`habits`/`photos`/`collections`: `data.uid == request.auth.uid || data.visibility == 'public' || (data.visibility == 'connections' && isAcceptedFriend(data.uid))`, the last clause added in v3.2). `expenses`/`goals`/`time_capsules`/`daily_reflections` skip `isMineOrPublic` and just check `resource.data.uid == request.auth.uid` for read/update/delete, full stop — never touched by the `connections` tier. Their `create` rules differ since v3.3: `goals` stays `canParticipate()` (Owner or Friend), while `expenses`/`time_capsules`/`daily_reflections` require `isOwner()` — see the "EdenAtlas v3.3" history bullet above. `photos/{id}/likes`, `/comments`, `/views` reuse a `canReadPost(photoId)` helper (subcollection rules never inherit from the parent `match` block, so these need their own explicit blocks) — likes/comments are open to any signed-in user who can read the post (liking isn't "participating" in the personal-data sense), views stay create-only for the viewer and read-only for the post's own `uid`. `usernames/{username}` (new in v3.1) is a `create`-only, no-`update` collection — Firestore's create-vs-update distinction (a `create` rule only fires when no doc with that ID exists) makes "first writer claims the handle" fall out for free, no transaction or Cloud Function needed; its `read` rule is world-open (`if true`, since v3.2.2 — was auth-required), as is the new `public_profiles/{uid}` collection's, since neither ever holds anything sensitive (`public_profiles` is a denormalized `users/{uid}` mirror with `email` deliberately excluded) — both exist to let an unauthenticated `resume.html?u=...` visitor resolve a handle/owner-lookup without needing to read the auth-required, email-bearing `users/{uid}`. `career_experiences`/`career_projects`/`career_certificates`/`career_awards`' read rule is `isCareerReadable(data)` (v3.2.2): `data.visibility == 'public' || isMineOrPublic(data)` — the one place in this app where a `public` doc is readable with **no** `request.auth` requirement at all, since Career is the one collection meant to support an unauthenticated HR visitor. **`friend_requests/{toUid}/incoming/{fromUid}` and `friendships/{uid}/friends/{friendUid}`** (v3.2) back the mutual-consent friend graph — see the "EdenAtlas v3.2" history bullet above for the full rule shapes and why the accept flow needs no transaction; `isAcceptedFriend(ownerUid)` is the helper `isMineOrPublic()` calls, deliberately named apart from `isFriend()` to avoid shadowing the whitelist check. `notifications`' create rule has one narrow cross-uid exception for `friend_request`/`friend_accepted` types only (self-attested via `fromUid`).

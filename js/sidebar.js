@@ -34,6 +34,11 @@ const SECONDARY_LINKS = [
   { href: "timeline.html", icon: "compass", key: "nav.journey", label: "Journey" },
   { href: "habits.html", icon: "list-checks", key: "nav.habits", label: "Habits" },
   { href: "time-capsule.html", icon: "hourglass", key: "nav.time_capsule", label: "Time Capsule" },
+  // Discover (anime, Phase 1) is strictly Owner-only — product decision, not just an "owner-heavy
+  // module" default like the rest of this list. Deliberately in SECONDARY_LINKS, never LIGHT_LINKS
+  // below, so a Friend/Viewer never even sees the link; auth-guard.js's data-owner-only backstop
+  // (discover.html's <body>) also redirects a direct-URL visit from a non-owner.
+  { href: "discover.html", icon: "compass", key: "nav.discover", label: "Discover" },
   { href: "constellation.html", icon: "sparkles", key: "nav.constellation", label: "Constellation" },
   // Owner-only AI feature (see netlify/functions/assistant.js) — deliberately in SECONDARY_LINKS,
   // not LIGHT_LINKS below, so a Friend/Viewer never even sees the link; auth-guard.js's

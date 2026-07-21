@@ -92,6 +92,52 @@ service cloud.firestore {
       allow create: if canParticipate() && request.resource.data.uid == request.auth.uid;
     }
 
+    // Discover (Owner-only): a personal AniList follow list. Strictly Owner-only end to end —
+    // product decision, not a technical default — so this uses isOwner() throughout, never
+    // canParticipate(), the same pattern career_* uses for the same reason. Doc ID is
+    // deterministic (`${uid}_${anilistId}`, same "structural uniqueness" trick as
+    // daily_reflections/usernames) so create-vs-update is Firestore's own idempotent
+    // follow/already-followed distinction. No visibility field — this collection has no public/
+    // connections story at all, so it never goes through isMineOrPublic().
+    match /followed_anime/{id} {
+      allow read, delete: if isOwner() && resource.data.uid == request.auth.uid;
+
+      allow create: if isOwner()
+        && request.resource.data.uid == request.auth.uid
+        && id == request.auth.uid + '_' + string(request.resource.data.anilistId)
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'anilistId', 'mediaType', 'title', 'coverImage', 'format', 'status', 'isAdult', 'followedAt', 'updatedAt']
+           )
+        && request.resource.data.anilistId is int && request.resource.data.anilistId > 0
+        && request.resource.data.mediaType == 'ANIME'
+        && request.resource.data.title is string
+        && (request.resource.data.coverImage == null || request.resource.data.coverImage is string)
+        && (request.resource.data.format == null || request.resource.data.format is string)
+        && request.resource.data.status in ['planning', 'watching', 'completed', 'paused', 'dropped']
+        && request.resource.data.isAdult == false
+        && request.resource.data.followedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // uid/anilistId/mediaType/followedAt are immutable — only title/coverImage/format/status
+      // may change (a display-metadata refresh or a status change), and updatedAt must always be
+      // freshly stamped on every update.
+      allow update: if isOwner()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.anilistId == resource.data.anilistId
+        && request.resource.data.mediaType == resource.data.mediaType
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'anilistId', 'mediaType', 'title', 'coverImage', 'format', 'status', 'isAdult', 'followedAt', 'updatedAt']
+           )
+        && request.resource.data.title is string
+        && (request.resource.data.coverImage == null || request.resource.data.coverImage is string)
+        && (request.resource.data.format == null || request.resource.data.format is string)
+        && request.resource.data.status in ['planning', 'watching', 'completed', 'paused', 'dropped']
+        && request.resource.data.isAdult == false
+        && request.resource.data.followedAt == resource.data.followedAt
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // Collections (v2.7): life-chapter containers that group existing records via
     // collectionId, same shape/visibility model as journals/life_events/habits.
     match /collections/{collectionId} {
