@@ -93,6 +93,14 @@ const HTML_ENTITY_MAP_SRC = extractConstSource(DISCOVER_SRC, "const HTML_ENTITY_
 const DECODE_HTML_ENTITIES_SRC = extractFunctionSource(DISCOVER_SRC, "decodeHtmlEntities");
 const DESCRIPTION_TO_PLAIN_TEXT_SRC = extractFunctionSource(DISCOVER_SRC, "descriptionToPlainText");
 const RENDER_ANIME_DESCRIPTION_SRC = extractFunctionSource(DISCOVER_SRC, "renderAnimeDescription");
+// Discover AI (PR B) pass: renderAnimeDescription() now also calls renderTranslationControls(),
+// which reads the module-level `modalTranslationState` -- both must be supplied to the sandbox or
+// the extracted renderAnimeDescription() throws ReferenceError the moment it's called at all.
+// handleTranslateClick() (the Translate button's own click handler) is deliberately NOT extracted
+// here -- it's referenced only inside a lazy arrow-function closure
+// (`() => handleTranslateClick(...)`), never called by any test in this file (none of these tests
+// click the new Translate button), so it never needs to actually exist in this sandbox.
+const RENDER_TRANSLATION_CONTROLS_SRC = extractFunctionSource(DISCOVER_SRC, "renderTranslationControls");
 
 // ==================================================================================
 // Section A — descriptionToPlainText()/decodeHtmlEntities(): pure-function behavior, executed via
@@ -240,9 +248,11 @@ function buildHarness({ simulateOverflow = false } = {}) {
   ctx.i18nT = (key) => (Object.prototype.hasOwnProperty.call(EN_FLAT, key) ? EN_FLAT[key] : key);
 
   const script = `
+    let modalTranslationState = null;
     ${HTML_ENTITY_MAP_SRC}
     ${DECODE_HTML_ENTITIES_SRC}
     ${DESCRIPTION_TO_PLAIN_TEXT_SRC}
+    ${RENDER_TRANSLATION_CONTROLS_SRC}
     ${RENDER_ANIME_DESCRIPTION_SRC}
     globalThis.__renderAnimeDescription = renderAnimeDescription;
   `;
@@ -284,7 +294,10 @@ await test("a short (non-overflowing) description renders complete, with no expa
   assert.ok(p, "expected a <p> element");
   assert.strictEqual(p.textContent, "A short synopsis.");
   assert.ok(!p.classList.contains("text-textGray"), "a real description must not use the fallback's muted styling");
-  assert.strictEqual(h.container.querySelector("button"), null, "a short description must never show an expand/collapse button");
+  assert.strictEqual(h.container.querySelector("button.description-toggle-btn"), null, "a short description must never show an expand/collapse button");
+  // A real (non-empty) description DOES show a Translate to Chinese button regardless of length
+  // — that control is independent of the Show more/less clamp, see the Discover AI section below.
+  assert.ok(h.container.querySelector("button"), "a real description must still offer a Translate control");
 });
 
 await test("a missing description renders the localized 'No description available.' fallback, with no button", () => {
@@ -346,7 +359,10 @@ await test("re-rendering (e.g. on modal reopen) clears any previous content -- n
   h.render({ description: "First." });
   h.render({ description: "Second." });
   assert.strictEqual(h.container.querySelectorAll("p").length, 1);
-  assert.strictEqual(h.container.querySelectorAll("button").length, 1);
+  // Two DISTINCT buttons are legitimately expected now (Show more/less + Translate to Chinese) --
+  // the dedup claim this test guards is that re-rendering doesn't multiply either of them.
+  assert.strictEqual(h.container.querySelectorAll("button.description-toggle-btn").length, 1);
+  assert.strictEqual(h.container.querySelectorAll("button").length, 2);
   assert.strictEqual(h.container.querySelector("p").textContent, "Second.");
 });
 

@@ -1,6 +1,14 @@
 // Minimal network-first service worker for offline shell caching.
 // Deliberately bypasses Firebase/CDN/weather hosts so it never interferes with
 // the auth flow, live Firestore/Storage reads, or third-party API calls.
+// v36 (Discover AI — Qwen Chinese translation + "For You" recommendations, Owner-only): discover.js
+// changed (Translate to Chinese/View Original controls, a new For You tab, a localStorage
+// translation cache) — discover.html/discover.js were already in PRECACHE from v33, so no new
+// entries were needed, only the version bump so the changed discover.js actually reaches an
+// already-installed worker. The new Function, netlify/functions/discover-ai.js, is never a static
+// browser asset (structurally excluded from the deployed site by scripts/build-site.js, same as
+// every other Function) and its production route, /.netlify/functions/discover-ai, is already
+// covered by the existing NEVER_CACHE_PATH_PREFIXES rule below with no change needed.
 // v33 (Discover — anime MVP, Owner-only): discover.html/discover.js added to PRECACHE (the new
 // page's static client shell — same treatment as every other page/script here). The AniList
 // proxy Function (netlify/functions/anilist.js) is never a static browser asset (Function source
@@ -118,7 +126,7 @@
 // change — index.html is now the public recruiter Portfolio, home.html is the private app
 // landing page), v21 (Trash privacy fix), v20 (Memory Trash + location-edit fix), v19 (canonical
 // location pipeline fix).
-const CACHE = "eden-shell-v35";
+const CACHE = "eden-shell-v36";
 
 const PRECACHE = [
   "index.html", "home.html", "resume.html", "gallery.html", "journal.html", "expenses.html",

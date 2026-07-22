@@ -246,20 +246,31 @@ async function run() {
     const pkg = JSON.parse(read("package.json"));
 
     const functionsCmds = splitCmds(pkg.scripts["test:functions"]);
-    // assistant.test.js/weather.test.js are the prior baseline; anilist.test.js (Discover, anime
-    // MVP) is the new addition on top — never a silent removal disguised as a reorder.
-    assert.deepStrictEqual(functionsCmds, [
+    // assistant.test.js/weather.test.js/anilist.test.js are the prior baseline; discover-ai.test.js
+    // (Discover AI — Qwen Chinese translation + "For You" recommendations) is the new addition on
+    // top — never a silent removal disguised as a reorder.
+    const priorFunctionsCmds = [
       "node netlify/functions/__tests__/assistant.test.js",
       "node netlify/functions/__tests__/weather.test.js",
       "node netlify/functions/__tests__/anilist.test.js",
+    ];
+    let functionsCursor = 0;
+    priorFunctionsCmds.forEach((cmd) => {
+      const idx = functionsCmds.indexOf(cmd, functionsCursor);
+      assert.ok(idx !== -1 && idx >= functionsCursor, `test:functions dropped or reordered pre-existing command: ${cmd}`);
+      functionsCursor = idx + 1;
+    });
+    assert.deepStrictEqual(functionsCmds, [
+      ...priorFunctionsCmds,
+      "node netlify/functions/__tests__/discover-ai.test.js",
     ]);
 
     const frontendCmds = splitCmds(pkg.scripts["test:frontend"]);
-    // "Prior" here means "predates the Discover description-sanitization fix's own new suite,"
-    // reconciled by folding every previously-new addition (xss-security.test.js,
-    // auth-pulse-scope.test.js, discover-security.test.js, discover-tabs.test.js) into this
-    // baseline list — the same "new addition becomes next pass's baseline" convention this
-    // assertion has followed every time it was updated before.
+    // "Prior" here means "predates the Discover AI (Qwen translation + For You) pass's own new
+    // suites," reconciled by folding every previously-new addition (xss-security.test.js,
+    // auth-pulse-scope.test.js, discover-security.test.js, discover-tabs.test.js,
+    // discover-description.test.js) into this baseline list — the same "new addition becomes next
+    // pass's baseline" convention this assertion has followed every time it was updated before.
     const priorFrontendCmds = [
       "node js/__tests__/date-utils.test.js",
       "node js/__tests__/reflection.test.js",
@@ -268,6 +279,7 @@ async function run() {
       "node js/__tests__/auth-pulse-scope.test.js",
       "node js/__tests__/discover-security.test.js",
       "node js/__tests__/discover-tabs.test.js",
+      "node js/__tests__/discover-description.test.js",
     ];
     // Every pre-existing command is still present, in its original relative order (a genuine
     // ordered-subsequence check, not just an unordered "includes all of" set check).
@@ -277,13 +289,13 @@ async function run() {
       assert.ok(idx !== -1 && idx >= cursor, `test:frontend dropped or reordered pre-existing command: ${cmd}`);
       cursor = idx + 1;
     });
-    // And exactly one new command was added on top — the Discover description-sanitization
-    // (AniList markup -> safe plain text) regression suite
-    // (js/__tests__/discover-description.test.js) — never a silent removal disguised as a
-    // reorder.
+    // And exactly two new commands were added on top — Discover AI's "For You" tab-lifecycle
+    // suite and its Translate to Chinese / View Original + localStorage-cache suite — never a
+    // silent removal disguised as a reorder.
     assert.deepStrictEqual(frontendCmds, [
       ...priorFrontendCmds,
-      "node js/__tests__/discover-description.test.js",
+      "node js/__tests__/discover-foryou.test.js",
+      "node js/__tests__/discover-translate.test.js",
     ]);
 
     assert.strictEqual(pkg.scripts.test, "npm run test:functions && npm run test:frontend");

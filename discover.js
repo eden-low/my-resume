@@ -1,5 +1,5 @@
 import { auth, db, isOwner } from "./firebase-init.js";
-import { t as i18nT } from "./js/i18n.js";
+import { t as i18nT, getLang } from "./js/i18n.js";
 import { resolveDisplayName } from "./js/identity.js";
 import {
   onAuthStateChanged,
@@ -18,6 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const ENDPOINT = "/.netlify/functions/anilist";
+const AI_ENDPOINT = "/.netlify/functions/discover-ai";
 
 // AniList-sourced text (title/description/genres) is untrusted free text from a third-party API
 // -- every interpolation into innerHTML below must be escaped. Same implementation as
@@ -173,8 +174,146 @@ function friendlyAniListError(err) {
     rate_limited: "discover.error_rate_limited",
     anilist_upstream_timeout: "discover.error_upstream",
     anilist_upstream_error: "discover.error_upstream",
+    discover_ai_upstream_error: "discover.error_upstream",
+    discover_ai_not_configured: "discover.error_generic",
+    discover_ai_internal_error: "discover.error_generic",
   };
   return i18nT(map[err && err.code] || "discover.error_generic");
+}
+
+// Same shape as callAniList() above, against the separate Discover AI Function (translation +
+// recommendations) — a deliberately different Netlify Function, never folded into the AniList
+// proxy or the Atlas Assistant. `args` only ever carries the small, validated leaf fields the
+// server-side operation allowlist expects (an anilistId, or a locale/force pair) — this client
+// never constructs a synopsis, a candidate list, or any other prompt-shaped payload.
+async function callDiscoverAi(operation, args) {
+  const user = auth.currentUser;
+  if (!user) {
+    const err = new Error("not_signed_in");
+    err.code = "not_signed_in";
+    throw err;
+  }
+  const res = await withOneRetryOn401(async (forceRefresh) =>
+    fetch(AI_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${await user.getIdToken(forceRefresh)}` },
+      body: JSON.stringify({ operation, args }),
+    })
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    const err = new Error(data.error || "discover_ai_request_failed");
+    err.code = data.error || "discover_ai_request_failed";
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+// ---- Client-side SHA-256 (Web Crypto SubtleCrypto — available in every browser this app already
+// targets, plus Node 22+, which is what makes the cross-runtime fixture test possible without a
+// polyfill). Used ONLY to check whether an already-cached translation's source text still matches
+// the anime's CURRENT description — never sent anywhere, never used for anything security-critical.
+async function sha256Hex(text) {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ---- Chinese translation: client-side cache (localStorage only for PR B v1 -- no Firestore
+// collection, per the brief). Cache identity is (anilistId, targetLang, sourceHash,
+// TRANSLATION_POLICY_VERSION) -- a changed sourceHash (the anime's description text itself
+// changed) or a bumped policy version always forces a fresh Function request; the localStorage
+// entry is never trusted as authoritative without that exact match. Every read defensively
+// re-validates shape before trusting an entry -- a malformed/tampered/pre-PR-B localStorage value
+// is silently ignored, never thrown on and never treated as a valid cache hit. ----
+
+const TRANSLATION_CACHE_KEY = "eden:discoverTranslations";
+const TRANSLATION_CACHE_MAX_ENTRIES = 100;
+// Must match netlify/functions/lib/discover-ai-operations.js's own TRANSLATION_POLICY_VERSION --
+// duplicated here per this repo's established per-runtime-boundary duplication convention (a
+// Function and a browser ES module can't share a literal constant). A future translation-prompt
+// change that bumps the server's version automatically invalidates every existing client cache
+// entry, since a mismatched policyVersion is treated as a miss below.
+const TRANSLATION_POLICY_VERSION = "zh-v1";
+
+function translationCacheEntryKey(anilistId, targetLang) {
+  return `${anilistId}:${targetLang}`;
+}
+
+function isValidTranslationEntry(entry) {
+  return (
+    !!entry &&
+    typeof entry === "object" &&
+    typeof entry.translatedText === "string" &&
+    entry.translatedText.length > 0 &&
+    typeof entry.sourceHash === "string" &&
+    typeof entry.targetLang === "string" &&
+    typeof entry.policyVersion === "string" &&
+    Number.isFinite(entry.savedAt)
+  );
+}
+
+// Ignores malformed/untrusted entries entirely -- a corrupted or hand-edited localStorage value
+// is treated exactly like "no cache," never as a parse error that breaks the page.
+function readTranslationCache() {
+  try {
+    const raw = localStorage.getItem(TRANSLATION_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out = {};
+    for (const [key, entry] of Object.entries(parsed)) {
+      if (isValidTranslationEntry(entry)) out[key] = entry;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+// Prunes to the TRANSLATION_CACHE_MAX_ENTRIES most-recently-saved entries before writing --
+// unbounded growth would otherwise be possible if the Owner translates many different titles
+// over time. Pruned by INSERTION ORDER (the last `max` keys of `cache`'s own iteration order),
+// not by re-sorting on the `savedAt` timestamp -- JS objects already guarantee string-keyed
+// property iteration reflects insertion order, and a NEW key is always appended last, so this is
+// simpler and doesn't depend on Date.now()'s millisecond resolution ever being fine-grained
+// enough to break ties (`savedAt` is kept on each entry purely as saved metadata/debugging aid,
+// not as the pruning sort key). localStorage.setItem can itself throw (quota exceeded, private
+// browsing) -- caught and swallowed, since a failed cache WRITE must never break translation
+// itself, only skip persisting it for next time.
+function writeTranslationCache(cache) {
+  try {
+    const pruned = Object.fromEntries(Object.entries(cache).slice(-TRANSLATION_CACHE_MAX_ENTRIES));
+    localStorage.setItem(TRANSLATION_CACHE_KEY, JSON.stringify(pruned));
+  } catch (err) {
+    console.error("[discover] failed to persist translation cache:", err);
+  }
+}
+
+// Returns the cached translated text only if BOTH the source hash and the policy version still
+// match -- a changed description (re-synced from AniList) or a bumped translation policy always
+// forces a fresh Function request, never a stale cached answer.
+function getCachedTranslation(anilistId, targetLang, sourceHash) {
+  const entry = readTranslationCache()[translationCacheEntryKey(anilistId, targetLang)];
+  if (!entry) return null;
+  if (entry.sourceHash !== sourceHash || entry.policyVersion !== TRANSLATION_POLICY_VERSION) return null;
+  return entry.translatedText;
+}
+
+// The cached translation TEXT itself is only ever written here and read back above -- it is never
+// included in any request body sent to /.netlify/functions/discover-ai or /.netlify/functions/
+// anilist; callDiscoverAi()'s translate_description request only ever carries {anilistId}.
+function saveCachedTranslation(anilistId, targetLang, sourceHash, translatedText) {
+  const cache = readTranslationCache();
+  cache[translationCacheEntryKey(anilistId, targetLang)] = {
+    translatedText,
+    sourceHash,
+    targetLang,
+    policyVersion: TRANSLATION_POLICY_VERSION,
+    savedAt: Date.now(),
+  };
+  writeTranslationCache(cache);
 }
 
 // ---- Display helpers (pure) ----
@@ -268,6 +407,18 @@ const mylistError = document.getElementById("mylist-error");
 const mylistErrorMessage = document.getElementById("mylist-error-message");
 const mylistRetryBtn = document.getElementById("mylist-retry-btn");
 
+const forYouViewEl = document.getElementById("foryou-view");
+const forYouLoadingEl = document.getElementById("foryou-loading");
+const forYouGrid = document.getElementById("foryou-grid");
+const forYouEmpty = document.getElementById("foryou-empty");
+const forYouEmptyTitle = document.getElementById("foryou-empty-title");
+const forYouEmptySubtitle = document.getElementById("foryou-empty-subtitle");
+const forYouError = document.getElementById("foryou-error");
+const forYouErrorMessage = document.getElementById("foryou-error-message");
+const forYouRetryBtn = document.getElementById("foryou-retry-btn");
+const forYouRefreshBtn = document.getElementById("foryou-refresh-btn");
+const forYouRateLimited = document.getElementById("foryou-rate-limited");
+
 const animeModal = document.getElementById("anime-modal");
 const animeModalBackdrop = document.getElementById("anime-modal-backdrop");
 const animeModalPanel = document.getElementById("anime-modal-panel");
@@ -291,6 +442,15 @@ let discoverCache = new Map(); // subtab/search key -> results[]
 let cachedFollowed = new Map(); // anilistId -> followed_anime doc {id, ...data}
 let myListLive = new Map(); // anilistId -> live sanitized AniList media (best-effort)
 let pageInitialized = false;
+
+// ---- For You (Qwen recommendations, PR B) ----
+// forYouResults holds the last successfully loaded {anime, reason} pairs -- switching away from
+// and back to the For You tab re-renders from this cached array rather than re-requesting, the
+// same way discoverCache avoids re-fetching an already-visited Discover subtab. Only Refresh
+// (force:true) or a genuinely first-ever visit this page load reaches the network.
+let forYouResults = [];
+let forYouLoadedOnce = false;
+let forYouLoading = false;
 
 function discoverCacheKey() {
   return currentDiscoverSubtab === "search" ? `search:${lastSearchQuery}` : currentDiscoverSubtab;
@@ -360,6 +520,13 @@ async function addFollow(media, status) {
   try {
     await setDoc(ref, payload);
     await fetchFollowed();
+    // Once a recommended title is added, it no longer belongs in "things you might want to
+    // watch" -- remove it from the currently-displayed For You results (never a re-fetch, no
+    // extra Qwen call; the server's own candidate pool would exclude it on the NEXT load anyway,
+    // this just keeps the current view honest immediately).
+    if (currentView === "foryou") {
+      forYouResults = forYouResults.filter((r) => r.anime.id !== media.id);
+    }
     renderCurrentView();
     refreshOpenModalActions(media.id);
   } catch (err) {
@@ -683,14 +850,17 @@ document.querySelectorAll(".mylist-filter-tab").forEach((btn) => btn.addEventLis
 function updateCount() {
   if (currentView === "discover") {
     discoverCountEl.textContent = discoverResults.length ? i18nT("discover.count_results", { n: discoverResults.length }) : "";
-  } else {
+  } else if (currentView === "mylist") {
     discoverCountEl.textContent = cachedFollowed.size ? i18nT("discover.count_mylist", { n: cachedFollowed.size }) : "";
+  } else {
+    discoverCountEl.textContent = forYouResults.length ? i18nT("discover.count_results", { n: forYouResults.length }) : "";
   }
 }
 
 function renderCurrentView() {
   if (currentView === "discover") renderDiscoverGrid();
-  else renderMyListGrid();
+  else if (currentView === "mylist") renderMyListGrid();
+  else renderForYouGrid();
 }
 
 function switchView(view) {
@@ -702,10 +872,111 @@ function switchView(view) {
   });
   discoverViewEl.classList.toggle("hidden", view !== "discover");
   mylistViewEl.classList.toggle("hidden", view !== "mylist");
-  if (view === "mylist") loadMyList();
-  else renderDiscoverGrid();
+  forYouViewEl.classList.toggle("hidden", view !== "foryou");
+  if (view === "mylist") {
+    loadMyList();
+  } else if (view === "foryou") {
+    // "clicking For You is an explicit request" -- this IS that click. A first-ever visit this
+    // page load reaches the network exactly once; a later re-visit (switching tabs back and
+    // forth) re-renders from the already-loaded forYouResults instead of spending another Qwen
+    // call -- only the Refresh button (force:true) or a genuine retry after an error does that.
+    if (!forYouLoadedOnce && !forYouLoading) loadForYou({ force: false });
+    else renderForYouGrid();
+  } else {
+    renderDiscoverGrid();
+  }
   updateCount();
 }
+
+// ---- For You: render/load ----
+
+function forYouCard(rec) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "flex flex-col gap-1.5";
+  // Reuses the EXISTING mediaCard()/renderCardActions() unchanged -- the same Plan to Watch
+  // action, the same status-select-once-followed behavior, the same click-to-open-detail-modal
+  // behavior every other card in this app already has. `rec.anime` is always a sanitized AniList
+  // card object built server-side; nothing here ever reads a field Qwen supplied directly.
+  wrapper.appendChild(mediaCard(rec.anime, cachedFollowed.get(rec.anime.id)));
+  const reasonEl = document.createElement("p");
+  reasonEl.className = "text-[11px] font-code text-neonPurple px-1 leading-snug";
+  reasonEl.textContent = `${i18nT("discover.why_this_fits")}: ${rec.reason}`; // .textContent only
+  wrapper.appendChild(reasonEl);
+  return wrapper;
+}
+
+function renderForYouGrid() {
+  forYouError.classList.add("hidden");
+  forYouRateLimited.classList.add("hidden");
+  if (!forYouResults.length) {
+    forYouGrid.replaceChildren();
+    forYouEmpty.classList.remove("hidden");
+  } else {
+    forYouEmpty.classList.add("hidden");
+    forYouGrid.replaceChildren(...forYouResults.map((rec) => forYouCard(rec)));
+  }
+  updateCount();
+}
+
+function showForYouLoading() {
+  forYouGrid.replaceChildren();
+  forYouLoadingEl.classList.remove("hidden");
+  forYouEmpty.classList.add("hidden");
+  forYouError.classList.add("hidden");
+  forYouRateLimited.classList.add("hidden");
+}
+
+function showForYouError(err) {
+  forYouLoadingEl.classList.add("hidden");
+  forYouGrid.replaceChildren();
+  forYouEmpty.classList.add("hidden");
+  forYouErrorMessage.textContent = friendlyAniListError(err);
+  forYouError.classList.remove("hidden");
+}
+
+function showForYouRateLimited() {
+  forYouLoadingEl.classList.add("hidden");
+  forYouGrid.replaceChildren();
+  forYouEmpty.classList.add("hidden");
+  forYouError.classList.add("hidden");
+  forYouRateLimited.classList.remove("hidden");
+}
+
+// `force` maps directly to the Function's own force:true bypass -- Refresh always passes true; a
+// first-ever tab visit and a Retry-after-error both pass false (a plain request, itself still
+// subject to the Function's own 20-minute cache, so re-clicking Retry right after a real error
+// still costs a fresh call, but two ordinary tab visits in a row within the TTL do not).
+async function loadForYou({ force = false } = {}) {
+  forYouLoading = true;
+  forYouLoadingEl.classList.remove("hidden");
+  showForYouLoading();
+  try {
+    const data = await callDiscoverAi("recommend", { locale: getLang(), force });
+    forYouResults = data.recommendations || [];
+    forYouLoadedOnce = true;
+    forYouLoadingEl.classList.add("hidden");
+    renderForYouGrid();
+    if (!forYouResults.length) {
+      if (data.reason === "insufficient_history") {
+        forYouEmptyTitle.textContent = i18nT("discover.foryou_empty_history");
+        forYouEmptySubtitle.textContent = i18nT("discover.foryou_empty_subtitle");
+      } else {
+        forYouEmptyTitle.textContent = i18nT("discover.foryou_no_recommendations");
+        forYouEmptySubtitle.textContent = "";
+      }
+    }
+  } catch (err) {
+    console.error("[discover] for-you load failed:", err.code || err);
+    forYouLoadingEl.classList.add("hidden");
+    if (err.code === "rate_limited") showForYouRateLimited(err);
+    else showForYouError(err);
+  } finally {
+    forYouLoading = false;
+  }
+}
+
+forYouRefreshBtn.addEventListener("click", () => loadForYou({ force: true }));
+forYouRetryBtn.addEventListener("click", () => loadForYou({ force: false }));
 
 document.querySelectorAll(".view-tab").forEach((btn) => btn.addEventListener("click", () => switchView(btn.dataset.view)));
 
@@ -799,47 +1070,163 @@ function renderDetailModal(media) {
   renderCardActions(animeModalBody.querySelector("[data-modal-actions]"), media, followedDoc);
 }
 
+// ---- Translate to Chinese / View Original (PR B) ----
+//
+// One state object per open modal, reset only by openDetailModal() (a genuinely NEW modal open) --
+// NOT reset when eden:langchange re-renders the SAME still-open modal (renderDetailModal() is
+// called directly in that path, see the listener at the bottom of this file), so switching the
+// app's UI language never discards an already-fetched translation or forces a second Qwen call --
+// only the button LABELS re-render, from the same already-fetched text.
+let modalTranslationState = null; // { status: "idle"|"loading"|"error", translatedText, errorMessage, showingTranslated } | null
+
+function resetModalTranslationState() {
+  modalTranslationState = null;
+}
+
+async function handleTranslateClick(media, plainOriginal) {
+  const anilistId = media.id;
+  modalTranslationState = { status: "loading", translatedText: modalTranslationState?.translatedText || null, errorMessage: null, showingTranslated: false };
+  if (currentModalAnilistId === anilistId) renderDetailModal(media);
+  try {
+    // Prefixed to match the Function's own sourceHash format exactly ("sha256:<hex>", see
+    // netlify/functions/lib/discover-ai-operations.js's sourceHashOf()) -- sha256Hex() itself
+    // returns a bare hex digest; without this prefix, getCachedTranslation()'s comparison against
+    // a saved entry's server-supplied sourceHash would NEVER match, silently defeating the entire
+    // cache (every translate click would re-hit the Function even for an already-cached item).
+    const clientHash = `sha256:${await sha256Hex(plainOriginal)}`;
+    const cached = getCachedTranslation(anilistId, "zh-CN", clientHash);
+    let translatedText;
+    if (cached) {
+      translatedText = cached;
+    } else {
+      // The client NEVER submits the synopsis itself -- only the anilistId. The Function fetches
+      // AniList's description server-side by id and translates that; this call's request body
+      // carries nothing but {"anilistId": <id>}.
+      const data = await callDiscoverAi("translate_description", { anilistId });
+      if (!data.translatedText) {
+        modalTranslationState = {
+          status: "error",
+          translatedText: null,
+          errorMessage: i18nT(data.reason === "no_description" ? "discover.no_description" : "discover.error_generic"),
+          showingTranslated: false,
+        };
+        if (currentModalAnilistId === anilistId) renderDetailModal(media);
+        return;
+      }
+      translatedText = data.translatedText;
+      // The cached text is written here and only ever READ back locally -- it is never included
+      // in any future request body (translate_description only ever sends {anilistId}).
+      saveCachedTranslation(anilistId, "zh-CN", data.sourceHash, translatedText);
+    }
+    modalTranslationState = { status: "idle", translatedText, errorMessage: null, showingTranslated: true };
+  } catch (err) {
+    console.error("[discover] translate failed:", err.code || err);
+    modalTranslationState = { status: "error", translatedText: modalTranslationState?.translatedText || null, errorMessage: friendlyAniListError(err), showingTranslated: false };
+  }
+  if (currentModalAnilistId === anilistId) renderDetailModal(media);
+}
+
+function renderTranslationControls(container, media, plainOriginal) {
+  if (!plainOriginal) return; // nothing to translate
+  const state = modalTranslationState;
+  const row = document.createElement("div");
+  row.className = "mt-2 flex items-center gap-2 flex-wrap";
+
+  if (!state || state.status === "error") {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "text-xs font-cyber font-bold tracking-wider text-neonPurple hover:text-white transition-colors flex items-center gap-1.5";
+    btn.innerHTML = `<i class="fa-solid fa-language text-[11px]"></i>`;
+    const label = document.createElement("span");
+    label.textContent = i18nT("discover.translate_to_chinese");
+    btn.appendChild(label);
+    btn.addEventListener("click", () => handleTranslateClick(media, plainOriginal));
+    row.appendChild(btn);
+    if (state && state.status === "error" && state.errorMessage) {
+      const errEl = document.createElement("span");
+      errEl.className = "text-[11px] font-code text-rose-400";
+      errEl.textContent = state.errorMessage;
+      row.appendChild(errEl);
+    }
+  } else if (state.status === "loading") {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.disabled = true;
+    btn.className = "text-xs font-cyber font-bold tracking-wider text-textGray flex items-center gap-1.5 cursor-wait";
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-[11px]"></i>`;
+    const label = document.createElement("span");
+    label.textContent = i18nT("discover.translating");
+    btn.appendChild(label);
+    row.appendChild(btn);
+  } else if (state.status === "idle" && state.translatedText) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "text-xs font-cyber font-bold tracking-wider text-neonPurple hover:text-white transition-colors flex items-center gap-1.5";
+    btn.innerHTML = `<i class="fa-solid fa-language text-[11px]"></i>`;
+    const label = document.createElement("span");
+    label.textContent = i18nT(state.showingTranslated ? "discover.view_original" : "discover.view_translation");
+    btn.appendChild(label);
+    btn.addEventListener("click", () => {
+      // Toggling never spends a Qwen call -- both texts are already held in memory/state.
+      modalTranslationState = { ...state, showingTranslated: !state.showingTranslated };
+      if (currentModalAnilistId === media.id) renderDetailModal(media);
+    });
+    row.appendChild(btn);
+  }
+  container.appendChild(row);
+}
+
 // The description is deliberately never part of the innerHTML template above -- it's the one
 // field AniList returns with (undocumented) literal inline markup still embedded even when
 // asHtml:false is requested (see descriptionToPlainText()'s header comment). Built entirely via
 // createElement()/.textContent, exactly mirroring how setImageWithFallback() already assigns the
 // cover `src` as a DOM property into a placeholder left by the innerHTML template above, rather
-// than string-interpolating either value into that template.
+// than string-interpolating either value into that template. The (optional) Chinese translation
+// is rendered exactly the same way -- .textContent only, never innerHTML -- so Qwen's output can
+// never inject a live element regardless of what it contains.
 function renderAnimeDescription(container, media) {
   if (!container) return;
   container.replaceChildren();
   const plain = descriptionToPlainText(media && media.description);
+  const state = modalTranslationState;
+  const showingTranslated = !!(state && state.status !== "loading" && state.showingTranslated && state.translatedText);
+  const displayText = showingTranslated ? state.translatedText : plain;
 
   const p = document.createElement("p");
   p.className = "text-sm leading-relaxed whitespace-pre-line";
-  if (!plain) {
+  if (!displayText) {
     p.classList.add("text-textGray");
     p.textContent = i18nT("discover.no_description");
     container.appendChild(p);
+    renderTranslationControls(container, media, plain);
     return;
   }
   p.classList.add("text-white", "line-clamp-6");
-  p.textContent = plain;
+  p.textContent = displayText; // textContent only -- Qwen output is never trusted as HTML
   container.appendChild(p);
 
   // Only offer Show more/less if the clamp is actually hiding content -- measured from the real,
   // already-laid-out DOM (the modal is visible by the time this runs) rather than guessed from a
   // character count, which can't account for the container's real width, font metrics, or actual
   // line-wrapping. A short description that fits within 6 lines never gets a toggle button.
+  // Re-checked every render (including after a translation swap), since Chinese text can wrap to
+  // a different number of lines than the English original.
   const overflowing = p.scrollHeight > p.clientHeight + 1; // +1: rounding-tolerant
-  if (!overflowing) return;
+  if (overflowing) {
+    let expanded = false;
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "description-toggle-btn mt-1.5 text-xs font-cyber font-bold tracking-wider text-neonPurple hover:text-white transition-colors";
+    toggleBtn.textContent = i18nT("discover.show_more");
+    toggleBtn.addEventListener("click", () => {
+      expanded = !expanded;
+      p.classList.toggle("line-clamp-6", !expanded);
+      toggleBtn.textContent = i18nT(expanded ? "discover.show_less" : "discover.show_more");
+    });
+    container.appendChild(toggleBtn);
+  }
 
-  let expanded = false;
-  const toggleBtn = document.createElement("button");
-  toggleBtn.type = "button";
-  toggleBtn.className = "description-toggle-btn mt-1.5 text-xs font-cyber font-bold tracking-wider text-neonPurple hover:text-white transition-colors";
-  toggleBtn.textContent = i18nT("discover.show_more");
-  toggleBtn.addEventListener("click", () => {
-    expanded = !expanded;
-    p.classList.toggle("line-clamp-6", !expanded);
-    toggleBtn.textContent = i18nT(expanded ? "discover.show_less" : "discover.show_more");
-  });
-  container.appendChild(toggleBtn);
+  renderTranslationControls(container, media, plain);
 }
 
 function refreshOpenModalActions(anilistId) {
@@ -854,6 +1241,7 @@ function refreshOpenModalActions(anilistId) {
 async function openDetailModal(anilistId) {
   modalReturnFocusEl = document.activeElement;
   currentModalAnilistId = anilistId;
+  resetModalTranslationState(); // a genuinely NEW modal open always starts from the original text
   const myToken = ++modalRequestToken;
 
   animeModalTitle.textContent = i18nT("common.loading");

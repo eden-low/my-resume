@@ -82,6 +82,7 @@
     "confirm_remove_location": "再次点击以移除",
     "view_on_atlas": "在地图集中查看",
     "retry": "重试",
+    "refresh": "刷新",
     "undo": "撤销",
     "delete_confirm": "删除这一项？此操作无法撤销。",
     "load_failed": "加载失败，请查看控制台。",
@@ -814,6 +815,16 @@
     "view_on_anilist": "在 AniList 查看",
     "no_description": "暂无简介。",
     "show_more": "显示更多",
-    "show_less": "收起"
+    "show_less": "收起",
+    "tab_foryou": "为你推荐",
+    "translate_to_chinese": "翻译成中文",
+    "view_original": "查看原文",
+    "view_translation": "查看翻译",
+    "translating": "翻译中…",
+    "foryou_hint": "AI 根据你的追番清单为你生成的个性化推荐。",
+    "foryou_empty_history": "请先在「我的清单」中添加几部作品。",
+    "foryou_empty_subtitle": "我们会根据你的清单推荐接下来适合看的作品。",
+    "foryou_no_recommendations": "这次没有特别合适的推荐——稍后可以点击刷新再试。",
+    "why_this_fits": "推荐理由"
   }
 }
